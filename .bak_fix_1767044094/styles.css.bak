@@ -1,0 +1,9 @@
+/* Improved UI */
+:root{--bg:#f7fafc;--card:#fff;--accent:#2b6cb0;--muted:#6b7280}
+body{background:linear-gradient(180deg,#eef2f7,white);color:#111}
+
+
+/* Improved UI */
+:root{--bg:#f7fafc;--card:#fff;--accent:#2b6cb0;--muted:#6b7280}
+a{color:var(--accent)}
+

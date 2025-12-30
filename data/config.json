@@ -1,0 +1,21 @@
+{
+    "summer_start": "06-15",
+    "summer_end": "09-30",
+    "work_hours": {
+        "winter": {
+            "mon_thu": 8,
+            "friday": 6
+        },
+        "summer": {
+            "mon_thu": 7.5,
+            "friday": 6
+        }
+    },
+    "coffee_minutes": 20,
+    "lunch_minutes": 60,
+    "db": {
+        "user": "app_user",
+        "pass": "app_pass"
+    },
+    "site_name": "Horas"
+}

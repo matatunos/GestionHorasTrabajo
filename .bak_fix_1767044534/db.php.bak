@@ -1,0 +1,215 @@
+<?php
+require_once __DIR__ . '/config.php';
+
+function get_pdo(){
+    static $pdo = null;
+    if ($pdo) return $pdo;
+    $cfg = get_config()['db'];
+    $dsn = "mysql:host={$cfg['host']};dbname={$cfg['name']};charset={$cfg['charset']}";
+    try {
+        $pdo = new PDO($dsn, $cfg['user'], $cfg['pass'], [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+        return $pdo;
+    } catch (PDOException $e) {
+        return null;
+    }
+}
+PHP
+
+cat > "$ROOT/auth.php" <<\'PHP\'
+<?php
+require_once __DIR__ . '/db.php';
+session_start();
+
+function current_user(){
+    if (empty($_SESSION['user_id'])) return null;
+    $pdo = get_pdo();
+    if (!$pdo) return null;
+    $stmt = $pdo->prepare('SELECT id, username, is_admin FROM users WHERE id = ?');
+    $stmt->execute([$_SESSION['user_id']]);
+    return $stmt->fetch();
+}
+
+function require_login(){
+    if (!current_user()){
+        header('Location: login.php'); exit;
+    }
+}
+
+function require_admin(){
+    $u = current_user();
+    if (!$u || !$u['is_admin']){ header('HTTP/1.1 403 Forbidden'); echo 'Forbidden'; exit; }
+}
+
+function do_login($username, $password){
+    $pdo = get_pdo(); if (!$pdo) return false;
+    $stmt = $pdo->prepare('SELECT id, password FROM users WHERE username = ? LIMIT 1');
+    $stmt->execute([$username]);
+    $u = $stmt->fetch();
+    if (!$u) return false;
+    if (password_verify($password, $u['password'])){
+        $_SESSION['user_id'] = $u['id'];
+        return true;
+    }
+    return false;
+}
+
+function do_logout(){
+    session_unset(); session_destroy();
+}
+PHP
+
+cat > "$ROOT/login.php" <<\'PHP\'
+<?php
+require_once __DIR__ . '/auth.php';
+
+$error = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST'){
+    $u = $_POST['username'] ?? '';
+    $p = $_POST['password'] ?? '';
+    if (do_login($u, $p)){
+        header('Location: index.php'); exit;
+    } else {
+        $error = 'Credenciales inválidas';
+    }
+}
+?><!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Login</title>
+<link rel="stylesheet" href="styles.css"></head><body>
+<div class="card center">
+  <h2>Acceso</h2>
+  <?php if($error): ?><div class="alert"><?=htmlspecialchars($error)?></div><?php endif; ?>
+  <form method="post">
+    <label>Usuario <input name="username" required></label>
+    <label>Contraseña <input type="password" name="password" required></label>
+    <div class="actions"><button type="submit">Entrar</button></div>
+  </form>
+  <p class="hint"><a href="index.php">Volver</a></p>
+</div>
+</body></html>
+PHP
+
+cat > "$ROOT/users.php" <<\'PHP\'
+<?php
+require_once __DIR__ . '/auth.php';
+require_admin();
+$pdo = get_pdo();
+
+// add user
+if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['username'])){
+    $u = $_POST['username'];
+    $p = $_POST['password'];
+    $is_admin = isset($_POST['is_admin']) ? 1 : 0;
+    $hash = password_hash($p, PASSWORD_DEFAULT);
+    $stmt = $pdo->prepare('INSERT INTO users (username,password,is_admin) VALUES (?,?,?)');
+    $stmt->execute([$u,$hash,$is_admin]);
+    header('Location: users.php'); exit;
+}
+
+$rows = $pdo->query('SELECT id,username,is_admin,created_at FROM users ORDER BY id')->fetchAll();
+?><!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Usuarios</title>
+<link rel="stylesheet" href="styles.css"></head><body>
+<div class="card">
+  <h2>Gestión de Usuarios</h2>
+  <table class="sheet"><thead><tr><th>ID</th><th>Usuario</th><th>Admin</th><th>Creado</th></tr></thead><tbody>
+  <?php foreach($rows as $r): ?>
+  <tr><td><?=$r['id']?></td><td><?=htmlspecialchars($r['username'])?></td><td><?= $r['is_admin'] ? 'Sí' : '' ?></td><td><?=$r['created_at']?></td></tr>
+  <?php endforeach; ?>
+  </tbody></table>
+
+  <h3>Añadir usuario</h3>
+  <form method="post">
+    <label>Usuario <input name="username" required></label>
+    <label>Contraseña <input type="password" name="password" required></label>
+    <label><input type="checkbox" name="is_admin"> Administrador</label>
+    <div class="actions"><button>Añadir</button></div>
+  </form>
+  <p class="hint"><a href="index.php">Volver</a></p>
+</div>
+</body></html>
+PHP
+
+cat > "$ROOT/styles.css" <<\'CSS\'
+/* Improved UI */
+:root{--bg:#f7fafc;--card:#fff;--accent:#2b6cb0;--muted:#6b7280}
+body{background:linear-gradient(180deg,#eef2f7,white);color:#111}
+.center{display:flex;justify-content:center;align-items:center;min-height:60vh}
+.card{background:var(--card);border-radius:8px;padding:18px;box-shadow:0 6px 18px rgba(11,22,39,0.06);max-width:980px;margin:12px auto}
+.sheet{border-collapse:collapse;width:100%;margin-top:12px;border-radius:6px;overflow:hidden}
+.sheet th,.sheet td{border-bottom:1px solid #eef2f6;padding:10px;font-size:14px}
+.sheet thead th{background:linear-gradient(0deg,#f8fafc,#f1f5f9);text-align:left;color:#223}
+.row-form{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.row-form label{display:flex;gap:6px;align-items:center}
+.row-form input{padding:6px;border:1px solid #e2e8f0;border-radius:4px}
+.row-form button{padding:8px 12px;background:var(--accent);color:white;border:none;border-radius:6px}
+.actions{margin-top:8px}
+.hint{margin-top:8px;color:var(--muted)}
+.alert{background:#fee2e2;color:#991b1b;padding:8px;border-radius:6px}
+
+.card h2{margin:0 0 8px}
+.card h3{margin-top:16px}
+
+a{color:var(--accent)}
+CSS
+
+cat > "$ROOT/deploy/install_db.sh" <<\'SH\'
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT=$(dirname "$0")
+SQL="$ROOT/schema_clean.sql"
+DBUSER=${DB_USER:-root}
+DBPASS=${DB_PASS:-satriani}
+
+if [ ! -f "$SQL" ]; then echo "schema.sql not found"; exit 1; fi
+
+echo "Importing schema into MySQL as $DBUSER@localhost"
+mysql -u"$DBUSER" -p"$DBPASS" < "$SQL"
+
+echo "Creating initial admin user 'admin' (password 'admin') - change it after first login"
+HASH=$(php -r 'echo password_hash("admin", PASSWORD_DEFAULT);')
+mysql -u"$DBUSER" -p"$DBPASS" -e "USE gestion_horas; INSERT IGNORE INTO users (username,password,is_admin) VALUES ('admin', '${HASH}', 1);"
+
+echo "Done. Admin user: admin / admin"
+SH
+
+cat > "$ROOT/deploy/schema_clean.sql" <<\'SQL\'
+-- Schema for GestionHorasTrabajo
+CREATE DATABASE IF NOT EXISTS gestion_horas CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE gestion_horas;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(100) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  is_admin TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS entries (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  date DATE NOT NULL,
+  start TIME NULL,
+  coffee_out TIME NULL,
+  coffee_in TIME NULL,
+  lunch_out TIME NULL,
+  lunch_in TIME NULL,
+  end TIME NULL,
+  note TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY user_date (user_id,date),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS app_config (
+  k VARCHAR(100) PRIMARY KEY,
+  v TEXT
+);
+SQL
+
+chmod +x "$ROOT/deploy/install_db.sh" || true
+
+echo "Done. Backups in $BACKUP_DIR"
+'
