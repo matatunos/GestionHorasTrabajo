@@ -13,7 +13,7 @@ php -S localhost:8000
 # luego abrir http://localhost:8000/index.php
 ```
 
-Los datos se guardan en `data/entries.json`.
+Los datos se guardan ahora en la base de datos MySQL (tabla `entries`).
 
 Configuración local para `calendar.favala.es` (desarrollo)
 

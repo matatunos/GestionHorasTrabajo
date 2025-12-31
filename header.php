@@ -11,8 +11,8 @@ $selYear = intval($_GET['year'] ?? date('Y'));
 try {
     $pdo = get_pdo();
     if ($pdo) {
-        $rows = $pdo->query("SELECT DISTINCT YEAR(date) AS y FROM entries ORDER BY y DESC")->fetchAll();
-        foreach ($rows as $r) $years[] = intval($r['y']);
+        $yearRows = $pdo->query("SELECT DISTINCT YEAR(date) AS y FROM entries ORDER BY y DESC")->fetchAll();
+        foreach ($yearRows as $r) $years[] = intval($r['y']);
     }
 } catch (Throwable $e) { /* ignore */ }
 if (empty($years)) { $years = [intval(date('Y'))]; }
@@ -33,6 +33,19 @@ if (empty($years)) { $years = [intval(date('Y'))]; }
           <a class="menu-item" href="users.php">Usuarios</a>
           <a class="menu-item" href="holidays.php">Festivos</a>
         <?php endif; ?>
+
+        <?php if (!empty($current)): ?>
+          <div class="menu-item menu-user" tabindex="0">
+            <div class="user-avatar"><?php echo strtoupper(substr($current['username'],0,1)); ?></div>
+            <span class="menu-user-name"><?php echo htmlspecialchars($current['username']); ?></span>
+            <div class="menu-user-dropdown" role="menu">
+              <a class="dropdown-item" href="profile.php">Perfil</a>
+              <a class="dropdown-item" href="logout.php">Salir</a>
+            </div>
+          </div>
+        <?php else: ?>
+          <a class="menu-item" href="login.php">Acceder</a>
+        <?php endif; ?>
       </div>
     </nav>
   </aside>
@@ -45,26 +58,33 @@ if (empty($years)) { $years = [intval(date('Y'))]; }
         <div class="header-brand-text"><?php echo htmlspecialchars($site_name); ?></div>
       </div>
       <div class="header-actions">
-        <?php if ($current): ?>
-          <form method="get" action="index.php" style="display:inline;margin-right:8px;">
-            <label class="small">Año
-              <select name="year" onchange="this.form.submit()">
-                <?php foreach($years as $y): ?>
-                  <option value="<?php echo $y;?>" <?php if($y==$selYear) echo 'selected';?>><?php echo $y;?></option>
-                <?php endforeach; ?>
-              </select>
-            </label>
-            <label class="small" style="margin-left:8px">Ocultar fines de semana
-              <input type="checkbox" name="hide_weekends" value="1" onchange="this.form.submit()" <?php if(!empty($_GET['hide_weekends'])) echo 'checked'; ?> />
-            </label>
-          </form>
-          <div class="user-menu">
-            <span class="small">Usuario: <?php echo htmlspecialchars($current['username']); ?></span>
-            <a class="btn" href="logout.php">Salir</a>
-          </div>
-        <?php else: ?>
-          <a class="btn" href="login.php">Acceder</a>
-        <?php endif; ?>
+        <form method="get" action="index.php" style="display:inline;margin-right:8px;">
+          <label class="small">Año
+            <select name="year" onchange="this.form.submit()">
+              <?php foreach($years as $y): ?>
+                <option value="<?php echo $y;?>" <?php if($y==$selYear) echo 'selected';?>><?php echo $y;?></option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+          <label class="small" style="margin-left:8px">Ocultar fines de semana
+            <input type="checkbox" name="hide_weekends" value="1" onchange="this.form.submit()" <?php if(!empty($_GET['hide_weekends'])) echo 'checked'; ?> />
+          </label>
+        </form>
       </div>
     </header>
+
+    <script>
+    (function(){
+      document.addEventListener('click', function(e){
+        const mu = document.querySelector('.menu-user');
+        if(!mu) return;
+        if (mu.contains(e.target)) {
+          mu.classList.toggle('open');
+        } else {
+          mu.classList.remove('open');
+        }
+      });
+      document.addEventListener('keydown', function(e){ if (e.key === 'Escape') { const mu = document.querySelector('.menu-user'); if(mu) mu.classList.remove('open'); } });
+    })();
+    </script>
 

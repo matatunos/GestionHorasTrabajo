@@ -24,14 +24,31 @@ function get_config(){
         ],
     ];
 
-    // allow runtime overrides from data/config.json
-    $cfg_file = __DIR__ . '/data/config.json';
-    if (file_exists($cfg_file)) {
-        $json = json_decode(file_get_contents($cfg_file), true);
-        if (is_array($json)) {
-            // merge overrides recursively
-            $defaults = array_replace_recursive($defaults, $json);
+    // Try to read configuration from DB (single JSON blob stored under 'site_config').
+    // Avoid breaking when DB is not reachable: fall back to defaults.
+    try {
+        if (function_exists('get_pdo')) {
+            $pdo = get_pdo();
+            if ($pdo) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS app_settings (
+                    name VARCHAR(191) PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                $stmt = $pdo->prepare('SELECT value FROM app_settings WHERE name = ? LIMIT 1');
+                $stmt->execute(['site_config']);
+                $row = $stmt->fetch();
+                if ($row && !empty($row['value'])) {
+                    $json = json_decode($row['value'], true);
+                    if (is_array($json)) {
+                        $defaults = array_replace_recursive($defaults, $json);
+                    }
+                }
+            }
         }
+    } catch (Throwable $e) {
+        // ignore DB errors and keep defaults
     }
 
     return $defaults;

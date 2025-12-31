@@ -157,7 +157,7 @@ $holidayMap = [];
         $extraClass = '';
         if (isset($holidayMap[$d])) {
             $t = $holidayMap[$d]['type'] ?? 'holiday';
-            $extraClass = $t === 'vacation' ? ' vacation' : ($t === 'personal' ? ' personal' : ' holiday');
+            $extraClass = $t === 'vacation' ? ' vacation' : ($t === 'personal' ? ' personal' : ($t === 'enfermedad' ? ' illness' : ($t === 'permiso' ? ' permiso' : ' holiday')));
         }
       ?>
       <tr class="<?php echo $rowClass . $extraClass; ?>">
@@ -180,6 +180,10 @@ $holidayMap = [];
               <span class="badge badge-primary"><?php echo $hlabel ?: 'Vacaciones'; ?></span>
             <?php elseif ($ht === 'personal'): ?>
               <span class="badge badge-success"><?php echo $hlabel ?: 'Asuntos propios'; ?></span>
+            <?php elseif ($ht === 'enfermedad'): ?>
+              <span class="badge badge-warning"><?php echo $hlabel ?: 'Enfermedad'; ?></span>
+            <?php elseif ($ht === 'permiso'): ?>
+              <span class="badge badge-info"><?php echo $hlabel ?: 'Permiso'; ?></span>
             <?php else: ?>
               <span class="badge badge-danger"><?php echo $hlabel ?: 'Festivo'; ?></span>
             <?php endif; ?>
@@ -197,7 +201,7 @@ $holidayMap = [];
 
   </div>
 </div>
-    <p class="hint">Configuración: <a href="config.php">ver</a></p>
+    <!-- configuración link removed per UI decision -->
   </div>
 </div>
 <script>

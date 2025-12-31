@@ -48,11 +48,13 @@ $rows = $pdo->query('SELECT id,username,is_admin,created_at FROM users ORDER BY 
     </div>
 
     <h3>Añadir usuario</h3>
-    <form method="post" class="row-form">
-      <label>Usuario <input name="username" required></label>
-      <label>Contraseña <input type="password" name="password" required></label>
-      <label><input type="checkbox" name="is_admin"> Administrador</label>
-      <div class="actions"><button class="btn btn-primary">Añadir</button></div>
+    <form method="post" class="form-wrapper">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Usuario</label><input class="form-control" name="username" required></div>
+        <div class="form-group"><label class="form-label">Contraseña</label><input class="form-control" type="password" name="password" required></div>
+        <div class="form-group"><label class="form-check"><input type="checkbox" name="is_admin"> Administrador</label></div>
+      </div>
+      <div class="form-actions" style="margin-top:12px;"><button class="btn-primary" type="submit">Añadir</button></div>
     </form>
     <p class="hint"><a href="index.php">Volver</a></p>
   </div>

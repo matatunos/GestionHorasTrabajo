@@ -47,19 +47,33 @@ $rows = $pdo->query('SELECT * FROM year_configs ORDER BY year DESC')->fetchAll()
 <div class="container">
   <div class="card">
     <h3>Configurar año</h3>
-    <form method="post" class="config-grid">
-      <div class="field"><label>Año</label><input name="year" required></div>
-      <div class="field"><label>Horas Invierno (mon-thu)</label><input name="mon_thu" placeholder="ej. 8.0"></div>
-      <div class="field"><label>Horas Invierno Viernes</label><input name="friday" placeholder="ej. 6.0"></div>
-      <div class="field"><label>Horas Verano (mon-thu)</label><input name="summer_mon_thu" placeholder="ej. 7.5"></div>
-      <div class="field"><label>Horas Verano Viernes</label><input name="summer_friday" placeholder="ej. 6.0"></div>
-      <div class="field"><label>Minutos café</label><input name="coffee_minutes" placeholder="15"></div>
-      <div class="field"><label>Minutos comida</label><input name="lunch_minutes" placeholder="30"></div>
-      <div class="actions"><button class="btn btn-primary" type="submit">Guardar año</button></div>
+    <form method="post" class="form-wrapper">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Año</label><input class="form-control" name="year" required></div>
+        <div class="form-group"><label class="form-label">Horas Invierno (mon-thu)</label><input class="form-control" name="mon_thu" placeholder="ej. 8.0"></div>
+        <div class="form-group"><label class="form-label">Horas Invierno Viernes</label><input class="form-control" name="friday" placeholder="ej. 6.0"></div>
+        <div class="form-group"><label class="form-label">Horas Verano (mon-thu)</label><input class="form-control" name="summer_mon_thu" placeholder="ej. 7.5"></div>
+        <div class="form-group"><label class="form-label">Horas Verano Viernes</label><input class="form-control" name="summer_friday" placeholder="ej. 6.0"></div>
+        <div class="form-group"><label class="form-label">Minutos café</label><input class="form-control" name="coffee_minutes" placeholder="15"></div>
+        <div class="form-group"><label class="form-label">Minutos comida</label><input class="form-control" name="lunch_minutes" placeholder="30"></div>
+      </div>
+      <div class="form-actions" style="margin-top:12px;"><button class="btn-primary" type="submit">Guardar año</button></div>
     </form>
 
     <h3>Listado</h3>
     <div class="table-responsive">
+      <form method="post" class="form-wrapper">
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Año</label><input class="form-control" name="year" required></div>
+          <div class="form-group"><label class="form-label">Horas Invierno (mon-thu)</label><input class="form-control" name="mon_thu" placeholder="ej. 8.0"></div>
+          <div class="form-group"><label class="form-label">Horas Invierno Viernes</label><input class="form-control" name="friday" placeholder="ej. 6.0"></div>
+          <div class="form-group"><label class="form-label">Horas Verano (mon-thu)</label><input class="form-control" name="summer_mon_thu" placeholder="ej. 7.5"></div>
+          <div class="form-group"><label class="form-label">Horas Verano Viernes</label><input class="form-control" name="summer_friday" placeholder="ej. 6.0"></div>
+          <div class="form-group"><label class="form-label">Minutos café</label><input class="form-control" name="coffee_minutes" placeholder="15"></div>
+          <div class="form-group"><label class="form-label">Minutos comida</label><input class="form-control" name="lunch_minutes" placeholder="30"></div>
+        </div>
+        <div class="form-actions" style="margin-top:12px;"><button class="btn-primary" type="submit">Guardar año</button></div>
+      </form>
       <table class="sheet">
         <thead>
           <tr><th>Año</th><th>Inv Mon-Thu</th><th>Inv Fri</th><th>Ver Mon-Thu</th><th>Ver Fri</th><th>Café</th><th>Comida</th><th>Creado</th></tr>
