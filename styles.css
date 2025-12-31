@@ -102,6 +102,73 @@ a:hover { color: var(--primary-dark); }
     .menu-user .menu-user-name { display: none; }
 }
 
+/* ==========================
+   Modern colorful theme (Pi-hole-like)
+   ========================== */
+:root {
+    --brand-primary: #ff4757;    /* coral/red */
+    --brand-accent: #1dd1a1;     /* mint */
+    --brand-secondary: #3742fa;  /* vivid blue */
+    --bg-color: #0f1724;         /* deep navy */
+    --bg-main: linear-gradient(180deg,#08101a 0%, #0f1724 100%);
+    --bg-secondary: rgba(255,255,255,0.02);
+    --surface-color: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    --text-color: #e6eef8;
+    --text-primary: #e6eef8;
+    --text-secondary: #b8d3ff;
+    --text-muted: #9fb7d6;
+    --border-color: rgba(255,255,255,0.06);
+}
+
+body {
+    background: var(--bg-main);
+    color: var(--text-color);
+}
+
+/* Header and sidebar vibrant */
+.header { background: linear-gradient(90deg, rgba(55,66,250,0.95), rgba(255,71,87,0.95)); color: white; box-shadow: 0 8px 30px rgba(8,10,20,0.6); }
+.sidebar { background: linear-gradient(180deg, rgba(8,10,20,0.6), rgba(12,18,28,0.6)); border-right: 1px solid rgba(255,255,255,0.03); }
+.sidebar .menu-item { color: var(--text-muted); }
+.sidebar .menu-item:hover, .sidebar .menu-item.active { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+
+/* Cards: glassy, accented */
+.card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 6px 24px rgba(2,6,23,0.6); }
+.card h1, .card h3, .card h4 { color: var(--text-primary); }
+.dashboard-cards .card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-left: 6px solid var(--brand-accent); }
+
+/* Buttons */
+.btn-primary { background: linear-gradient(90deg, var(--brand-secondary), var(--brand-primary)); color: white; box-shadow: 0 6px 18px rgba(55,66,250,0.18); }
+.btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.06); color: var(--text-primary); }
+
+/* Form controls */
+.form-control, .form-select, .form-textarea { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); color: var(--text-primary); }
+.form-control:focus { box-shadow: 0 6px 18px rgba(29,209,161,0.08); border-color: var(--brand-accent); }
+
+/* Badges */
+.badge { background: linear-gradient(90deg, var(--brand-accent), var(--brand-secondary)); color: #042026; font-weight:700; }
+.badge-danger { background: linear-gradient(90deg,#ff6b81,#ff4757); color: white; }
+.badge-primary { background: linear-gradient(90deg,#74b9ff,#3742fa); color: white; }
+
+/* Table */
+.sheet thead th { background: rgba(255,255,255,0.03); color: var(--text-secondary); border-bottom: 1px solid rgba(255,255,255,0.04); }
+.sheet tr { border-bottom: 1px solid rgba(255,255,255,0.02); }
+
+/* Sparklines - accent stroke */
+svg polyline { stroke: var(--brand-accent) !important; stroke-linecap: round; stroke-linejoin: round; }
+
+/* User menu */
+.menu-user { background: rgba(255,255,255,0.02); border-radius: 10px; padding: 6px 10px; }
+
+/* Small responsive tweaks to keep airy spacing */
+@media (max-width:900px){
+  .dashboard-cards { grid-template-columns: 1fr !important; }
+  .sidebar { display:none; }
+}
+
+/* subtle transitions */
+* { transition: all 0.12s ease-in-out; }
+
+
 /* ===== Sidebar ===== */
 .sidebar-header { padding: 1.5rem; border-bottom: 1px solid var(--border-color); }
 .logo { font-size: 1.5rem; font-weight: 700; color: var(--primary-color); display: flex; align-items: center; gap: 0.75rem; }
@@ -169,6 +236,19 @@ body.mobile-menu-open .sidebar {
     background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
     color: var(--text-on-primary, #ffffff);
 }
+/* Dashboard-specific card tweaks */
+.dashboard-cards .card { padding: 14px; display:flex; flex-direction:column; justify-content:space-between; min-height:110px; }
+.dashboard-cards .card h4 { margin: 0 0 8px 0; font-size: 0.95rem; font-weight:600; color:var(--text-secondary); }
+.dashboard-cards .card .muted { margin-top:6px; font-size:0.85rem; }
+.dashboard-cards .card a.card-link { color: inherit; text-decoration: none; display:block; height:100%; }
+.dashboard-cards .card .value { font-size:1.35rem; font-weight:700; color:var(--primary-color); }
+.dashboard-cards .card .sparkline { width:120px; height:28px; display:inline-block; vertical-align:middle; }
+
+/* Table sparkline cell */
+.sheet td .sparkline { width:160px; height:32px; display:inline-block; }
+
+/* Make cards responsive */
+@media (max-width: 720px) { .dashboard-cards { grid-template-columns: 1fr !important; } }
 
 /* Utility helpers to avoid inline styles */
 .card-header--padded {
@@ -678,6 +758,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 /* Global form styles */
 .form-wrapper { background: var(--surface-color); border: 1px solid var(--border-color); padding: 16px; border-radius: 8px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.form-grid.single-column { grid-template-columns: 1fr; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-label { font-weight: 600; color: var(--text-primary); }
 .form-help { font-size: 12px; color: var(--text-muted); }
@@ -789,5 +870,29 @@ tbody.month-group .month-header.collapsed { opacity: 0.85; }
 
 /* Slightly dim weekend header color to differentiate */
 tbody.month-group.collapsed tr.weekend td:not(.month) { opacity: 0.95; }
+
+/* Holiday highlight (general) */
+.sheet tbody tr.holiday td {
+    background-color: rgba(255, 230, 230, 0.8); /* light red/pink */
+}
+.sheet tbody tr.holiday td:first-child {
+    position: relative;
+    padding-left: 28px;
+}
+.sheet tbody tr.holiday td:first-child::before {
+    content: "🎉";
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    opacity: 0.95;
+}
+
+/* Vacation highlight */
+.sheet tbody tr.vacation td { background-color: rgba(230, 245, 255, 0.85); }
+.sheet tbody tr.personal td { background-color: rgba(235, 255, 230, 0.85); }
+.sheet tbody tr.illness td { background-color: rgba(255, 250, 230, 0.85); }
+.sheet tbody tr.permiso td { background-color: rgba(240, 245, 255, 0.85); }
 
 

@@ -122,6 +122,7 @@ $c = get_config();
         <div class="form-actions" style="margin-top:12px;"><button class="btn-primary" type="submit">Guardar configuración</button><button class="btn-secondary" type="button" onclick="location.reload();">Cancelar</button></div>
       </div>
     </form>
+    <div style="margin-top:12px;"><a class="btn" href="years.php">Gestionar años</a></div>
     <div class="footer small">Config stored in <strong>DB (app_settings.site_config)</strong></div>
   </div>
 </div>

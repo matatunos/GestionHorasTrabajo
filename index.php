@@ -9,7 +9,7 @@ $pdo = get_pdo();
 
 // selected year from GET or default current year
 $year = intval($_GET['year'] ?? date('Y'));
-$config = get_year_config($year);
+$config = get_year_config($year, $user['id']);
 
 // filters from GET
 $hideWeekends = !empty($_GET['hide_weekends']);
@@ -59,10 +59,15 @@ foreach ($rows as $r) { $entries[$r['date']] = $r; }
 // load holidays for year
 $holidayMap = [];
   try {
-    $hstmt = $pdo->prepare('SELECT date,label,type FROM holidays WHERE year = ?');
-    $hstmt->execute([$year]);
+    $hstmt = $pdo->prepare('SELECT date,label,type,annual,user_id FROM holidays WHERE (YEAR(date) = ? OR annual = 1) AND (user_id IS NULL OR user_id = ?)');
+    $hstmt->execute([$year, $user['id']]);
     foreach ($hstmt->fetchAll() as $h) {
-      $holidayMap[$h['date']] = ['label' => $h['label'], 'type' => $h['type']];
+      // if this is an annual holiday stored with original year, map it to the selected year for display
+      $keyDate = $h['date'];
+      if (!empty($h['annual'])) {
+        $keyDate = sprintf('%04d-%s', $year, substr($h['date'],5));
+      }
+      $holidayMap[$keyDate] = ['label' => $h['label'], 'type' => $h['type']];
     }
   } catch (Throwable $e) { /* ignore if table missing */ }
 ?>

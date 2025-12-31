@@ -1,7 +1,6 @@
--- Schema for GestionHorasTrabajo
 CREATE DATABASE IF NOT EXISTS gestion_horas CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE gestion_horas;
-
+  date DATE NOT NULL,
+  UNIQUE KEY date_unique (date)
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(100) NOT NULL UNIQUE,

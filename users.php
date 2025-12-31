@@ -5,13 +5,14 @@ $pdo = get_pdo();
 
 // add user
 if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['username'])){
-    $u = $_POST['username'];
-    $p = $_POST['password'];
-    $is_admin = isset($_POST['is_admin']) ? 1 : 0;
-    $hash = password_hash($p, PASSWORD_DEFAULT);
-    $stmt = $pdo->prepare('INSERT INTO users (username,password,is_admin) VALUES (?,?,?)');
-    $stmt->execute([$u,$hash,$is_admin]);
-    header('Location: users.php'); exit;
+  require_once __DIR__ . '/lib.php';
+  $u = $_POST['username'];
+  $p = $_POST['password'];
+  $is_admin = post_flag('is_admin');
+  $hash = password_hash($p, PASSWORD_DEFAULT);
+  $stmt = $pdo->prepare('INSERT INTO users (username,password,is_admin) VALUES (?,?,?)');
+  $stmt->execute([$u,$hash,$is_admin]);
+  header('Location: users.php'); exit;
 }
 
 $rows = $pdo->query('SELECT id,username,is_admin,created_at FROM users ORDER BY id')->fetchAll();
@@ -52,7 +53,7 @@ $rows = $pdo->query('SELECT id,username,is_admin,created_at FROM users ORDER BY 
       <div class="form-grid">
         <div class="form-group"><label class="form-label">Usuario</label><input class="form-control" name="username" required></div>
         <div class="form-group"><label class="form-label">Contraseña</label><input class="form-control" type="password" name="password" required></div>
-        <div class="form-group"><label class="form-check"><input type="checkbox" name="is_admin"> Administrador</label></div>
+        <div class="form-group"><?php echo render_checkbox('is_admin', null, 'Administrador'); ?></div>
       </div>
       <div class="form-actions" style="margin-top:12px;"><button class="btn-primary" type="submit">Añadir</button></div>
     </form>
