@@ -341,7 +341,7 @@ function svg_compare_chart(array $dates, array $worked, array $expected, $w=700,
       foreach ($dayLabels as $idx => $d) {
         $ts = strtotime($d);
         $weekKey = date('oW', $ts); // ISO week-year + week
-        if (!isset($weeks[$weekKey])) $weeks[$weekKey] = ['worked'=>0,'expected'=>0,'days'=>0,'label'=>date('o \W\W', $ts)];
+        if (!isset($weeks[$weekKey])) $weeks[$weekKey] = ['worked'=>0,'expected'=>0,'days'=>0,'label'=> date('o', $ts) . ' W' . date('W', $ts)];
         $weeks[$weekKey]['worked'] += $dailyWorked[$idx];
         $weeks[$weekKey]['expected'] += $dailyExpected[$idx];
         $weeks[$weekKey]['days']++;
