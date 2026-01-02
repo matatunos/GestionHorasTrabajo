@@ -12,6 +12,15 @@ $currentYear = date('Y');
 $currentMonth = intval(date('n'));
 $config = get_year_config($year, $user['id']);
 
+// Date range filter for custom charts
+$start_date = $_GET['start_date'] ?? '';
+$end_date = $_GET['end_date'] ?? '';
+if (!$start_date || !$end_date) {
+  // default last 30 days
+  $end_date = $today;
+  $start_date = date('Y-m-d', strtotime($end_date . ' -29 days'));
+}
+
 // allow user to force recompute their cached summary for this year
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'force_recalc') {
   // compute monthly totals for this user and store in app_settings
@@ -153,18 +162,64 @@ function svg_sparkline(array $values, $w=120, $h=28){
   return $svg;
 }
 
+function svg_compare_chart(array $dates, array $worked, array $expected, $w=700, $h=220){
+  // dates: array of Y-m-d labels; worked & expected: minutes per day
+  $valsW = array_values($worked);
+  $valsE = array_values($expected);
+  $max = max(max($valsW) ?: 1, max($valsE) ?: 1);
+  $min = 0;
+  $count = count($dates) ?: 1;
+  $pad = 20;
+  $plotW = $w - $pad*2;
+  $plotH = $h - $pad*2;
+  $polyW = [];
+  $polyE = [];
+  for ($i=0;$i<$count;$i++){
+    $x = $pad + ($i / max(1, $count-1)) * $plotW;
+    $yW = $pad + ($plotH - (($valsW[$i]-$min)/max(1,$max-$min))*$plotH);
+    $yE = $pad + ($plotH - (($valsE[$i]-$min)/max(1,$max-$min))*$plotH);
+    $polyW[] = round($x,2) . ',' . round($yW,2);
+    $polyE[] = round($x,2) . ',' . round($yE,2);
+  }
+  $polyW = implode(' ', $polyW);
+  $polyE = implode(' ', $polyE);
+  $svg = '<svg width="' . $w . '" height="' . $h . '" viewBox="0 0 ' . $w . ' ' . $h . '" xmlns="http://www.w3.org/2000/svg">';
+  // axes
+  $svg .= '<rect x="' . $pad . '" y="' . $pad . '" width="' . $plotW . '" height="' . $plotH . '" fill="none" stroke="#ddd" stroke-width="0.5"/>';
+  // expected line (dashed)
+  $svg .= '<polyline fill="none" stroke="#e11d48" stroke-width="2" stroke-dasharray="6 4" points="' . $polyE . '" />';
+  // worked line
+  $svg .= '<polyline fill="none" stroke="#06b6d4" stroke-width="2" points="' . $polyW . '" />';
+  // legend
+  $svg .= '<g transform="translate(' . ($w-180) . ',10)"><rect width="160" height="36" rx="6" fill="#ffffff" stroke="#eee"/></g>';
+  $svg .= '<text x="' . ($w-170) . '" y="28" font-size="12" fill="#e11d48">— Esperadas</text>';
+  $svg .= '<text x="' . ($w-170) . '" y="44" font-size="12" fill="#06b6d4">— Realizadas</text>';
+  $svg .= '</svg>';
+  return $svg;
+}
+
 ?>
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard</title><link rel="stylesheet" href="styles.css"></head><body>
 <?php include __DIR__ . '/header.php'; ?>
 <div class="container">
   <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
       <h1>Dashboard — <?php echo $year; ?></h1>
-      <form method="post" style="margin:0;">
-        <input type="hidden" name="action" value="force_recalc">
-        <button class="btn" type="submit">Recalcular ahora</button>
-      </form>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <form method="get" style="display:flex;gap:8px;align-items:center;margin:0;"> 
+          <input type="hidden" name="year" value="<?php echo htmlspecialchars($year); ?>">
+          <label class="small">Desde</label>
+          <input class="form-control" type="date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>">
+          <label class="small">Hasta</label>
+          <input class="form-control" type="date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>">
+          <button class="btn" type="submit">Filtrar</button>
+        </form>
+        <form method="post" style="margin:0;">
+          <input type="hidden" name="action" value="force_recalc">
+          <button class="btn" type="submit">Recalcular ahora</button>
+        </form>
+      </div>
     </div>
     <div class="dashboard-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px;">
       <?php
@@ -248,6 +303,58 @@ function svg_sparkline(array $values, $w=120, $h=28){
       </table>
     </div>
   </div>
+    
+    <h3 style="margin-top:18px;">Comparativa diaria (Esperadas vs Realizadas)</h3>
+    <?php
+      // Build daily series for the selected range
+      $ds = strtotime($start_date); $de = strtotime($end_date);
+      $dayLabels = [];
+      $dailyWorked = [];
+      $dailyExpected = [];
+      for ($t = $ds; $t <= $de; $t += 86400) {
+        $d = date('Y-m-d', $t);
+        $dayLabels[] = $d;
+        $e = $entries[$d] ?? ['date'=>$d];
+        if (isset($holidayMap[$d])) { $e['is_holiday'] = true; $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday'; }
+        $calc = compute_day($e, get_year_config(intval(date('Y', $t)), $user['id']));
+        $dailyWorked[] = intval($calc['worked_minutes'] ?? 0);
+        $dailyExpected[] = intval($calc['expected_minutes'] ?? 0);
+      }
+      // weekly aggregates
+      $weeks = [];
+      foreach ($dayLabels as $idx => $d) {
+        $ts = strtotime($d);
+        $weekKey = date('oW', $ts); // ISO week-year + week
+        if (!isset($weeks[$weekKey])) $weeks[$weekKey] = ['worked'=>0,'expected'=>0,'days'=>0,'label'=>date('o \W\W', $ts)];
+        $weeks[$weekKey]['worked'] += $dailyWorked[$idx];
+        $weeks[$weekKey]['expected'] += $dailyExpected[$idx];
+        $weeks[$weekKey]['days']++;
+      }
+    ?>
+    <div class="card" style="margin-top:8px;">
+      <div style="padding:12px;">
+        <div class="muted">Rango: <?php echo htmlspecialchars($start_date); ?> — <?php echo htmlspecialchars($end_date); ?></div>
+        <div style="margin-top:12px;">
+          <?php echo svg_compare_chart($dayLabels, $dailyWorked, $dailyExpected, 900, 260); ?>
+        </div>
+        <h4 style="margin-top:12px;">Exceso por semana</h4>
+        <div class="table-responsive">
+          <table class="sheet compact">
+            <thead><tr><th>Semana</th><th>Trabajadas</th><th>Esperadas</th><th>Saldo</th></tr></thead>
+            <tbody>
+            <?php foreach ($weeks as $wk => $vals): $bal = $vals['worked'] - $vals['expected']; ?>
+              <tr>
+                <td><?php echo htmlspecialchars($vals['label']); ?></td>
+                <td><?php echo fmt($vals['worked']); ?></td>
+                <td><?php echo fmt($vals['expected']); ?></td>
+                <td><?php echo fmt($bal); ?></td>
+              </tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 </div>
 <?php include __DIR__ . '/footer.php'; ?>
 </body></html>
