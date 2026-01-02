@@ -216,7 +216,10 @@ function svg_compare_chart(array $dates, array $worked, array $expected, $w=700,
 
 ?>
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard</title><link rel="stylesheet" href="styles.css"></head><body>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard</title><link rel="stylesheet" href="styles.css">
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head><body>
 <?php include __DIR__ . '/header.php'; ?>
 <div class="container">
   <div class="card">
@@ -351,7 +354,48 @@ function svg_compare_chart(array $dates, array $worked, array $expected, $w=700,
       <div style="padding:12px;">
         <div class="muted">Rango: <?php echo htmlspecialchars($start_date); ?> — <?php echo htmlspecialchars($end_date); ?></div>
         <div style="margin-top:12px;">
-          <?php echo svg_compare_chart($dayLabels, $dailyWorked, $dailyExpected, 900, 260); ?>
+          <canvas id="compareChart" width="900" height="260"></canvas>
+          <script>
+            (function(){
+              const labels = <?php echo json_encode($dayLabels); ?>;
+              const dataWorked = <?php echo json_encode($dailyWorked); ?>; // minutes
+              const dataExpected = <?php echo json_encode($dailyExpected); ?>; // minutes
+              function fmtMinToHMS(mins){ const h = Math.floor(mins/60); const m = Math.abs(mins % 60); return h + ':' + String(m).padStart(2,'0'); }
+              const ctx = document.getElementById('compareChart').getContext('2d');
+              const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                  labels: labels.map(d => { const dt = new Date(d); return (dt.getDate()<10? '0'+dt.getDate():dt.getDate()) + '/' + (dt.getMonth()+1<10? '0'+(dt.getMonth()+1):dt.getMonth()+1); }),
+                  datasets: [
+                    { label: 'Esperadas', data: dataExpected, borderColor: '#e11d48', backgroundColor: 'rgba(225,29,72,0.05)', borderDash: [6,4], tension: 0.2 },
+                    { label: 'Realizadas', data: dataWorked, borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,0.06)', tension: 0.2 }
+                  ]
+                },
+                options: {
+                  maintainAspectRatio: false,
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      ticks: {
+                        callback: function(value){ return fmtMinToHMS(value); }
+                      }
+                    },
+                    x: {
+                      ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }
+                    }
+                  },
+                  plugins: {
+                    tooltip: {
+                      callbacks: {
+                        label: function(ctx){ return ctx.dataset.label + ': ' + fmtMinToHMS(ctx.parsed.y); }
+                      }
+                    },
+                    legend: { position: 'top' }
+                  }
+                }
+              });
+            })();
+          </script>
         </div>
         <h4 style="margin-top:12px;">Exceso por semana</h4>
         <div class="table-responsive">
