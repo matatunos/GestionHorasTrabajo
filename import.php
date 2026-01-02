@@ -39,19 +39,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
       $lunch_out = null;
       $lunch_in = null;
       
-      if (count($horas) >= 4) {
-        // Asumimos: start, coffee_out, coffee_in, lunch_out, lunch_in, end
-        // o alguna variación similar
+      if (count($horas) >= 6) {
+        // Formato completo: start, coffee_out, coffee_in, lunch_out, lunch_in, end
         $coffee_out = $horas[1] ?? null;
         $coffee_in = $horas[2] ?? null;
-        if (count($horas) >= 6) {
-          $lunch_out = $horas[3] ?? null;
-          $lunch_in = $horas[4] ?? null;
-          $end = $horas[5] ?? null;
-        } elseif (count($horas) >= 4) {
-          $lunch_out = $horas[2] ?? null;
-          $lunch_in = $horas[3] ?? null;
-        }
+        $lunch_out = $horas[3] ?? null;
+        $lunch_in = $horas[4] ?? null;
+        $end = $horas[5] ?? null;
+      } elseif (count($horas) == 5) {
+        // Sin coffee break: start, lunch_out, lunch_in, end (o similar)
+        $lunch_out = $horas[1] ?? null;
+        $lunch_in = $horas[2] ?? null;
+        $end = $horas[3] ?? null;
+      } elseif (count($horas) == 4) {
+        // Dos pausas: start, pausa1_out, pausa1_in, end
+        $lunch_out = $horas[1] ?? null;
+        $lunch_in = $horas[2] ?? null;
+        $end = $horas[3] ?? null;
       } elseif (count($horas) == 3) {
         $lunch_out = $horas[1] ?? null;
         $lunch_in = $horas[2] ?? null;

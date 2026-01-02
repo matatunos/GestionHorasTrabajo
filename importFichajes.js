@@ -26,6 +26,8 @@ const MESES_MAP = {
   'dic': '12', 'diciembre': '12', 'dec': '12', 'december': '12'
 };
 
+const EMPTY_CELL_MARKER = '-';
+
 /**
  * Parsea un archivo HTML y extrae los registros de fichajes
  * @param {string} htmlContent - Contenido del archivo HTML
@@ -49,7 +51,13 @@ function parseFichajesHTML(htmlContent, year) {
   // Buscar la fila de encabezado para identificar columnas
   let dataStartIndex = 0;
   for (let i = 0; i < rows.length; i++) {
-    const headers = rows[i].querySelectorAll('th');
+    const row = rows[i];
+    // Detener si llegamos a un tbody (ya encontramos el thead)
+    if (row.parentElement.tagName === 'TBODY') {
+      dataStartIndex = i;
+      break;
+    }
+    const headers = row.querySelectorAll('th');
     if (headers.length > 0) {
       dataStartIndex = i + 1;
       break;
@@ -96,12 +104,12 @@ function parseFichajesHTML(htmlContent, year) {
         balance = cellTexts[cellTexts.length - 1];
         
         // Las horas están entre la fecha y el balance
-        horas = cellTexts.slice(2, cellTexts.length - 1).filter(h => h && h !== '-');
+        horas = cellTexts.slice(2, cellTexts.length - 1).filter(h => h && h !== EMPTY_CELL_MARKER);
       } else {
         // Estrategia 2: Primera columna es fecha directamente
         fecha = cellTexts[0];
         balance = cellTexts[cellTexts.length - 1];
-        horas = cellTexts.slice(1, cellTexts.length - 1).filter(h => h && h !== '-');
+        horas = cellTexts.slice(1, cellTexts.length - 1).filter(h => h && h !== EMPTY_CELL_MARKER);
       }
     } else {
       // Caso simple: solo fecha y una columna más

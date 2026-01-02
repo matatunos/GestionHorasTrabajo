@@ -264,7 +264,7 @@
         const validacion = window.importFichajes.validarRegistros(registros);
         
         if (!validacion.valid) {
-          alert('Errores en los registros:\\n' + validacion.errors.join('\\n'));
+          alert('Errores en los registros:\n' + validacion.errors.join('\n'));
           return;
         }
         
