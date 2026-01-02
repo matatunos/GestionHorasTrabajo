@@ -306,20 +306,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
     const reader = new FileReader();
     reader.onload = function(e) {
       const htmlContent = e.target.result;
-      
+
       try {
-        const registros = window.importFichajes.parseFichajesHTML(htmlContent, year);
+        let registros = window.importFichajes.parseFichajesHTML(htmlContent, year);
+
+        // If client-side parser found nothing, try server-side parser
+        if ((!registros || registros.length === 0) && file) {
+          const fd = new FormData();
+          fd.append('file', file);
+          fetch('scripts/parse_tragsa.php', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(data => {
+              if (data && data.ok && Array.isArray(data.records) && data.records.length > 0) {
+                registros = data.records.map(function(r){
+                  return {
+                    dia: r.dia || '',
+                    fecha: r.fecha || '',
+                    fechaISO: r.fechaISO || '',
+                    horas: r.horas || [],
+                    balance: r.balance || ''
+                  };
+                });
+              }
+
+              const validacion = window.importFichajes.validarRegistros(registros);
+              if (!validacion.valid) {
+                alert('Errores en los registros:\n' + validacion.errors.join('\n'));
+                return;
+              }
+
+              currentRecords = registros;
+              displayPreview(registros);
+              previewSection.classList.add('show');
+              importDataInput.value = JSON.stringify(registros);
+              importYearInput.value = year;
+            })
+            .catch(err => {
+              alert('Error al procesar el archivo en el servidor: ' + err.message);
+              console.error(err);
+            });
+
+          return; // server will finalize
+        }
+
         const validacion = window.importFichajes.validarRegistros(registros);
-        
+
         if (!validacion.valid) {
           alert('Errores en los registros:\n' + validacion.errors.join('\n'));
           return;
         }
-        
+
         currentRecords = registros;
         displayPreview(registros);
         previewSection.classList.add('show');
-        
+
         // Preparar datos para importación
         importDataInput.value = JSON.stringify(registros);
         importYearInput.value = year;
