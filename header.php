@@ -7,7 +7,9 @@ try { $current = current_user(); } catch (Throwable $e) { $current = null; }
 
 // prepare year options from entries table (fallback to current year)
 $years = [];
-$selYear = intval($_GET['year'] ?? date('Y'));
+// Prefer a $year variable provided by the including page (index.php sets it),
+// otherwise fall back to GET or current year.
+$selYear = isset($year) ? intval($year) : intval($_GET['year'] ?? date('Y'));
 try {
     $pdo = get_pdo();
     if ($pdo) {
@@ -15,24 +17,33 @@ try {
         foreach ($yearRows as $r) $years[] = intval($r['y']);
     }
 } catch (Throwable $e) { /* ignore */ }
+// Ensure the selected year appears in the list even if there are no DB rows for it
+if (!in_array($selYear, $years, true)) {
+  array_unshift($years, intval($selYear));
+}
 if (empty($years)) { $years = [intval(date('Y'))]; }
 ?>
 <div class="app-container">
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-brand-visual">
-        <div class="sidebar-brand-logo logo"><h1>GestionHoras</h1></div>
+        <a class="sidebar-brand-logo logo" href="dashboard.php"><h1>GestionHoras</h1></a>
       </div>
     </div>
     <nav class="sidebar-menu">
       <div class="menu-section">
-        <a class="menu-item" href="index.php">Inicio</a>
-        <a class="menu-item" href="years.php">Años</a>
+        <?php if (!empty($current)): ?>
+          <a class="menu-item" href="dashboard.php">Dashboard</a>
+        <?php endif; ?>
+        <a class="menu-item" href="index.php">Registro horario</a>
+        <!-- 'Años' link removed: management consolidated into settings.php -->
         <a class="menu-item" href="import.php">Importar Fichajes</a>
         <?php if (!empty($current) && $current['is_admin']): ?>
           <a class="menu-item" href="settings.php">Configuración</a>
           <a class="menu-item" href="users.php">Usuarios</a>
-          <a class="menu-item" href="holidays.php">Festivos</a>
+        <?php endif; ?>
+        <?php if (!empty($current)): ?>
+          <a class="menu-item" href="dashboard.php">Dashboard</a>
         <?php endif; ?>
 
         <?php if (!empty($current)): ?>
@@ -55,8 +66,8 @@ if (empty($years)) { $years = [intval(date('Y'))]; }
     <?php $site_cfg = get_config(); $site_name = $site_cfg['site_name'] ?? 'GestionHoras'; ?>
     <header class="header">
       <div class="header-brand">
-        <div class="header-brand-logo"><!-- optional logo --></div>
-        <div class="header-brand-text"><?php echo htmlspecialchars($site_name); ?></div>
+        <a class="header-brand-logo" href="dashboard.php"><!-- optional logo --></a>
+        <a class="header-brand-text" href="dashboard.php"><?php echo htmlspecialchars($site_name); ?></a>
       </div>
       <div class="header-actions">
         <form method="get" action="index.php" style="display:inline;margin-right:8px;">

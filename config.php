@@ -58,7 +58,7 @@ function get_config(){
  * Get configuration for a specific year. Falls back to global config and
  * applies DB overrides from `year_configs` table when present.
  */
-function get_year_config(int $year){
+function get_year_config(int $year, int $user_id = null){
     $conf = get_config();
     // try reading from DB if available
     try {
@@ -69,7 +69,9 @@ function get_year_config(int $year){
         if ($pdo) {
             // ensure table exists
             $pdo->exec("CREATE TABLE IF NOT EXISTS year_configs (
-                year INT PRIMARY KEY,
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                year INT NOT NULL,
+                user_id INT DEFAULT NULL,
                 mon_thu DOUBLE DEFAULT NULL,
                 friday DOUBLE DEFAULT NULL,
                 -- summer overrides
@@ -77,12 +79,24 @@ function get_year_config(int $year){
                 summer_friday DOUBLE DEFAULT NULL,
                 coffee_minutes INT DEFAULT NULL,
                 lunch_minutes INT DEFAULT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY user_year (user_id, year)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-            $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? LIMIT 1');
-            $stmt->execute([$year]);
-            $row = $stmt->fetch();
+            // prefer user-specific override when user_id provided
+            if ($user_id !== null) {
+                $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? AND user_id = ? LIMIT 1');
+                $stmt->execute([$year, $user_id]);
+                $row = $stmt->fetch();
+            } else {
+                $row = false;
+            }
+            // fallback to global config (user_id IS NULL)
+            if (!$row) {
+                $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? AND user_id IS NULL LIMIT 1');
+                $stmt->execute([$year]);
+                $row = $stmt->fetch();
+            }
             if ($row) {
                 // merge numeric overrides for winter
                 if ($row['mon_thu'] !== null) $conf['work_hours']['winter']['mon_thu'] = floatval($row['mon_thu']);

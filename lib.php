@@ -1,6 +1,35 @@
 <?php
 require_once __DIR__ . '/config.php';
 
+/**
+ * Parse a boolean-like checkbox value from POST and return 1 or 0.
+ */
+function post_flag(string $name): int {
+    return !empty($_POST[$name]) ? 1 : 0;
+}
+
+/**
+ * Render a checkbox input with label. Returns HTML string.
+ */
+function render_checkbox(string $name, $checked = null, string $label = 'Repite anualmente', array $attrs = []): string {
+    // $checked can be: null (auto-detect), bool, int, or string
+    if ($checked === null) {
+        // prefer POST value if available
+        $checked = !empty($_POST[$name]);
+    } else {
+        $checked = (bool)$checked;
+    }
+    $atts = '';
+    foreach ($attrs as $k => $v) {
+        $atts .= ' ' . htmlspecialchars($k) . '="' . htmlspecialchars($v) . '"';
+    }
+    $html = '<label class="form-label">';
+    $html .= '<input type="checkbox" name="' . htmlspecialchars($name) . '"' . ($checked ? ' checked' : '') . $atts . '>'; 
+    $html .= ' ' . htmlspecialchars($label);
+    $html .= '</label>';
+    return $html;
+}
+
 function is_summer_date(string $date, array $config): bool {
     $y = date('Y', strtotime($date));
     $start = strtotime("$y-" . $config['summer_start']);
@@ -30,7 +59,10 @@ function compute_day(array $entry, array $config = null): array {
     // if no config provided, fetch by year
     if ($config === null) {
         $year = date('Y', strtotime($entry['date']));
-        $config = get_year_config(intval($year));
+        // try to use current user if available
+        $user_id = null;
+        if (function_exists('current_user')) { $cu = current_user(); if ($cu) $user_id = $cu['id']; }
+        $config = get_year_config(intval($year), $user_id);
     }
     $isSummer = is_summer_date($entry['date'], $config);
     $weekday = date('N', strtotime($entry['date'])); // 1-7
@@ -64,8 +96,12 @@ function compute_day(array $entry, array $config = null): array {
 
     $worked_minutes = null;
     if ($start !== null && $end !== null) {
-        // coffee counts as work, lunch does not
-        $worked_minutes = ($end - $start) - $lunch_duration;
+        // coffee counts as work. Lunch does NOT count as worked time,
+        // and its actual duration should not affect worked minutes.
+        // Use configured nominal lunch minutes to subtract from the day
+        // (so actual lunch duration is only informative via lunch_balance).
+        $nominal_lunch = intval($config['lunch_minutes']);
+        $worked_minutes = ($end - $start) - $nominal_lunch;
     } else {
         $worked_minutes = 0;
     }

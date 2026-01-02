@@ -6,7 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'){
     $u = $_POST['username'] ?? '';
     $p = $_POST['password'] ?? '';
     if (do_login($u, $p)){
-        header('Location: index.php'); exit;
+      header('Location: dashboard.php'); exit;
     } else {
         $error = 'Credenciales inválidas';
     }

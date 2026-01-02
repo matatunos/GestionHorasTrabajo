@@ -102,6 +102,73 @@ a:hover { color: var(--primary-dark); }
     .menu-user .menu-user-name { display: none; }
 }
 
+/* ==========================
+   Modern colorful theme (Pi-hole-like)
+   ========================== */
+:root {
+    --brand-primary: #ff4757;    /* coral/red */
+    --brand-accent: #1dd1a1;     /* mint */
+    --brand-secondary: #3742fa;  /* vivid blue */
+    --bg-color: #0f1724;         /* deep navy */
+    --bg-main: linear-gradient(180deg,#08101a 0%, #0f1724 100%);
+    --bg-secondary: rgba(255,255,255,0.02);
+    --surface-color: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    --text-color: #e6eef8;
+    --text-primary: #e6eef8;
+    --text-secondary: #b8d3ff;
+    --text-muted: #9fb7d6;
+    --border-color: rgba(255,255,255,0.06);
+}
+
+body {
+    background: var(--bg-main);
+    color: var(--text-color);
+}
+
+/* Header and sidebar vibrant */
+.header { background: linear-gradient(90deg, rgba(55,66,250,0.95), rgba(255,71,87,0.95)); color: white; box-shadow: 0 8px 30px rgba(8,10,20,0.6); }
+.sidebar { background: linear-gradient(180deg, rgba(8,10,20,0.6), rgba(12,18,28,0.6)); border-right: 1px solid rgba(255,255,255,0.03); }
+.sidebar .menu-item { color: var(--text-muted); }
+.sidebar .menu-item:hover, .sidebar .menu-item.active { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+
+/* Cards: glassy, accented */
+.card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 6px 24px rgba(2,6,23,0.6); }
+.card h1, .card h3, .card h4 { color: var(--text-primary); }
+.dashboard-cards .card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-left: 6px solid var(--brand-accent); }
+
+/* Buttons */
+.btn-primary { background: linear-gradient(90deg, var(--brand-secondary), var(--brand-primary)); color: white; box-shadow: 0 6px 18px rgba(55,66,250,0.18); }
+.btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.06); color: var(--text-primary); }
+
+/* Form controls */
+.form-control, .form-select, .form-textarea { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); color: var(--text-primary); }
+.form-control:focus { box-shadow: 0 6px 18px rgba(29,209,161,0.08); border-color: var(--brand-accent); }
+
+/* Badges */
+.badge { background: linear-gradient(90deg, var(--brand-accent), var(--brand-secondary)); color: #042026; font-weight:700; }
+.badge-danger { background: linear-gradient(90deg,#ff6b81,#ff4757); color: white; }
+.badge-primary { background: linear-gradient(90deg,#74b9ff,#3742fa); color: white; }
+
+/* Table */
+.sheet thead th { background: rgba(255,255,255,0.03); color: var(--text-secondary); border-bottom: 1px solid rgba(255,255,255,0.04); }
+.sheet tr { border-bottom: 1px solid rgba(255,255,255,0.02); }
+
+/* Sparklines - accent stroke */
+svg polyline { stroke: var(--brand-accent) !important; stroke-linecap: round; stroke-linejoin: round; }
+
+/* User menu */
+.menu-user { background: rgba(255,255,255,0.02); border-radius: 10px; padding: 6px 10px; }
+
+/* Small responsive tweaks to keep airy spacing */
+@media (max-width:900px){
+  .dashboard-cards { grid-template-columns: 1fr !important; }
+  .sidebar { display:none; }
+}
+
+/* subtle transitions */
+* { transition: all 0.12s ease-in-out; }
+
+
 /* ===== Sidebar ===== */
 .sidebar-header { padding: 1.5rem; border-bottom: 1px solid var(--border-color); }
 .logo { font-size: 1.5rem; font-weight: 700; color: var(--primary-color); display: flex; align-items: center; gap: 0.75rem; }
@@ -169,6 +236,19 @@ body.mobile-menu-open .sidebar {
     background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
     color: var(--text-on-primary, #ffffff);
 }
+/* Dashboard-specific card tweaks */
+.dashboard-cards .card { padding: 14px; display:flex; flex-direction:column; justify-content:space-between; min-height:110px; }
+.dashboard-cards .card h4 { margin: 0 0 8px 0; font-size: 0.95rem; font-weight:600; color:var(--text-secondary); }
+.dashboard-cards .card .muted { margin-top:6px; font-size:0.85rem; }
+.dashboard-cards .card a.card-link { color: inherit; text-decoration: none; display:block; height:100%; }
+.dashboard-cards .card .value { font-size:1.35rem; font-weight:700; color:var(--primary-color); }
+.dashboard-cards .card .sparkline { width:120px; height:28px; display:inline-block; vertical-align:middle; }
+
+/* Table sparkline cell */
+.sheet td .sparkline { width:160px; height:32px; display:inline-block; }
+
+/* Make cards responsive */
+@media (max-width: 720px) { .dashboard-cards { grid-template-columns: 1fr !important; } }
 
 /* Utility helpers to avoid inline styles */
 .card-header--padded {
@@ -332,6 +412,240 @@ body .bulk-actions-bar {
     white-space: nowrap !important;
     overflow: hidden !important;
 }
+
+/* ==========================
+   Light modern theme overrides
+   ========================== */
+:root {
+    --brand-primary: #2563eb; /* muted blue */
+    --brand-secondary: #64748b; /* slate gray */
+    --brand-accent: #60a5fa; /* soft accent */
+
+    --bg-color: #f7f8fb; /* very light background */
+    --bg-main: #ffffff;
+    --bg-secondary: #f1f5f9;
+    --surface-color: #ffffff;
+    --text-color: #0f172a;
+    --text-primary: #0b1220;
+    --text-secondary: #475569;
+    --text-muted: #6b7280;
+    --border-color: #e6edf3;
+    --border-light: #f3f6f9;
+
+    --shadow-sm: 0 1px 4px rgba(16,24,40,0.04);
+    --shadow-md: 0 4px 12px rgba(16,24,40,0.06);
+    --shadow-lg: 0 8px 24px rgba(16,24,40,0.08);
+}
+
+body {
+    background: var(--bg-color);
+    color: var(--text-color);
+}
+
+/* Header & Sidebar: light surfaces, subtle shadows */
+.header {
+    background: var(--surface-color);
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+.sidebar {
+    background: var(--surface-color);
+    border-right: 1px solid var(--border-color);
+    box-shadow: none;
+}
+.sidebar .menu-item, .menu-item { color: var(--text-secondary); }
+.sidebar .menu-item:hover, .sidebar .menu-item.active { background: var(--bg-secondary); color: var(--text-primary); }
+
+/* Cards: white surface, soft rounded corners and subtle shadow */
+.card { background-color: var(--surface-color) !important; border-radius: 10px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); }
+.card-header { background: transparent !important; color: var(--text-primary) !important; border-bottom: 1px solid var(--border-light) !important; }
+.dashboard-cards .card { border-left: 4px solid transparent; }
+.dashboard-cards .card .value { color: var(--text-primary); }
+
+/* Buttons: flat, single-color, subtle shadow */
+.btn-primary { background: var(--brand-primary) !important; color: var(--text-on-primary, #ffffff) !important; box-shadow: var(--shadow-sm) !important; border: 1px solid rgba(0,0,0,0.04) !important; }
+.btn-secondary { background: transparent !important; border: 1px solid var(--border-color) !important; color: var(--text-primary) !important; }
+.period-btn, .disk-period-btn { background: var(--surface-color); border: 1px solid var(--border-color); color: var(--text-primary); box-shadow: none; }
+
+/* Badges: neutral, low-saturation */
+.badge { background: var(--bg-secondary); color: var(--text-primary); font-weight:600; }
+.badge-danger { background: rgba(220,38,38,0.12); color: var(--danger-color, #dc2626); }
+.badge-primary { background: rgba(37,99,235,0.12); color: var(--brand-primary); }
+
+/* Forms: light inputs */
+.form-control, .form-select, .form-textarea { background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-primary); box-shadow: none; }
+.form-control:focus { box-shadow: 0 6px 18px rgba(37,99,235,0.06); border-color: var(--brand-primary); }
+
+/* Sparklines stroke to match muted brand */
+svg polyline { stroke: var(--brand-primary) !important; }
+
+/* User menu simplified */
+.menu-user { background: transparent; padding: 0.25rem 0.5rem; border-radius: 8px; box-shadow: none; }
+.menu-user:hover { background: var(--bg-secondary); }
+
+/* Bulk actions bar: neutral background */
+.bulk-actions-bar { background: var(--surface-color); color: var(--text-primary); box-shadow: var(--shadow-md); border: 1px solid var(--border-color); }
+
+/* Reduce heavy transitions for a cleaner feel */
+* { transition: all 0.12s cubic-bezier(.2,.9,.3,1); }
+
+/* Ensure the date column in sheets stays on a single line */
+.sheet th:nth-child(1), .sheet td:nth-child(1) {
+    white-space: nowrap;
+    width: 1%;
+}
+
+/* Ensure action buttons (editar/borrar) remain on a single line */
+.sheet th:last-child, .sheet td:last-child {
+    white-space: nowrap;
+    width: 1%;
+}
+.sheet td:last-child .btn,
+.sheet td:last-child .edit-entry,
+.sheet td:last-child .delete-entry {
+    display: inline-block;
+    white-space: nowrap;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+.sheet td:last-child .btn:last-child { margin-right: 0; }
+
+/* Compact table mode to avoid horizontal overflow */
+.sheet.compact { font-size: 13px; }
+.sheet.compact th, .sheet.compact td { padding: 6px 8px; line-height: 1.2; }
+.sheet.compact .card-body { padding: 8px; }
+
+/* Smaller buttons inside tables */
+.sheet.compact .btn { padding: 4px 8px; font-size: 0.82rem; }
+.sheet.compact .btn.btn-danger { padding: 4px 7px; background-color: var(--danger-color) !important; color: #ffffff !important; border-color: transparent !important; }
+
+/* Fixed column widths for critical compacting (date, time columns, actions) */
+.sheet.compact th:nth-child(1), .sheet.compact td:nth-child(1) { width: 95px; }
+.sheet.compact th:nth-child(2), .sheet.compact td:nth-child(2),
+.sheet.compact th:nth-child(3), .sheet.compact td:nth-child(3),
+.sheet.compact th:nth-child(4), .sheet.compact td:nth-child(4),
+.sheet.compact th:nth-child(6), .sheet.compact td:nth-child(6),
+.sheet.compact th:nth-child(7), .sheet.compact td:nth-child(7),
+.sheet.compact th:nth-child(9), .sheet.compact td:nth-child(9) { width: 70px; }
+.sheet.compact th:nth-child(11), .sheet.compact td:nth-child(11) { width: 85px; }
+.sheet.compact th:nth-child(12), .sheet.compact td:nth-child(12) { width: 140px; }
+
+/* Make table container allow horizontal scroll but avoid unnecessary overflow */
+.table-responsive { overflow-x: auto; max-width: 100%; }
+
+@media (max-width: 900px) {
+    .sheet.compact th, .sheet.compact td { padding: 5px 6px; font-size: 12px; }
+    .sheet.compact th:nth-child(1), .sheet.compact td:nth-child(1) { width: 90px; }
+    .sheet.compact th:nth-child(12), .sheet.compact td:nth-child(12) { width: 110px; }
+    .sheet.compact .btn { padding: 3px 6px; font-size: 0.78rem; }
+}
+
+/* More aggressive compacting: fixed table layout and truncation */
+.sheet.compact { table-layout: fixed; }
+.sheet.compact td, .sheet.compact th { overflow: hidden; text-overflow: ellipsis; }
+.sheet.compact td:nth-child(12), .sheet.compact th:nth-child(12) { white-space: nowrap; }
+
+/* Icon buttons style */
+.icon-btn { padding: 4px 6px; width: 30px; text-align: center; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; }
+
+/* Responsive: hide less important columns on narrower screens to save space */
+@media (max-width: 1100px) {
+    /* hide coffee time columns */
+    .sheet.compact th:nth-child(3), .sheet.compact td:nth-child(3),
+    .sheet.compact th:nth-child(4), .sheet.compact td:nth-child(4) { display: none; }
+}
+@media (max-width: 900px) {
+    /* hide coffee balance and lunch columns */
+    .sheet.compact th:nth-child(5), .sheet.compact td:nth-child(5),
+    .sheet.compact th:nth-child(6), .sheet.compact td:nth-child(6),
+    .sheet.compact th:nth-child(7), .sheet.compact td:nth-child(7),
+    .sheet.compact th:nth-child(8), .sheet.compact td:nth-child(8) { display: none; }
+}
+@media (max-width: 700px) {
+    /* hide day balance and note to keep essential columns */
+    .sheet.compact th:nth-child(11), .sheet.compact td:nth-child(11),
+    .sheet.compact th:nth-child(12), .sheet.compact td:nth-child(12) { display: none; }
+}
+
+/* Prevent hiding of action/global columns for tables explicitly marked no-hide-actions */
+.sheet.compact.no-hide-actions th:last-child, .sheet.compact.no-hide-actions td:last-child,
+.sheet.compact.no-hide-actions th:nth-last-child(2), .sheet.compact.no-hide-actions td:nth-last-child(2) {
+    display: table-cell !important;
+}
+
+/* Ensure buttons inside tables are visible and high-contrast */
+.sheet .btn {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        background: transparent !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--text-primary) !important;
+        padding: 4px 6px !important;
+        min-width: 28px;
+        height: 28px;
+        line-height: 1;
+        box-shadow: none;
+}
+.sheet .btn.btn-primary { background: var(--brand-primary) !important; color: #fff !important; border-color: transparent !important; }
+.sheet .btn.btn-danger { background-color: var(--danger-color) !important; color: #ffffff !important; border-color: transparent !important; }
+.sheet .icon-btn { width: 28px; padding: 0 6px; font-size: 14px; }
+
+/* If buttons are hidden via display:none by responsive rules, ensure action column shows at least icons */
+.sheet.compact td:last-child, .sheet.compact th:last-child { display: table-cell !important; }
+.sheet.compact th:nth-child(13), .sheet.compact td:nth-child(13),
+.sheet.compact th:nth-child(12), .sheet.compact td:nth-child(12) {
+    display: table-cell !important;
+    width: 80px !important;
+    min-width: 60px !important;
+}
+.sheet.compact td:last-child .icon-btn { font-size: 14px !important; color: var(--text-primary) !important; }
+
+/* Holiday & year action helpers (moved from inline/debug styles) */
+.holiday-global { text-align: center; width: 80px; }
+.holiday-actions { white-space: nowrap; text-align: right; }
+.holiday-actions .btn, .yc-actions .btn { display: inline-block; }
+.holiday-actions form, .yc-actions form { display: inline; margin-left: 6px; }
+.yc-actions .btn-danger { padding: 4px 6px; height: 28px; }
+/* Ensure svg icons inside danger buttons are white */
+.btn-danger svg, .sheet .btn.btn-danger svg { fill: #ffffff !important; color: #ffffff !important; }
+
+/* Highlight edit button appearance (was applied inline during debugging) */
+.highlight-edit-btn { background: linear-gradient(90deg,#ffd54d,#ffb74d); color:#1b1b1b; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+
+/* Highlight row that is in inline-edit mode */
+.sheet tr.editing td {
+    background-color: rgba(96,165,250,0.06); /* soft blue tint */
+    transition: background-color 0.15s ease-in-out;
+}
+.sheet tr.editing td:first-child {
+    border-left: 4px solid var(--brand-accent);
+}
+.sheet tr.editing input.form-control {
+    border-color: rgba(37,99,235,0.55) !important;
+    box-shadow: 0 4px 10px rgba(37,99,235,0.06) !important;
+    background: #fff !important;
+    padding: 4px 6px !important;
+    height: 30px !important;
+}
+.sheet tr.editing .btn.save-entry { background: var(--brand-primary) !important; color: #fff !important; }
+.sheet tr.editing .btn.cancel-entry { background: transparent !important; border-color: var(--border-color) !important; color: var(--text-primary) !important; }
+
+/* small popup menu for 'more' buttons */
+.more-menu {
+    position: absolute;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+    border-radius: 6px;
+    padding: 6px 4px;
+    z-index: 1200;
+    min-width: 120px;
+}
+.more-menu .more-item { display: block; padding: 6px 10px; color: var(--text-primary); text-decoration: none; cursor: pointer; }
+.more-menu .more-item:hover { background: var(--bg-secondary); }
 
 .main-content .bulk-actions-bar.show,
 #bulkActionsBar.show {
@@ -678,6 +992,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 /* Global form styles */
 .form-wrapper { background: var(--surface-color); border: 1px solid var(--border-color); padding: 16px; border-radius: 8px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.form-grid.single-column { grid-template-columns: 1fr; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-label { font-weight: 600; color: var(--text-primary); }
 .form-help { font-size: 12px; color: var(--text-muted); }
@@ -789,5 +1104,67 @@ tbody.month-group .month-header.collapsed { opacity: 0.85; }
 
 /* Slightly dim weekend header color to differentiate */
 tbody.month-group.collapsed tr.weekend td:not(.month) { opacity: 0.95; }
+
+/* Holiday highlight (general) */
+.sheet tbody tr.holiday td {
+    background-color: rgba(255, 230, 230, 0.8); /* light red/pink */
+}
+.sheet tbody tr.holiday td:first-child {
+    position: relative;
+    padding-left: 28px;
+}
+.sheet tbody tr.holiday td:first-child::before {
+    content: "🎉";
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    opacity: 0.95;
+}
+
+/* Vacation highlight */
+.sheet tbody tr.vacation td { background-color: rgba(230, 245, 255, 0.85); }
+.sheet tbody tr.personal td { background-color: rgba(235, 255, 230, 0.85); }
+.sheet tbody tr.illness td { background-color: rgba(255, 250, 230, 0.85); }
+.sheet tbody tr.permiso td { background-color: rgba(240, 245, 255, 0.85); }
+
+
+
+/* Ensure date column shows fully: give first column more space and avoid truncation */
+.sheet th:first-child, .sheet td:first-child {
+    min-width: 130px !important;
+    white-space: nowrap !important;
+}
+
+/* If compact mode is enabled, still allow date to expand */
+.page-index.compact .sheet th:first-child, .page-index.compact .sheet td:first-child {
+    min-width: 110px !important;
+    white-space: nowrap !important;
+}
+
+/* Strong overrides to counter earlier compact/fixed-table rules that shrink the first column */
+.sheet.compact th:nth-child(1), .sheet.compact td:nth-child(1),
+.sheet th:nth-child(1), .sheet td:nth-child(1) {
+    min-width: 130px !important;
+    max-width: none !important;
+    width: auto !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+/* If the table layout is fixed globally, allow the first column to behave like auto for visibility */
+.sheet.compact, .sheet {
+    table-layout: auto !important;
+}
+
+/* Date cell styling: center weekend labels and keep nowrap */
+.sheet td.date-cell, .sheet th.date-cell { white-space: nowrap; }
+.sheet td.date-cell.center, .sheet th.date-cell.center {
+    text-align: center !important;
+    font-weight: 600;
+}
+
 
 

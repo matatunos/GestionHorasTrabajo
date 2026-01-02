@@ -13,13 +13,27 @@ function current_user(){
 
 function require_login(){
     if (!current_user()){
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+            header('Content-Type: application/json'); http_response_code(401); echo json_encode(['ok'=>false,'login'=>true,'redirect'=>'login.php']); exit;
+        }
         header('Location: login.php'); exit;
     }
 }
 
 function require_admin(){
     $u = current_user();
-    if (!$u || !$u['is_admin']){ header('HTTP/1.1 403 Forbidden'); echo 'Forbidden'; exit; }
+    if (!$u) {
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+            header('Content-Type: application/json'); http_response_code(401); echo json_encode(['ok'=>false,'login'=>true,'redirect'=>'login.php']); exit;
+        }
+        header('Location: login.php'); exit;
+    }
+    if (!$u['is_admin']){
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+            header('Content-Type: application/json'); http_response_code(403); echo json_encode(['ok'=>false,'error'=>'forbidden']); exit;
+        }
+        header('HTTP/1.1 403 Forbidden'); echo 'Forbidden'; exit;
+    }
 }
 
 function do_login($username, $password){
