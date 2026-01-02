@@ -5,6 +5,31 @@ Mini aplicación PHP para registrar una fila por día (estilo Excel) con campos:
 
 Calcula: horas trabajadas, balance diario y balances comparados con la configuración para verano/invierno.
 
+## Funcionalidad de Importación de Fichajes
+
+La aplicación permite importar registros de fichajes desde archivos HTML descargados de portales externos.
+
+### Cómo usar la función de importación:
+
+1. **Descargar el informe HTML**: Desde tu portal de horas externo, descarga tu informe de fichajes usando la opción "Guardar como" del navegador (Ctrl+S o Cmd+S), guardándolo como archivo HTML.
+
+2. **Acceder a la función de importación**: En la aplicación, haz clic en "Importar Fichajes" en el menú lateral.
+
+3. **Seleccionar el archivo**: 
+   - Haz clic en "Seleccionar archivo" y elige el archivo HTML descargado.
+   - Indica el año correspondiente al informe (necesario ya que la tabla no suele incluir el año).
+
+4. **Previsualizar datos**: Haz clic en "Cargar y previsualizar" para ver los datos extraídos del archivo HTML. El sistema parseará automáticamente la tabla y mostrará:
+   - Día de la semana
+   - Fecha original
+   - Fecha en formato ISO (YYYY-MM-DD)
+   - Horas registradas
+   - Balance
+
+5. **Importar**: Si la previsualización es correcta, haz clic en "Importar registros" para guardar los datos en la base de datos.
+
+**Nota**: La utilidad de parsing está implementada en `importFichajes.js` y soporta múltiples formatos de tablas HTML comunes.
+
 Cómo ejecutar:
 
 ```bash
