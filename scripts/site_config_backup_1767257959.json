@@ -1,0 +1,24 @@
+{
+    "site_name": "GestionHoras",
+    "summer_start": "06-15",
+    "summer_end": "09-30",
+    "work_hours": {
+        "winter": {
+            "mon_thu": 7,
+            "friday": 6
+        },
+        "summer": {
+            "mon_thu": 7,
+            "friday": 6
+        }
+    },
+    "coffee_minutes": 20,
+    "lunch_minutes": 60,
+    "db": {
+        "host": "localhost",
+        "name": "gestion_horas",
+        "user": "app_user>>>",
+        "pass": "app_pass",
+        "charset": "utf8mb4"
+    }
+}

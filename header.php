@@ -26,6 +26,9 @@ if (empty($years)) { $years = [intval(date('Y'))]; }
     </div>
     <nav class="sidebar-menu">
       <div class="menu-section">
+        <?php if (!empty($current)): ?>
+          <a class="menu-item" href="dashboard.php">Dashboard</a>
+        <?php endif; ?>
         <a class="menu-item" href="index.php">Registro horario</a>
         <a class="menu-item" href="years.php">Años</a>
         <a class="menu-item" href="import.php">Importar Fichajes</a>
@@ -34,7 +37,6 @@ if (empty($years)) { $years = [intval(date('Y'))]; }
           <a class="menu-item" href="users.php">Usuarios</a>
         <?php endif; ?>
         <?php if (!empty($current)): ?>
-          <a class="menu-item" href="holidays.php">Festivos</a>
           <a class="menu-item" href="dashboard.php">Dashboard</a>
         <?php endif; ?>
 

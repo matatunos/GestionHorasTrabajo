@@ -96,8 +96,12 @@ function compute_day(array $entry, array $config = null): array {
 
     $worked_minutes = null;
     if ($start !== null && $end !== null) {
-        // coffee counts as work, lunch does not
-        $worked_minutes = ($end - $start) - $lunch_duration;
+        // coffee counts as work. Lunch does NOT count as worked time,
+        // and its actual duration should not affect worked minutes.
+        // Use configured nominal lunch minutes to subtract from the day
+        // (so actual lunch duration is only informative via lunch_balance).
+        $nominal_lunch = intval($config['lunch_minutes']);
+        $worked_minutes = ($end - $start) - $nominal_lunch;
     } else {
         $worked_minutes = 0;
     }

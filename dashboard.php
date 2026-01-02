@@ -94,7 +94,7 @@ try {
   }
 } catch (Throwable $e) { /* ignore cache errors */ }
 
-// iterate days and sum
+// iterate days and sum (compute dynamically on each page load)
 $startTs = strtotime("$year-01-01");
 $endTs = strtotime("$year-12-31");
 $month_values = array_fill(1,12,0);

@@ -17,6 +17,25 @@ $hideHolidays = !empty($_GET['hide_holidays']);
 $hideVacations = !empty($_GET['hide_vacations']);
 
 // handle POST create/update entry for current user
+// handle inline delete via AJAX
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_date'])) {
+  $delDate = $_POST['delete_date'];
+  try {
+    $stmt = $pdo->prepare('DELETE FROM entries WHERE user_id = ? AND date = ?');
+    $stmt->execute([$user['id'], $delDate]);
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+      header('Content-Type: application/json'); echo json_encode(['ok' => true]); exit;
+    }
+    header('Location: index.php?year=' . urlencode($year)); exit;
+  } catch (Throwable $e) {
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+      header('Content-Type: application/json'); echo json_encode(['ok' => false, 'error' => 'delete_failed']); exit;
+    }
+    // fallthrough to render page with error (not ideal)
+  }
+}
+
+// handle POST create/update entry for current user
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['date'])) {
   $date = $_POST['date'];
   $data = [
@@ -87,12 +106,12 @@ $holidayMap = [];
 
     <form id="entry-form" method="post" class="row-form" style="gap:8px;align-items:center;">
       <label class="form-label">Fecha <input class="form-control" type="date" name="date" required value="<?php echo date('Y-m-d'); ?>"></label>
-      <label class="form-label">Entrada <input class="form-control" type="time" name="start"></label>
-      <label class="form-label">Salida café <input class="form-control" type="time" name="coffee_out"></label>
-      <label class="form-label">Entrada café <input class="form-control" type="time" name="coffee_in"></label>
-      <label class="form-label">Salida comida <input class="form-control" type="time" name="lunch_out"></label>
-      <label class="form-label">Entrada comida <input class="form-control" type="time" name="lunch_in"></label>
-      <label class="form-label">Hora salida <input class="form-control" type="time" name="end"></label>
+      <label class="form-label">Entrada <input class="form-control" type="text" name="start"></label>
+      <label class="form-label">Salida café <input class="form-control" type="text" name="coffee_out"></label>
+      <label class="form-label">Entrada café <input class="form-control" type="text" name="coffee_in"></label>
+      <label class="form-label">Salida comida <input class="form-control" type="text" name="lunch_out"></label>
+      <label class="form-label">Entrada comida <input class="form-control" type="text" name="lunch_in"></label>
+      <label class="form-label">Hora salida <input class="form-control" type="text" name="end"></label>
       <label class="form-label">Nota <input class="form-control" type="text" name="note" style="min-width:150px"></label>
       <div class="actions"><button class="btn btn-primary" type="submit">Guardar</button></div>
     </form>
@@ -122,25 +141,26 @@ $holidayMap = [];
         <th>Total h.</th>
         <th>Balance día</th>
         <th>Nota</th>
+        <th>Acciones</th>
       </tr>
     </thead>
     <?php
       $currentMonth = null;
       // iterate every day of the year so weekends are shown even when no entry exists
-      $startTs = strtotime("$year-01-01");
-      $endTs = strtotime("$year-12-31");
       $hideWeekends = !empty($_GET['hide_weekends']);
-      for ($ts = $startTs; $ts <= $endTs; $ts += 86400) {
-        $d = date('Y-m-d', $ts);
-        $month = strftime('%B', $ts);
-        $monthKey = date('Y-m', $ts);
+      $dt = new DateTimeImmutable("$year-01-01");
+      $end = new DateTimeImmutable("$year-12-31");
+      for ($cur = $dt; $cur <= $end; $cur = $cur->modify('+1 day')) {
+        $d = $cur->format('Y-m-d');
+        $month = strftime('%B', $cur->getTimestamp());
+        $monthKey = $cur->format('Y-m');
         if ($currentMonth !== $month) {
           if ($currentMonth !== null) {
             echo "</tbody>";
           }
           $currentMonth = $month;
           echo "<tbody class=\"month-group\" data-month=\"".$monthKey."\">";
-          echo "<tr class=\"month\"><td class=\"month-header\" data-month=\"".$monthKey."\" colspan=12><button class=\"month-toggle\" data-month=\"".$monthKey."\">−</button> ".htmlspecialchars($month)."</td></tr>";
+          echo "<tr class=\"month\"><td class=\"month-header\" data-month=\"".$monthKey."\" colspan=13><button class=\"month-toggle\" data-month=\"".$monthKey."\">−</button> ".htmlspecialchars($month)."</td></tr>";
         }
           $dow = (int)date('N', $ts);
           $rowClass = ($dow >= 6) ? 'weekend' : '';
@@ -196,6 +216,14 @@ $holidayMap = [];
           <?php else: ?>
             <?php echo htmlspecialchars($e['note'] ?? ''); ?>
           <?php endif; ?>
+        </td>
+        <td>
+          <button class="btn btn-secondary edit-entry icon-btn" type="button" title="Editar" data-date="<?php echo $d; ?>" data-start="<?php echo htmlspecialchars($e['start'] ?? ''); ?>" data-coffee_out="<?php echo htmlspecialchars($e['coffee_out'] ?? ''); ?>" data-coffee_in="<?php echo htmlspecialchars($e['coffee_in'] ?? ''); ?>" data-lunch_out="<?php echo htmlspecialchars($e['lunch_out'] ?? ''); ?>" data-lunch_in="<?php echo htmlspecialchars($e['lunch_in'] ?? ''); ?>" data-end="<?php echo htmlspecialchars($e['end'] ?? ''); ?>" data-note="<?php echo htmlspecialchars($e['note'] ?? ''); ?>">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.41l-2.34-2.34a1.003 1.003 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
+          </button>
+          <button class="btn btn-danger delete-entry icon-btn" type="button" title="Borrar" data-date="<?php echo $d; ?>" onclick="(function(e){ e.stopPropagation(); handleDeleteDate('<?php echo $d; ?>'); })(event)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/></svg>
+          </button>
         </td>
       </tr>
     <?php } // end for each day
@@ -352,6 +380,116 @@ $holidayMap = [];
     });
     if (container) mo.observe(container, {childList:true, subtree:true});
   })();
+
+  // row actions: inline edit / delete (robust handler that works with clicks inside SVGs)
+  // helper for inline delete invoked from button onclick; stops propagation in the inline handler
+  window.handleDeleteDate = function(d){
+    if (!d) return;
+    if (!confirm('Confirma borrar la entrada de ' + d + '?')) return;
+    const fd = new FormData(); fd.append('delete_date', d);
+    fetch(location.pathname + location.search, { method: 'POST', body: fd, headers: {'X-Requested-With':'XMLHttpRequest'} })
+      .then(r => r.json()).then(j => { if (j && j.ok) fetchTable(); else alert('Error borrando entrada'); })
+      .catch(err => { console.error(err); alert('Error de red al borrar'); });
+  };
+  document.addEventListener('click', function(e){
+    const target = e.target;
+    const closestEl = function(el, sel){
+      while(el){
+        try { if (el.matches && el.matches(sel)) return el; } catch(err) {}
+        el = el.parentNode;
+      }
+      return null;
+    };
+
+    // Edit
+    const editBtn = closestEl(target, '.edit-entry');
+    if (editBtn){
+      const tr = closestEl(editBtn, 'tr');
+      if (!tr || tr.classList.contains('editing')) return;
+      tr.classList.add('editing');
+      tr.dataset._orig = tr.innerHTML;
+      const tds = tr.querySelectorAll('td');
+      const date = editBtn.getAttribute('data-date') || '';
+      function mkInput(type, value, name){
+        if (type === 'time') return `<input class="form-control" type="text" name="${name}" value="${value}">`;
+        return `<input class="form-control" type="text" name="${name}" value="${value}">`;
+      }
+      tds[1].innerHTML = mkInput('time', editBtn.getAttribute('data-start') || '', 'start');
+      tds[2].innerHTML = mkInput('time', editBtn.getAttribute('data-coffee_out') || '', 'coffee_out');
+      tds[3].innerHTML = mkInput('time', editBtn.getAttribute('data-coffee_in') || '', 'coffee_in');
+      tds[5].innerHTML = mkInput('time', editBtn.getAttribute('data-lunch_out') || '', 'lunch_out');
+      tds[6].innerHTML = mkInput('time', editBtn.getAttribute('data-lunch_in') || '', 'lunch_in');
+      tds[8].innerHTML = mkInput('time', editBtn.getAttribute('data-end') || '', 'end');
+      tds[11].innerHTML = mkInput('text', editBtn.getAttribute('data-note') || '', 'note');
+      tds[12].innerHTML = '<button class="btn btn-primary save-entry" type="button">Guardar</button> <button class="btn btn-secondary cancel-entry" type="button">Cancelar</button>';
+      tr.dataset._date = date;
+      return;
+    }
+
+    // Save
+    const saveBtn = closestEl(target, '.save-entry');
+    if (saveBtn){
+      const tr = closestEl(saveBtn, 'tr');
+      if (!tr) return;
+      const tds = tr.querySelectorAll('td');
+      const date = tr.dataset._date || '';
+      const fd = new FormData(); fd.append('date', date);
+      const getVal = (idx, name) => { const inp = tds[idx].querySelector('input[name="' + name + '"]'); return inp ? inp.value : ''; };
+      fd.append('start', getVal(1,'start'));
+      fd.append('coffee_out', getVal(2,'coffee_out'));
+      fd.append('coffee_in', getVal(3,'coffee_in'));
+      fd.append('lunch_out', getVal(5,'lunch_out'));
+      fd.append('lunch_in', getVal(6,'lunch_in'));
+      fd.append('end', getVal(8,'end'));
+      fd.append('note', getVal(11,'note'));
+      fetch(location.pathname + location.search, { method: 'POST', body: fd, headers: {'X-Requested-With':'XMLHttpRequest'} })
+        .then(r => r.json()).then(j => { if (j && j.ok){ tr.classList.remove('editing'); fetchTable(); } else { alert('Error guardando'); } })
+        .catch(err => { console.error(err); alert('Error de red'); });
+      return;
+    }
+
+    // Cancel
+    const cancelBtn = closestEl(target, '.cancel-entry');
+    if (cancelBtn){
+      const tr = closestEl(cancelBtn, 'tr');
+      if (!tr) return;
+      if (tr.dataset._orig) tr.innerHTML = tr.dataset._orig;
+      tr.classList.remove('editing');
+      delete tr.dataset._orig; delete tr.dataset._date;
+      return;
+    }
+
+    // Delete
+    const delBtn = closestEl(target, '.delete-entry');
+    if (delBtn){
+      const d = delBtn.getAttribute('data-date');
+      if (!d) return;
+      if (!confirm('Confirma borrar la entrada de ' + d + '?')) return;
+      const fd = new FormData(); fd.append('delete_date', d);
+      fetch(location.pathname + location.search, { method: 'POST', body: fd, headers: {'X-Requested-With':'XMLHttpRequest'} })
+        .then(r => r.json()).then(j => { if (j && j.ok) fetchTable(); else alert('Error borrando entrada'); })
+        .catch(err => { console.error(err); alert('Error de red al borrar'); });
+      return;
+    }
+
+    // More menu
+    const moreBtn = closestEl(target, '.more-entry') || closestEl(target, 'button.more');
+    if (moreBtn){
+      document.querySelectorAll('.more-menu').forEach(m=>m.remove());
+      const rect = moreBtn.getBoundingClientRect();
+      const menu = document.createElement('div'); menu.className = 'more-menu';
+      const itemEdit = document.createElement('div'); itemEdit.className = 'more-item'; itemEdit.textContent = 'Editar';
+      const itemDelete = document.createElement('div'); itemDelete.className = 'more-item'; itemDelete.textContent = 'Borrar';
+      menu.appendChild(itemEdit); menu.appendChild(itemDelete);
+      document.body.appendChild(menu);
+      menu.style.left = (rect.left + window.scrollX) + 'px';
+      menu.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+      itemEdit.addEventListener('click', function(){ const tr = moreBtn.closest('tr'); if (tr) { const eb = tr.querySelector('.edit-entry'); if (eb) eb.click(); } menu.remove(); });
+      itemDelete.addEventListener('click', function(){ const tr = moreBtn.closest('tr'); if (tr) { const db = tr.querySelector('.delete-entry'); if (db) db.click(); } menu.remove(); });
+      setTimeout(()=>{ document.addEventListener('click', function _closer(ev){ if (!menu.contains(ev.target) && ev.target !== moreBtn){ menu.remove(); document.removeEventListener('click', _closer); } }); }, 10);
+      return;
+    }
+  });
 
 })();
 </script>
