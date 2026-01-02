@@ -308,7 +308,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
       const htmlContent = e.target.result;
 
       try {
-        let registros = window.importFichajes.parseFichajesHTML(htmlContent, year);
+        let registros = [];
+        if (window.importFichajes && typeof window.importFichajes.parseFichajesHTML === 'function') {
+          registros = window.importFichajes.parseFichajesHTML(htmlContent, year);
+        } else {
+          registros = [];
+        }
 
         // If client-side parser found nothing, try server-side parser
         if ((!registros || registros.length === 0) && file) {
