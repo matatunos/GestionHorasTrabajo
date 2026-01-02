@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Demo - Importar Fichajes</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    h1 {
+      color: #333;
+      margin-top: 0;
+    }
+    h2 {
+      color: #555;
+      margin-top: 20px;
+    }
+    .import-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      max-width: 600px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .form-group label {
+      font-weight: 500;
+      color: #333;
+    }
+    .form-control {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    .btn-primary {
+      background-color: #2196F3;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #1976D2;
+    }
+    .btn-secondary {
+      background-color: #6c757d;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background-color: #5a6268;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+    }
+    .preview-section {
+      margin-top: 20px;
+      display: none;
+    }
+    .preview-section.show {
+      display: block;
+    }
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.9em;
+      background: white;
+    }
+    .preview-table th,
+    .preview-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    .preview-table th {
+      background-color: #f5f5f5;
+      font-weight: 600;
+      color: #333;
+    }
+    .preview-table tr:nth-child(even) {
+      background-color: #fafafa;
+    }
+    .instructions {
+      background-color: #e7f3ff;
+      border-left: 4px solid #2196F3;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: #1976D2;
+    }
+    .instructions ol {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .instructions li {
+      margin: 8px 0;
+    }
+    .message {
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    .message.success {
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+    .message.error {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+    .stats {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    .sample-file {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+      border: 1px solid #dee2e6;
+    }
+    .sample-file h4 {
+      margin-top: 0;
+      color: #495057;
+    }
+    .sample-file a {
+      color: #2196F3;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .sample-file a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Demo - Importar Fichajes desde HTML</h1>
+    
+    <div class="instructions">
+      <h3>📋 Instrucciones</h3>
+      <ol>
+        <li>Descarga tu informe de fichajes en formato HTML desde el portal de horas externo usando la opción "Guardar como" del navegador.</li>
+        <li>Selecciona el archivo HTML descargado usando el botón "Seleccionar archivo".</li>
+        <li>Indica el año correspondiente al informe (necesario ya que la tabla no suele incluir el año).</li>
+        <li>Haz clic en "Cargar y previsualizar" para ver los datos extraídos.</li>
+        <li>Revisa la previsualización para confirmar que los datos se extrajeron correctamente.</li>
+      </ol>
+    </div>
+    
+    <form class="import-form" id="import-form">
+      <div class="form-group">
+        <label for="html-file">Archivo HTML:</label>
+        <input type="file" id="html-file" name="html_file" accept=".html,.htm" required class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="year">Año del informe:</label>
+        <input type="number" id="year" name="year" min="2020" max="2030" value="2024" required class="form-control">
+      </div>
+      
+      <div class="button-group">
+        <button type="button" id="load-preview-btn" class="btn btn-primary">Cargar y previsualizar</button>
+        <button type="button" id="clear-btn" class="btn btn-secondary">Limpiar</button>
+      </div>
+    </form>
+    
+    <div class="sample-file">
+      <h4>🔍 ¿No tienes un archivo para probar?</h4>
+      <p>Puedes usar este archivo de ejemplo: <a href="ejemplo_fichajes.html" download>ejemplo_fichajes.html</a></p>
+      <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+        <em>El archivo de ejemplo contiene una tabla con formato típico de exportación de portales de fichajes.</em>
+      </p>
+    </div>
+  </div>
+  
+  <div class="preview-section card" id="preview-section">
+    <h2>✅ Previsualización de datos</h2>
+    <div class="stats">
+      <strong>Registros encontrados:</strong> <span id="record-count">0</span>
+    </div>
+    
+    <div style="overflow-x: auto;">
+      <table class="preview-table" id="preview-table">
+        <thead>
+          <tr>
+            <th>Día</th>
+            <th>Fecha</th>
+            <th>Fecha ISO</th>
+            <th>Horas</th>
+            <th>Balance</th>
+          </tr>
+        </thead>
+        <tbody id="preview-tbody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<script src="importFichajes.js"></script>
+<script>
+(function() {
+  const fileInput = document.getElementById('html-file');
+  const yearInput = document.getElementById('year');
+  const loadPreviewBtn = document.getElementById('load-preview-btn');
+  const clearBtn = document.getElementById('clear-btn');
+  const previewSection = document.getElementById('preview-section');
+  const previewTbody = document.getElementById('preview-tbody');
+  const recordCount = document.getElementById('record-count');
+  
+  let currentRecords = [];
+  
+  loadPreviewBtn.addEventListener('click', function() {
+    const file = fileInput.files[0];
+    const year = parseInt(yearInput.value);
+    
+    if (!file) {
+      alert('Por favor, selecciona un archivo HTML.');
+      return;
+    }
+    
+    if (!year || year < 2020 || year > 2030) {
+      alert('Por favor, indica un año válido.');
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const htmlContent = e.target.result;
+      
+      try {
+        const registros = window.importFichajes.parseFichajesHTML(htmlContent, year);
+        const validacion = window.importFichajes.validarRegistros(registros);
+        
+        if (!validacion.valid) {
+          alert('Errores en los registros:\\n' + validacion.errors.join('\\n'));
+          return;
+        }
+        
+        currentRecords = registros;
+        displayPreview(registros);
+        previewSection.classList.add('show');
+        
+        // Scroll to preview
+        previewSection.scrollIntoView({ behavior: 'smooth' });
+      } catch (error) {
+        alert('Error al procesar el archivo: ' + error.message);
+        console.error('Error:', error);
+      }
+    };
+    
+    reader.readAsText(file);
+  });
+  
+  clearBtn.addEventListener('click', function() {
+    fileInput.value = '';
+    previewSection.classList.remove('show');
+    previewTbody.innerHTML = '';
+    currentRecords = [];
+  });
+  
+  function displayPreview(registros) {
+    previewTbody.innerHTML = '';
+    recordCount.textContent = registros.length;
+    
+    registros.forEach(function(registro) {
+      const row = document.createElement('tr');
+      
+      const diaCell = document.createElement('td');
+      diaCell.textContent = registro.dia;
+      row.appendChild(diaCell);
+      
+      const fechaCell = document.createElement('td');
+      fechaCell.textContent = registro.fecha;
+      row.appendChild(fechaCell);
+      
+      const fechaISOCell = document.createElement('td');
+      fechaISOCell.textContent = registro.fechaISO;
+      row.appendChild(fechaISOCell);
+      
+      const horasCell = document.createElement('td');
+      horasCell.textContent = registro.horas.join(', ');
+      row.appendChild(horasCell);
+      
+      const balanceCell = document.createElement('td');
+      balanceCell.textContent = registro.balance;
+      row.appendChild(balanceCell);
+      
+      previewTbody.appendChild(row);
+    });
+  }
+})();
+</script>
+</body>
+</html>
