@@ -102,7 +102,21 @@ $holidayMap = [];
 <?php include __DIR__ . '/header.php'; ?>
 <div class="container">
   <div class="card">
-    <h1>Registro de Horas — <?php echo $year; ?></h1>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <h1>Registro de Horas — <?php echo $year; ?></h1>
+      <form method="get" style="display:flex;gap:8px;align-items:center;"> 
+        <label class="small">Año
+          <select name="year" onchange="this.form.submit()">
+            <?php foreach($years as $y): ?>
+              <option value="<?php echo $y;?>" <?php if($y==$year) echo 'selected';?>><?php echo $y;?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <label class="small">Ocultar fines de semana
+          <input type="checkbox" name="hide_weekends" value="1" onchange="this.form.submit()" <?php if($hideWeekends) echo 'checked'; ?> />
+        </label>
+      </form>
+    </div>
 
     <form id="entry-form" method="post" class="row-form" style="gap:8px;align-items:center;">
       <label class="form-label">Fecha <input class="form-control" type="date" name="date" required value="<?php echo date('Y-m-d'); ?>"></label>

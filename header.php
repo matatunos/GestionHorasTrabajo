@@ -70,18 +70,7 @@ if (empty($years)) { $years = [intval(date('Y'))]; }
         <a class="header-brand-text" href="dashboard.php"><?php echo htmlspecialchars($site_name); ?></a>
       </div>
       <div class="header-actions">
-        <form method="get" action="index.php" style="display:inline;margin-right:8px;">
-          <label class="small">Año
-            <select name="year" onchange="this.form.submit()">
-              <?php foreach($years as $y): ?>
-                <option value="<?php echo $y;?>" <?php if($y==$selYear) echo 'selected';?>><?php echo $y;?></option>
-              <?php endforeach; ?>
-            </select>
-          </label>
-          <label class="small" style="margin-left:8px">Ocultar fines de semana
-            <input type="checkbox" name="hide_weekends" value="1" onchange="this.form.submit()" <?php if(!empty($_GET['hide_weekends'])) echo 'checked'; ?> />
-          </label>
-        </form>
+        <!-- Header actions intentionally minimal; year selector moved to Registro page -->
       </div>
     </header>
 
