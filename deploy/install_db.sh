@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT=$(dirname "$0")
 SQL="$ROOT/schema_clean.sql"
 DBUSER=${DB_USER:-root}
-DBPASS=${DB_PASS:-satriani}
+DBPASS=${DB_PASS:-password}
 
 if [ ! -f "$SQL" ]; then echo "schema.sql not found"; exit 1; fi
 
