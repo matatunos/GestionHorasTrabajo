@@ -5,6 +5,27 @@
  * la información estructurada de la tabla de fichajes.
  */
 
+// Constants
+const DIAS_SEMANA = ['lun', 'mar', 'mié', 'mie', 'jue', 'vie', 'sáb', 'sab', 'dom', 
+                     'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+const DIAS_SEMANA_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+const MESES_MAP = {
+  'ene': '01', 'enero': '01', 'jan': '01', 'january': '01',
+  'feb': '02', 'febrero': '02', 'february': '02',
+  'mar': '03', 'marzo': '03', 'march': '03',
+  'abr': '04', 'abril': '04', 'apr': '04', 'april': '04',
+  'may': '05', 'mayo': '05',
+  'jun': '06', 'junio': '06', 'june': '06',
+  'jul': '07', 'julio': '07', 'july': '07',
+  'ago': '08', 'agosto': '08', 'aug': '08', 'august': '08',
+  'sep': '09', 'septiembre': '09', 'september': '09',
+  'oct': '10', 'octubre': '10', 'october': '10',
+  'nov': '11', 'noviembre': '11', 'november': '11',
+  'dic': '12', 'diciembre': '12', 'dec': '12', 'december': '12'
+};
+
 /**
  * Parsea un archivo HTML y extrae los registros de fichajes
  * @param {string} htmlContent - Contenido del archivo HTML
@@ -66,10 +87,8 @@ function parseFichajesHTML(htmlContent, year) {
     if (cellTexts.length >= 3) {
       // Verificar si primera columna parece un día de semana
       const primeraCelda = cellTexts[0].toLowerCase();
-      const diasSemana = ['lun', 'mar', 'mié', 'mie', 'jue', 'vie', 'sáb', 'sab', 'dom', 
-                          'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
       
-      if (diasSemana.some(d => primeraCelda.includes(d))) {
+      if (DIAS_SEMANA.some(d => primeraCelda.includes(d))) {
         dia = cellTexts[0];
         fecha = cellTexts[1];
         
@@ -105,8 +124,7 @@ function parseFichajesHTML(htmlContent, year) {
     // Extraer día de la semana de la fecha ISO si no lo tenemos
     if (!dia && fechaISO) {
       const date = new Date(fechaISO);
-      const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-      dia = dias[date.getDay()];
+      dia = DIAS_SEMANA_LABELS[date.getDay()];
     }
     
     registros.push({
@@ -147,22 +165,7 @@ function parseFechaToISO(fechaTexto, year) {
     const dia = match[1].padStart(2, '0');
     const mesTexto = match[2].toLowerCase();
     
-    const meses = {
-      'ene': '01', 'enero': '01', 'jan': '01', 'january': '01',
-      'feb': '02', 'febrero': '02', 'february': '02',
-      'mar': '03', 'marzo': '03', 'march': '03',
-      'abr': '04', 'abril': '04', 'apr': '04', 'april': '04',
-      'may': '05', 'mayo': '05',
-      'jun': '06', 'junio': '06', 'june': '06',
-      'jul': '07', 'julio': '07', 'july': '07',
-      'ago': '08', 'agosto': '08', 'aug': '08', 'august': '08',
-      'sep': '09', 'septiembre': '09', 'september': '09',
-      'oct': '10', 'octubre': '10', 'october': '10',
-      'nov': '11', 'noviembre': '11', 'november': '11',
-      'dic': '12', 'diciembre': '12', 'dec': '12', 'december': '12'
-    };
-    
-    const mes = meses[mesTexto];
+    const mes = MESES_MAP[mesTexto];
     if (mes) {
       return `${year}-${mes}-${dia}`;
     }

@@ -2,6 +2,9 @@
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/db.php';
 
+// Constants
+define('IMPORT_NOTE_TEXT', 'Importado');
+
 $user = current_user();
 require_login();
 $pdo = get_pdo();
@@ -45,14 +48,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
           $lunch_out = $horas[3] ?? null;
           $lunch_in = $horas[4] ?? null;
           $end = $horas[5] ?? null;
-        } else if (count($horas) >= 4) {
+        } elseif (count($horas) >= 4) {
           $lunch_out = $horas[2] ?? null;
           $lunch_in = $horas[3] ?? null;
         }
-      } else if (count($horas) == 3) {
+      } elseif (count($horas) == 3) {
         $lunch_out = $horas[1] ?? null;
         $lunch_in = $horas[2] ?? null;
-      } else if (count($horas) == 2) {
+      } elseif (count($horas) == 2) {
         // Solo entrada y salida
         $start = $horas[0];
         $end = $horas[1];
@@ -71,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
         } else {
           // Insert new entry
           $stmt = $pdo->prepare('INSERT INTO entries (user_id,date,start,coffee_out,coffee_in,lunch_out,lunch_in,end,note) VALUES (?,?,?,?,?,?,?,?,?)');
-          $stmt->execute([$user['id'], $fechaISO, $start, $coffee_out, $coffee_in, $lunch_out, $lunch_in, $end, 'Importado']);
+          $stmt->execute([$user['id'], $fechaISO, $start, $coffee_out, $coffee_in, $lunch_out, $lunch_in, $end, IMPORT_NOTE_TEXT]);
         }
         $imported++;
       } catch (Exception $e) {
