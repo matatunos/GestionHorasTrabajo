@@ -62,15 +62,31 @@ $rows = $stmt->fetchAll();
 $entries = [];
 foreach ($rows as $r) $entries[$r['date']] = $r;
 
-// load holidays for year (map annual to selected year)
+// also load entries for the selected date range (in case range spans other years)
+try {
+  $rstmt = $pdo->prepare('SELECT * FROM entries WHERE user_id = ? AND date BETWEEN ? AND ? ORDER BY date ASC');
+  $rstmt->execute([$user['id'], $start_date, $end_date]);
+  foreach ($rstmt->fetchAll() as $r) { $entries[$r['date']] = $r; }
+} catch (Throwable $e) { /* ignore */ }
+
+// load holidays for all years in the selected range (map annual to each year)
 $holidayMap = [];
 try {
-  $hstmt = $pdo->prepare('SELECT date,label,type,annual,user_id FROM holidays WHERE (YEAR(date) = ? OR annual = 1) AND (user_id IS NULL OR user_id = ?)');
-  $hstmt->execute([$year, $user['id']]);
+  $rangeStartYear = intval(date('Y', strtotime($start_date)));
+  $rangeEndYear = intval(date('Y', strtotime($end_date)));
+  $hstmt = $pdo->prepare('SELECT date,label,type,annual,user_id FROM holidays WHERE (YEAR(date) BETWEEN ? AND ? OR annual = 1) AND (user_id IS NULL OR user_id = ?)');
+  $hstmt->execute([$rangeStartYear, $rangeEndYear, $user['id']]);
   foreach ($hstmt->fetchAll() as $h) {
-    $keyDate = $h['date'];
-    if (!empty($h['annual'])) $keyDate = sprintf('%04d-%s', $year, substr($h['date'],5));
-    $holidayMap[$keyDate] = ['label'=>$h['label'],'type'=>$h['type']];
+    // if annual, map to each year in range; otherwise map to its date
+    if (!empty($h['annual'])) {
+      for ($yy = $rangeStartYear; $yy <= $rangeEndYear; $yy++) {
+        $keyDate = sprintf('%04d-%s', $yy, substr($h['date'],5));
+        $holidayMap[$keyDate] = ['label'=>$h['label'],'type'=>$h['type']];
+      }
+    } else {
+      $keyDate = $h['date'];
+      $holidayMap[$keyDate] = ['label'=>$h['label'],'type'=>$h['type']];
+    }
   }
 } catch (Throwable $e) { }
 
@@ -224,23 +240,28 @@ function svg_compare_chart(array $dates, array $worked, array $expected, $w=700,
 <div class="container">
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-      <h1>Dashboard — <?php echo $year; ?></h1>
+      
       <div style="display:flex;gap:8px;align-items:center;">
         <form method="get" style="display:flex;gap:8px;align-items:center;margin:0;"> 
-          <input type="hidden" name="year" value="<?php echo htmlspecialchars($year); ?>">
-          <label class="small">Desde</label>
-          <input class="form-control" type="date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>">
-          <label class="small">Hasta</label>
-          <input class="form-control" type="date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>">
-          <button class="btn" type="submit">Filtrar</button>
+          <label class="small">Año</label>
+          <select name="year" class="form-control" onchange="this.form.submit()">
+            <?php for ($y = $currentYear - 3; $y <= $currentYear + 1; $y++): ?>
+              <option value="<?php echo $y; ?>" <?php if ($y === $year) echo 'selected'; ?>><?php echo $y; ?></option>
+            <?php endfor; ?>
+          </select>
         </form>
-        <form method="post" style="margin:0;">
+        <form method="post" action="?year=<?php echo urlencode($year); ?>" style="margin:0;">
           <input type="hidden" name="action" value="force_recalc">
           <button class="btn" type="submit">Recalcular ahora</button>
         </form>
       </div>
     </div>
     <div class="dashboard-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px;">
+      <div class="card">
+        <h4>Total horas trabajadas (año)</h4>
+        <div style="font-size:1.4rem;font-weight:700"><?php echo fmt($ytd_worked); ?></div>
+        <div class="muted">Total acumulado en <?php echo htmlspecialchars($year); ?></div>
+      </div>
       <?php
         // This month summary
         $m = ($year == $currentYear) ? $currentMonth : min($currentMonth,12);
@@ -325,19 +346,31 @@ function svg_compare_chart(array $dates, array $worked, array $expected, $w=700,
     
     <h3 style="margin-top:18px;">Comparativa diaria (Esperadas vs Realizadas)</h3>
     <?php
-      // Build daily series for the selected range
+      // Build daily series for the selected range and collect diagnostics per-day
       $ds = strtotime($start_date); $de = strtotime($end_date);
       $dayLabels = [];
       $dailyWorked = [];
       $dailyExpected = [];
+      $dailyNominalLunch = [];
+      $dailyLunchActual = [];
+      $dailyLunchBalance = [];
+      $dailyConfigYear = [];
+      $configsByYear = [];
       for ($t = $ds; $t <= $de; $t += 86400) {
         $d = date('Y-m-d', $t);
         $dayLabels[] = $d;
         $e = $entries[$d] ?? ['date'=>$d];
         if (isset($holidayMap[$d])) { $e['is_holiday'] = true; $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday'; }
-        $calc = compute_day($e, get_year_config(intval(date('Y', $t)), $user['id']));
+        $yDay = intval(date('Y', $t));
+        if (!isset($configsByYear[$yDay])) $configsByYear[$yDay] = get_year_config($yDay, $user['id']);
+        $cfgUsed = $configsByYear[$yDay];
+        $calc = compute_day($e, $cfgUsed);
         $dailyWorked[] = intval($calc['worked_minutes'] ?? 0);
         $dailyExpected[] = intval($calc['expected_minutes'] ?? 0);
+        $dailyNominalLunch[] = intval($cfgUsed['lunch_minutes']);
+        $dailyLunchActual[] = intval($calc['lunch_duration'] ?? 0);
+        $dailyLunchBalance[] = is_null($calc['lunch_balance']) ? null : intval($calc['lunch_balance']);
+        $dailyConfigYear[] = $yDay;
       }
       // weekly aggregates
       $weeks = [];
@@ -352,7 +385,14 @@ function svg_compare_chart(array $dates, array $worked, array $expected, $w=700,
     ?>
     <div class="card" style="margin-top:8px;">
       <div style="padding:12px;">
-        <div class="muted">Rango: <?php echo htmlspecialchars($start_date); ?> — <?php echo htmlspecialchars($end_date); ?></div>
+        <form method="get" style="display:flex;gap:8px;align-items:center;margin:0;"> 
+          <input type="hidden" name="year" value="<?php echo htmlspecialchars($year); ?>">
+          <label class="small">Desde</label>
+          <input class="form-control" type="date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>">
+          <label class="small">Hasta</label>
+          <input class="form-control" type="date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>">
+          <button class="btn" type="submit">Filtrar gráfico</button>
+        </form>
         <div style="margin-top:12px;">
           <canvas id="compareChart" width="900" height="260"></canvas>
           <script>
@@ -360,8 +400,33 @@ function svg_compare_chart(array $dates, array $worked, array $expected, $w=700,
               const labels = <?php echo json_encode($dayLabels); ?>;
               const dataWorked = <?php echo json_encode($dailyWorked); ?>; // minutes
               const dataExpected = <?php echo json_encode($dailyExpected); ?>; // minutes
+              const holidayFlags = <?php
+                $hf = array_map(function($d) use ($holidayMap){ return isset($holidayMap[$d]) ? 1 : 0; }, $dayLabels);
+                echo json_encode($hf);
+              ?>;
               function fmtMinToHMS(mins){ const h = Math.floor(mins/60); const m = Math.abs(mins % 60); return h + ':' + String(m).padStart(2,'0'); }
               const ctx = document.getElementById('compareChart').getContext('2d');
+              // plugin to draw holiday background columns
+              const holidayBg = {
+                id: 'holidayBg',
+                beforeDatasetsDraw(chart, args, options) {
+                  const {ctx, chartArea: {left, right, top, bottom}, scales: {x, y}} = chart;
+                  ctx.save();
+                  let stepPx = 10;
+                  try { if (labels.length > 1) stepPx = Math.abs(x.getPixelForValue(1) - x.getPixelForValue(0)); }
+                  catch (e) { stepPx = 10; }
+                  for (let i = 0; i < holidayFlags.length; i++) {
+                    if (!holidayFlags[i]) continue;
+                    const cx = x.getPixelForValue(i);
+                    const x1 = cx - stepPx/2;
+                    const x2 = cx + stepPx/2;
+                    ctx.fillStyle = 'rgba(249,115,22,0.08)';
+                    ctx.fillRect(x1, top, x2 - x1, bottom - top);
+                  }
+                  ctx.restore();
+                }
+              };
+
               const chart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -393,11 +458,53 @@ function svg_compare_chart(array $dates, array $worked, array $expected, $w=700,
                     legend: { position: 'top' }
                   }
                 }
+              , plugins: [holidayBg]
               });
             })();
           </script>
         </div>
-        <h4 style="margin-top:12px;">Exceso por semana</h4>
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center;justify-content:space-between;">
+          <h4>Exceso por semana</h4>
+          <div>
+            <button id="toggleDiag" class="btn">Mostrar valores por día</button>
+          </div>
+        </div>
+        <div id="dailyDiag" style="display:none;margin-top:10px;">
+          <div class="table-responsive">
+            <table class="sheet compact">
+              <thead><tr><th>Fecha</th><th>Año cfg</th><th>Nom. comida</th><th>Comida real</th><th>Saldo comida</th><th>Esperadas</th><th>Realizadas</th><th>Saldo día</th></tr></thead>
+              <tbody>
+              <?php for ($i=0;$i<count($dayLabels);$i++):
+                  $d = $dayLabels[$i];
+                  $nom = $dailyNominalLunch[$i];
+                  $lact = $dailyLunchActual[$i];
+                  $lbal = $dailyLunchBalance[$i];
+                  $exp = $dailyExpected[$i];
+                  $wrk = $dailyWorked[$i];
+                  $dbal = $wrk - $exp;
+              ?>
+                <tr>
+                  <td><?php echo htmlspecialchars($d); ?></td>
+                  <td><?php echo htmlspecialchars($dailyConfigYear[$i]); ?></td>
+                  <td><?php echo fmt($nom); ?></td>
+                  <td><?php echo fmt($lact); ?></td>
+                  <td><?php echo is_null($lbal) ? '' : fmt($lbal); ?></td>
+                  <td><?php echo fmt($exp); ?></td>
+                  <td><?php echo fmt($wrk); ?></td>
+                  <td><?php echo fmt($dbal); ?></td>
+                </tr>
+              <?php endfor; ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <script>
+          document.getElementById('toggleDiag').addEventListener('click', function(){
+            var el = document.getElementById('dailyDiag');
+            if (el.style.display === 'none' || el.style.display === '') { el.style.display = 'block'; this.textContent = 'Ocultar valores por día'; }
+            else { el.style.display = 'none'; this.textContent = 'Mostrar valores por día'; }
+          });
+        </script>
         <div class="table-responsive">
           <table class="sheet compact">
             <thead><tr><th>Semana</th><th>Trabajadas</th><th>Esperadas</th><th>Saldo</th></tr></thead>

@@ -83,33 +83,38 @@ function get_year_config(int $year, int $user_id = null){
                 UNIQUE KEY user_year (user_id, year)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-            // prefer user-specific override when user_id provided
+            // Read global (user_id IS NULL) first, then overlay user-specific if present.
+            $row = false;
+            $globalRow = false;
+            $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? AND user_id IS NULL LIMIT 1');
+            $stmt->execute([$year]);
+            $globalRow = $stmt->fetch();
             if ($user_id !== null) {
                 $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? AND user_id = ? LIMIT 1');
                 $stmt->execute([$year, $user_id]);
                 $row = $stmt->fetch();
-            } else {
-                $row = false;
             }
-            // fallback to global config (user_id IS NULL)
-            if (!$row) {
-                $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? AND user_id IS NULL LIMIT 1');
-                $stmt->execute([$year]);
-                $row = $stmt->fetch();
-            }
+            // Merge: start from globalRow if exists, then overlay user-specific fields
+            $merged = $globalRow ?: false;
             if ($row) {
+                // overlay fields from user-specific onto merged
+                if (!$merged) $merged = $row; else {
+                    foreach ($row as $k => $v) { $merged[$k] = $v; }
+                }
+            }
+            if ($merged) {
                 // merge numeric overrides for winter
-                if ($row['mon_thu'] !== null) $conf['work_hours']['winter']['mon_thu'] = floatval($row['mon_thu']);
-                if ($row['friday'] !== null) $conf['work_hours']['winter']['friday'] = floatval($row['friday']);
+                if ($merged['mon_thu'] !== null) $conf['work_hours']['winter']['mon_thu'] = floatval($merged['mon_thu']);
+                if ($merged['friday'] !== null) $conf['work_hours']['winter']['friday'] = floatval($merged['friday']);
                 // merge numeric overrides for summer (if provided)
-                if (array_key_exists('summer_mon_thu', $row) && $row['summer_mon_thu'] !== null) {
-                    $conf['work_hours']['summer']['mon_thu'] = floatval($row['summer_mon_thu']);
+                if (array_key_exists('summer_mon_thu', $merged) && $merged['summer_mon_thu'] !== null) {
+                    $conf['work_hours']['summer']['mon_thu'] = floatval($merged['summer_mon_thu']);
                 }
-                if (array_key_exists('summer_friday', $row) && $row['summer_friday'] !== null) {
-                    $conf['work_hours']['summer']['friday'] = floatval($row['summer_friday']);
+                if (array_key_exists('summer_friday', $merged) && $merged['summer_friday'] !== null) {
+                    $conf['work_hours']['summer']['friday'] = floatval($merged['summer_friday']);
                 }
-                if ($row['coffee_minutes'] !== null) $conf['coffee_minutes'] = intval($row['coffee_minutes']);
-                if ($row['lunch_minutes'] !== null) $conf['lunch_minutes'] = intval($row['lunch_minutes']);
+                if ($merged['coffee_minutes'] !== null) $conf['coffee_minutes'] = intval($merged['coffee_minutes']);
+                if ($merged['lunch_minutes'] !== null) $conf['lunch_minutes'] = intval($merged['lunch_minutes']);
             }
         }
     } catch (Throwable $e) {
