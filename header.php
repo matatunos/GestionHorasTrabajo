@@ -28,6 +28,7 @@ if (empty($years)) { $years = [intval(date('Y'))]; }
       <div class="menu-section">
         <a class="menu-item" href="index.php">Registro horario</a>
         <a class="menu-item" href="years.php">Años</a>
+        <a class="menu-item" href="import.php">Importar Fichajes</a>
         <?php if (!empty($current) && $current['is_admin']): ?>
           <a class="menu-item" href="settings.php">Configuración</a>
           <a class="menu-item" href="users.php">Usuarios</a>
