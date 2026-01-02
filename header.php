@@ -7,7 +7,9 @@ try { $current = current_user(); } catch (Throwable $e) { $current = null; }
 
 // prepare year options from entries table (fallback to current year)
 $years = [];
-$selYear = intval($_GET['year'] ?? date('Y'));
+// Prefer a $year variable provided by the including page (index.php sets it),
+// otherwise fall back to GET or current year.
+$selYear = isset($year) ? intval($year) : intval($_GET['year'] ?? date('Y'));
 try {
     $pdo = get_pdo();
     if ($pdo) {
@@ -15,6 +17,10 @@ try {
         foreach ($yearRows as $r) $years[] = intval($r['y']);
     }
 } catch (Throwable $e) { /* ignore */ }
+// Ensure the selected year appears in the list even if there are no DB rows for it
+if (!in_array($selYear, $years, true)) {
+  array_unshift($years, intval($selYear));
+}
 if (empty($years)) { $years = [intval(date('Y'))]; }
 ?>
 <div class="app-container">
@@ -30,7 +36,7 @@ if (empty($years)) { $years = [intval(date('Y'))]; }
           <a class="menu-item" href="dashboard.php">Dashboard</a>
         <?php endif; ?>
         <a class="menu-item" href="index.php">Registro horario</a>
-        <a class="menu-item" href="years.php">Años</a>
+        <!-- 'Años' link removed: management consolidated into settings.php -->
         <a class="menu-item" href="import.php">Importar Fichajes</a>
         <?php if (!empty($current) && $current['is_admin']): ?>
           <a class="menu-item" href="settings.php">Configuración</a>

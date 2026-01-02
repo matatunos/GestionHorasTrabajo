@@ -1,3 +1,23 @@
+</style>
+
+<style>
+/* Final unified edit button style to force exact match */
+.btn-edit {
+  background: linear-gradient(90deg,#ffd54d,#ffb74d) !important;
+  color: #1b1b1b !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  padding: 6px 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+}
+.btn-edit svg { width: 16px !important; height: 16px !important; }
+</style>
 <?php
 require_once __DIR__ . '/auth.php';
 require_admin();
@@ -141,7 +161,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_year_config']) 
         try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS lunch_minutes INT DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN lunch_minutes INT DEFAULT NULL"); }catch(Throwable $e2){} }
         $stmt = $pdo->prepare('REPLACE INTO year_configs (year, mon_thu, friday, summer_mon_thu, summer_friday, coffee_minutes, lunch_minutes) VALUES (?,?,?,?,?,?,?)');
         $stmt->execute([$yy, $mt, $fr, $smt, $sfr, $cm, $lm]);
-        $msg = 'Configuración del año guardada.';
+          $msg = 'Configuración del año guardada.';
+          if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+            header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
+          }
       } else {
         $msg = 'Año inválido.';
       }
@@ -153,6 +176,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_year_config']) 
         $stmt = $pdo->prepare('DELETE FROM year_configs WHERE year = ?');
         $stmt->execute([$yy]);
         $msg = 'Configuración del año eliminada.';
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+          header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
+        }
       }
     }
   } else {
@@ -182,8 +208,14 @@ if (
     $stmt = $pdo->prepare('REPLACE INTO app_settings (name,value) VALUES (?,?)');
     $stmt->execute(['site_config', json_encode($existing, JSON_UNESCAPED_UNICODE)]);
     $msg = 'Nombre del sitio guardado.';
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+      header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
+    }
   } else {
     $msg = 'Error: no hay conexión con la base de datos para guardar la configuración.';
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+      header('Content-Type: application/json'); http_response_code(500); echo json_encode(['ok'=>false,'error'=>'no_db']); exit;
+    }
   }
 }
 
@@ -320,33 +352,44 @@ if ($hol_pdo) {
           </div></div>
         </form>
 
-        <form method="post" class="form-wrapper">
-          <input type="hidden" name="holiday_action" value="add">
-          <div class="form-grid">
-            <div class="form-group"><label class="form-label">Fecha</label>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <select id="hd_month" class="form-control" aria-label="Mes"></select>
-                <select id="hd_day" class="form-control" aria-label="Día"></select>
-                <input type="hidden" id="hd_date" name="date" required>
+        <div style="margin-bottom:12px;">
+          <button id="openAddHolidayBtn" class="btn-primary" type="button">Añadir festivo</button>
+        </div>
+
+        <!-- Modal for adding a holiday -->
+        <div id="holidayModalOverlay" aria-hidden="true" style="display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;z-index:9999">
+          <div id="holidayModal" role="dialog" aria-modal="true" style="background:#fff;padding:18px;border-radius:6px;max-width:720px;width:100%;box-shadow:0 6px 24px rgba(0,0,0,0.2)">
+            <h3>Añadir festivo</h3>
+            <form method="post" id="holidayAddForm" class="form-wrapper">
+              <input type="hidden" name="holiday_action" value="add">
+              <div class="form-grid">
+                <div class="form-group"><label class="form-label">Fecha</label>
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <select id="hd_month" class="form-control" aria-label="Mes"></select>
+                    <select id="hd_day" class="form-control" aria-label="Día"></select>
+                    <input type="hidden" id="hd_date" name="date" required>
+                  </div>
+                </div>
+                <div class="form-group"><label class="form-label">Descripción</label><input class="form-control" type="text" name="label" placeholder="Ej: Año Nuevo"></div>
+                <div class="form-group"><label class="form-label">Tipo</label>
+                  <select class="form-control" name="type">
+                    <option value="holiday">Festivo</option>
+                    <option value="vacation">Vacaciones</option>
+                    <option value="personal">Asuntos propios</option>
+                    <option value="enfermedad">Enfermedad</option>
+                    <option value="permiso">Permiso</option>
+                  </select>
+                </div>
+                <div class="form-group"><?php echo render_checkbox('annual', 0, 'Repite anualmente'); ?></div>
+                <div class="form-group"><?php echo render_checkbox('global', 0, 'Visible a todos (global)'); ?></div>
               </div>
-            </div>
-            <div class="form-group"><label class="form-label">Descripción</label><input class="form-control" type="text" name="label" placeholder="Ej: Año Nuevo"></div>
-            <div class="form-group"><label class="form-label">Tipo</label>
-              <select class="form-control" name="type">
-                <option value="holiday">Festivo</option>
-                <option value="vacation">Vacaciones</option>
-                <option value="personal">Asuntos propios</option>
-                <option value="enfermedad">Enfermedad</option>
-                <option value="permiso">Permiso</option>
-              </select>
-            </div>
-            <div class="form-group"><?php echo render_checkbox('annual', 0, 'Repite anualmente'); ?></div>
-            <?php if (!empty($hol_user) && !empty($hol_user['is_admin'])): ?>
-              <div class="form-group"><?php echo render_checkbox('global', 0, 'Visible a todos (global)'); ?></div>
-            <?php endif; ?>
+              <div class="form-actions" style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn-secondary" type="button" id="closeHolidayModal">Cancelar</button>
+                <button class="btn-primary" type="submit">Añadir</button>
+              </div>
+            </form>
           </div>
-          <div class="form-actions" style="margin-top:12px;"><button class="btn-primary" type="submit">Añadir</button></div>
-        </form>
+        </div>
 
         <h4>Listado de festivos</h4>
         <div class="table-responsive">
@@ -372,11 +415,11 @@ if ($hol_pdo) {
                   <?php endif; ?>
                 </td>
                 <td class="holiday-actions">
-                  <button class="btn edit-holiday-btn highlight-edit-btn" type="button" title="Editar festivo">✎</button>
+                  <button class="btn edit-holiday-btn highlight-edit-btn icon-btn btn-edit" type="button" title="Editar festivo"> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L20.71 7.04a1 1 0 0 0 0-1.41L18.36 3.28a1 1 0 0 0-1.41 0L3 17.25z" fill="currentColor"/></svg> </button>
                   <form method="post" onsubmit="return confirm('Eliminar este festivo?');">
                     <input type="hidden" name="holiday_action" value="delete">
                     <input type="hidden" name="id" value="<?php echo $r['id']?>">
-                    <button class="btn btn-outline" type="submit" title="Eliminar festivo">🗑️</button>
+                    <button class="btn btn-danger icon-btn btn-delete" type="submit" title="Eliminar festivo"> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/></svg> </button>
                   </form>
                 </td>
               </tr>
@@ -407,10 +450,10 @@ if ($hol_pdo) {
             <td class="yc-coffee_minutes"><?php echo htmlspecialchars($yc['coffee_minutes']); ?></td>
             <td class="yc-lunch_minutes"><?php echo htmlspecialchars($yc['lunch_minutes']); ?></td>
             <td class="yc-actions">
-              <button class="btn edit-year-btn highlight-edit-btn icon-btn" type="button" title="Editar configuración">✎</button>
+              <button class="btn edit-year-btn highlight-edit-btn icon-btn btn-edit" type="button" title="Editar configuración"> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L20.71 7.04a1 1 0 0 0 0-1.41L18.36 3.28a1 1 0 0 0-1.41 0L3 17.25z" fill="currentColor"/></svg> </button>
               <form method="post" onsubmit="return confirm('Eliminar configuración del año <?php echo intval($yc['year']); ?>?');">
                 <input type="hidden" name="delete_year_config" value="<?php echo intval($yc['year']); ?>">
-                <button class="btn-danger icon-btn" type="submit" title="Eliminar configuración">🗑️</button>
+                <button class="btn btn-danger icon-btn btn-delete" type="submit" title="Eliminar configuración"> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/></svg> </button>
               </form>
             </td>
           </tr>
@@ -469,7 +512,49 @@ if ($hol_pdo) {
   }, false);
 })();
 </script>
+<script>
+// Modal open/close for holiday add (mirrors year modal behavior)
+(function(){
+  const openBtn = document.getElementById('openAddHolidayBtn');
+  const overlay = document.getElementById('holidayModalOverlay');
+  const closeBtn = document.getElementById('closeHolidayModal');
+  const addForm = document.getElementById('holidayAddForm');
+  if (!openBtn || !overlay) return;
+  openBtn.addEventListener('click', () => { overlay.style.display = 'flex'; overlay.setAttribute('aria-hidden','false'); try{ addForm.reset(); addForm.querySelector('[name="label"]').focus(); }catch(e){} });
+  closeBtn && closeBtn.addEventListener('click', () => { overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); });
+  overlay.addEventListener('click', (e)=>{ if (e.target===overlay) { overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); } });
+})();
+</script>
 <style>
+/* Settings page: force listing panels to have white background for readability */
+.table-responsive { background: #ffffff !important; padding: 12px !important; border-radius: 8px; }
+.table-responsive .sheet { background: #ffffff !important; }
+
+/* Override holiday/vacation row highlights inside settings listing to keep a neutral background */
+.table-responsive .sheet tbody tr.holiday td,
+.table-responsive .sheet tbody tr.vacation td,
+.table-responsive .sheet tbody tr.personal td,
+.table-responsive .sheet tbody tr.illness td,
+.table-responsive .sheet tbody tr.permiso td {
+  background: transparent !important;
+}
+/* Stronger, more specific overrides to hide icons and ensure transparency */
+.container .card .table-responsive .sheet tbody tr.holiday td,
+.container .card .table-responsive .sheet tbody tr.vacation td,
+.container .card .table-responsive .sheet tbody tr.personal td,
+.container .card .table-responsive .sheet tbody tr.illness td,
+.container .card .table-responsive .sheet tbody tr.permiso td {
+  background-color: transparent !important;
+  background: none !important;
+}
+.container .card .table-responsive .sheet tbody tr.holiday td:first-child::before,
+.container .card .table-responsive .sheet tbody tr.vacation td:first-child::before,
+.container .card .table-responsive .sheet tbody tr.personal td:first-child::before,
+.container .card .table-responsive .sheet tbody tr.illness td:first-child::before,
+.container .card .table-responsive .sheet tbody tr.permiso td:first-child::before {
+  display: none !important;
+}
+
 /* Simple modal styles */
 #yearModalOverlay{position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;z-index:9999}
 #yearModal{background:#fff;padding:18px;border-radius:6px;max-width:720px;width:100%;box-shadow:0 6px 24px rgba(0,0,0,0.2)}
@@ -566,12 +651,12 @@ if ($hol_pdo) {
     setInput('coffee_minutes', 'yearcfg_coffee_minutes', tr.dataset.coffee_minutes);
     setInput('lunch_minutes', 'yearcfg_lunch_minutes', tr.dataset.lunch_minutes);
 
-    // replace actions with Save (💾) / Cancel (✖)
+    // replace actions with Save / Cancel (SVG icons)
     const actionsTd = btn.parentElement;
     actionsTd._orig = actionsTd.innerHTML;
     actionsTd.innerHTML = '';
-    const saveBtn = document.createElement('button'); saveBtn.className = 'btn-primary save-year-btn icon-btn'; saveBtn.type='button'; saveBtn.title = 'Guardar'; saveBtn.innerHTML = '💾';
-    const cancelBtn = document.createElement('button'); cancelBtn.className='btn-secondary cancel-year-btn icon-btn'; cancelBtn.type='button'; cancelBtn.title='Cancelar'; cancelBtn.innerHTML='✖';
+    const saveBtn = document.createElement('button'); saveBtn.className = 'btn-primary save-year-btn icon-btn'; saveBtn.type='button'; saveBtn.title = 'Guardar'; saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM12 19a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="currentColor"/></svg>';
+    const cancelBtn = document.createElement('button'); cancelBtn.className='btn-secondary cancel-year-btn icon-btn'; cancelBtn.type='button'; cancelBtn.title='Cancelar'; cancelBtn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.41 4.29 19.71 2.88 18.3 9.17 12 2.88 5.71 4.29 4.29 10.59 10.59 16.88 4.29z" fill="currentColor"/></svg>';
     actionsTd.appendChild(saveBtn); actionsTd.appendChild(cancelBtn);
 
     cancelBtn.addEventListener('click', function(){
@@ -589,7 +674,7 @@ if ($hol_pdo) {
       const inputs = tr.querySelectorAll('input[name]');
       inputs.forEach(function(inp){ fd.append(inp.name, inp.value); });
       // send
-      saveBtn.disabled = true; saveBtn.innerHTML = '⏳';
+      saveBtn.disabled = true; saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="20" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/></svg>';
       fetch(location.pathname + location.search, { method:'POST', body:fd, headers: {'X-Requested-With':'XMLHttpRequest'} })
         .then(r=>r.json().catch(()=>({ok:false})))
         .then(function(data){
@@ -598,7 +683,7 @@ if ($hol_pdo) {
             location.reload();
           } else {
             alert('Error al guardar la configuración del año');
-            saveBtn.disabled = false; saveBtn.innerHTML = '💾';
+            saveBtn.disabled = false; saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM12 19a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="currentColor"/></svg>';
           }
         }).catch(function(err){ console.error(err); alert('Error de red'); saveBtn.disabled=false; saveBtn.innerHTML='💾'; });
     });
@@ -629,13 +714,12 @@ if ($hol_pdo) {
     const globalTd = tr.querySelector('.holiday-global');
     if (globalTd) {
       globalTd._orig = globalTd.innerHTML;
-      if (holIsAdmin) {
-        const checked = (tr.dataset.global === '1') ? 'checked' : '';
-        globalTd.innerHTML = '<label><input type="checkbox" name="global" ' + checked + '> Global</label>';
-      }
+      // Always show editable checkbox for 'global' in inline edit; server enforces admin rights
+      const checked = (tr.dataset.global === '1') ? 'checked' : '';
+      globalTd.innerHTML = '<label><input type="checkbox" name="global" ' + checked + '> Global</label>';
     }
-    const saveBtn = document.createElement('button'); saveBtn.type='button'; saveBtn.className='btn-primary save-holiday-btn icon-btn'; saveBtn.title='Guardar'; saveBtn.innerHTML='💾';
-    const cancelBtn = document.createElement('button'); cancelBtn.type='button'; cancelBtn.className='btn-secondary cancel-holiday-btn icon-btn'; cancelBtn.title='Cancelar'; cancelBtn.innerHTML='✖';
+    const saveBtn = document.createElement('button'); saveBtn.type='button'; saveBtn.className='btn-primary save-holiday-btn icon-btn'; saveBtn.title='Guardar'; saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM12 19a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="currentColor"/></svg>';
+    const cancelBtn = document.createElement('button'); cancelBtn.type='button'; cancelBtn.className='btn-secondary cancel-holiday-btn icon-btn'; cancelBtn.title='Cancelar'; cancelBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.41 4.29 19.71 2.88 18.3 9.17 12 2.88 5.71 4.29 4.29 10.59 10.59 16.88 4.29z" fill="currentColor"/></svg>';
     actionsTd.appendChild(saveBtn); actionsTd.appendChild(cancelBtn);
     cancelBtn.addEventListener('click', function(){ ['date','annual','type','label','global'].forEach(k=>{ const td = (k==='global') ? tr.querySelector('.holiday-global') : tr.querySelector('.holiday-'+k); if (td) td.innerHTML = tr._orig[k] ?? ''; }); actionsTd.innerHTML = actionsTd._orig; delete tr._orig; delete tr.dataset.editing; });
     saveBtn.addEventListener('click', function(){
@@ -645,14 +729,14 @@ if ($hol_pdo) {
       const typeVal = tr.querySelector('.holiday-type [name="type"]')?.value || 'holiday';
       const labelVal = tr.querySelector('.holiday-label [name="label"]')?.value || '';
       const globalEl = tr.querySelector('.holiday-global [name="global"]');
-      const globalVal = globalEl ? (globalEl.checked ? '1' : '') : '';
+      const globalVal = globalEl ? (globalEl.checked ? '1' : '0') : '0';
       fd.append('date', dateVal); fd.append('annual', annualVal); fd.append('type', typeVal); fd.append('label', labelVal);
-      if (globalVal) fd.append('global', globalVal);
-      saveBtn.disabled = true; saveBtn.innerHTML = '⏳';
+      fd.append('global', globalVal);
+      saveBtn.disabled = true; saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="20" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/></svg>';
       fetch(location.pathname + location.search, { method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'} })
         .then(r=>r.json().catch(()=>({ok:false})))
-        .then(function(data){ if (data && data.ok) { location.reload(); } else { alert('Error al guardar festivo'); saveBtn.disabled=false; saveBtn.innerHTML='💾'; } })
-        .catch(function(){ alert('Error de red'); saveBtn.disabled=false; saveBtn.innerHTML='💾'; });
+        .then(function(data){ if (data && data.ok) { location.reload(); } else { alert('Error al guardar festivo'); saveBtn.disabled=false; saveBtn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM12 19a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="currentColor"/></svg>'; } })
+        .catch(function(){ alert('Error de red'); saveBtn.disabled=false; saveBtn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM12 19a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="currentColor"/></svg>'; });
     });
   });
 })();
@@ -669,6 +753,63 @@ if ($hol_pdo) {
 .holiday-actions .btn, .yc-actions .btn { display: inline-block !important; }
 /* Highlight variant for edit buttons */
 .highlight-edit-btn { background: linear-gradient(90deg,#ffd54d,#ffb74d); color:#1b1b1b; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+</style>
+
+<style>
+/* Ensure edit and delete buttons look identical in both holiday and year lists */
+.holiday-actions .highlight-edit-btn,
+.yc-actions .highlight-edit-btn {
+  padding: 6px 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  display:inline-flex !important;
+  align-items:center; justify-content:center;
+}
+.holiday-actions .btn-danger,
+.yc-actions .btn-danger {
+  background-color: var(--danger-color) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  padding: 6px 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  display:inline-flex !important;
+  align-items:center; justify-content:center;
+}
+.holiday-actions .icon-btn, .yc-actions .icon-btn { padding: 6px 8px !important; }
+
+/* Common delete button helper */
+.btn-delete {
+  background-color: var(--danger-color) !important;
+  color: #ffffff !important;
+  border: none !important;
+  padding: 6px 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+}
+</style>
+
+<style>
+/* Force exact same visuals for edit buttons in both lists */
+.holiday-actions .edit-holiday-btn,
+.yc-actions .edit-year-btn {
+  background: linear-gradient(90deg,#ffd54d,#ffb74d) !important;
+  background-image: linear-gradient(90deg,#ffd54d,#ffb74d) !important;
+  color: #1b1b1b !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  padding: 6px 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-repeat: no-repeat !important;
+}
 </style>
 
 <style>

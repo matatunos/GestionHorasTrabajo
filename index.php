@@ -127,23 +127,6 @@ $holidayMap = [];
 
     <div class="table-responsive">
     <table class="sheet compact">
-    <thead>
-      <tr>
-        <th>Fecha</th>
-        <th>Entrada</th>
-        <th>Salida café</th>
-        <th>Entrada café</th>
-        <th>Saldo café</th>
-        <th>Salida comida</th>
-        <th>Entrada comida</th>
-        <th>Saldo comida</th>
-        <th>Hora salida</th>
-        <th>Total h.</th>
-        <th>Balance día</th>
-        <th>Nota</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
     <?php
       $currentMonth = null;
       // iterate every day of the year so weekends are shown even when no entry exists
@@ -161,8 +144,25 @@ $holidayMap = [];
           $currentMonth = $month;
           echo "<tbody class=\"month-group\" data-month=\"".$monthKey."\">";
           echo "<tr class=\"month\"><td class=\"month-header\" data-month=\"".$monthKey."\" colspan=13><button class=\"month-toggle\" data-month=\"".$monthKey."\">−</button> ".htmlspecialchars($month)."</td></tr>";
+          // insert a header row at the top of each month for quick reference
+          echo "<tr class=\"month-columns\">";
+          echo "<th>Fecha</th>";
+          echo "<th>Entrada</th>";
+          echo "<th>Salida café</th>";
+          echo "<th>Entrada café</th>";
+          echo "<th>Saldo café</th>";
+          echo "<th>Salida comida</th>";
+          echo "<th>Entrada comida</th>";
+          echo "<th>Saldo comida</th>";
+          echo "<th>Hora salida</th>";
+          echo "<th>Total h.</th>";
+          echo "<th>Balance día</th>";
+          echo "<th>Nota</th>";
+          echo "<th>Acciones</th>";
+          echo "</tr>";
         }
-          $dow = (int)date('N', $ts);
+          // get day-of-week from current DateTimeImmutable
+          $dow = (int)$cur->format('N');
           $rowClass = ($dow >= 6) ? 'weekend' : '';
           if ($hideWeekends && $dow >= 6) continue;
           $e = isset($entries[$d]) ? $entries[$d] : ['date' => $d];
@@ -186,7 +186,13 @@ $holidayMap = [];
         }
       ?>
       <tr class="<?php echo $rowClass . $extraClass; ?>">
-        <td><?php echo htmlspecialchars($d); ?></td>
+        <?php
+          $dateLabel = htmlspecialchars($d);
+          $isWeekend = ($dow >= 6);
+          if ($dow === 6) $dateLabel = 'Sabado';
+          elseif ($dow === 7) $dateLabel = 'Domingo';
+        ?>
+        <td class="date-cell<?php echo $isWeekend ? ' center' : ''; ?>"><?php echo $dateLabel; ?></td>
         <td><?php echo htmlspecialchars($e['start'] ?? ''); ?></td>
         <td><?php echo htmlspecialchars($e['coffee_out'] ?? ''); ?></td>
         <td><?php echo htmlspecialchars($e['coffee_in'] ?? ''); ?></td>

@@ -24,46 +24,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
     foreach ($importData as $record) {
       $fechaISO = $record['fechaISO'] ?? '';
       if (!$fechaISO) continue;
-      
+
       // Extraer horas del registro importado
-      // El formato de horas puede variar, intentamos mapear lo mejor posible
-      $horas = $record['horas'] ?? [];
-      
-      // Mapeo simple: primera hora = start, última hora = end
-      $start = count($horas) > 0 ? $horas[0] : null;
-      $end = count($horas) > 0 ? $horas[count($horas) - 1] : null;
-      
-      // Si hay más de 2 horas, intentar mapear intermedias
-      $coffee_out = null;
-      $coffee_in = null;
-      $lunch_out = null;
-      $lunch_in = null;
-      
-      if (count($horas) >= 6) {
-        // Formato completo: start, coffee_out, coffee_in, lunch_out, lunch_in, end
-        $coffee_out = $horas[1] ?? null;
-        $coffee_in = $horas[2] ?? null;
-        $lunch_out = $horas[3] ?? null;
-        $lunch_in = $horas[4] ?? null;
-        $end = $horas[5] ?? null;
-      } elseif (count($horas) == 5) {
-        // Sin coffee break: start, lunch_out, lunch_in, end (o similar)
-        $lunch_out = $horas[1] ?? null;
-        $lunch_in = $horas[2] ?? null;
-        $end = $horas[3] ?? null;
-      } elseif (count($horas) == 4) {
-        // Dos pausas: start, pausa1_out, pausa1_in, end
-        $lunch_out = $horas[1] ?? null;
-        $lunch_in = $horas[2] ?? null;
-        $end = $horas[3] ?? null;
-      } elseif (count($horas) == 3) {
-        $lunch_out = $horas[1] ?? null;
-        $lunch_in = $horas[2] ?? null;
-      } elseif (count($horas) == 2) {
-        // Solo entrada y salida
-        $start = $horas[0];
-        $end = $horas[1];
+      // Preferimos recibir un array `horas_slots` con 6 posiciones (puede contener cadenas vacías o marcadores)
+      $horas_slots = null;
+      if (isset($record['horas_slots']) && is_array($record['horas_slots'])) {
+        $horas_slots = $record['horas_slots'];
       }
+
+      // Si no hay `horas_slots`, caemos en el antiguo comportamiento usando 'horas'
+      if ($horas_slots === null) {
+        $horas = $record['horas'] ?? [];
+        // mapear por posición asumida
+        $horas_slots = [];
+        for ($i = 0; $i < 6; $i++) {
+          $horas_slots[$i] = $horas[$i] ?? '';
+        }
+      } else {
+        // Asegurar exactamente 6 posiciones
+        for ($i = 0; $i < 6; $i++) {
+          if (!isset($horas_slots[$i])) $horas_slots[$i] = '';
+        }
+      }
+
+      // Normalizar valores vacíos
+      foreach ($horas_slots as $k => $v) {
+        if ($v === null) $horas_slots[$k] = '';
+        $horas_slots[$k] = trim((string)$horas_slots[$k]);
+        if ($horas_slots[$k] === '#' || $horas_slots[$k] === '-') {
+          $horas_slots[$k] = '';
+        }
+      }
+
+      // Mapeo explícito por slot: 0=start,1=coffee_out,2=coffee_in,3=lunch_out,4=lunch_in,5=end
+      $start = $horas_slots[0] !== '' ? $horas_slots[0] : null;
+      $coffee_out = $horas_slots[1] !== '' ? $horas_slots[1] : null;
+      $coffee_in = $horas_slots[2] !== '' ? $horas_slots[2] : null;
+      $lunch_out = $horas_slots[3] !== '' ? $horas_slots[3] : null;
+      $lunch_in = $horas_slots[4] !== '' ? $horas_slots[4] : null;
+      $end = $horas_slots[5] !== '' ? $horas_slots[5] : null;
       
       try {
         // Check if entry already exists
@@ -219,12 +218,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
     <div class="instructions">
       <h3>Instrucciones</h3>
       <ol>
-        <li>Descarga tu informe de fichajes en formato HTML desde el portal de horas externo usando la opción "Guardar como" del navegador.</li>
-        <li>Selecciona el archivo HTML descargado usando el botón "Seleccionar archivo".</li>
-        <li>Indica el año correspondiente al informe (necesario ya que la tabla no suele incluir el año).</li>
-        <li>Haz clic en "Cargar y previsualizar" para ver los datos extraídos.</li>
-        <li>Revisa la previsualización y, si es correcta, haz clic en "Importar registros".</li>
+        <li>Descarga tu informe de fichajes en formato HTML desde el portal externo (opción "Guardar como" del navegador).</li>
+        <li>Selecciona el archivo HTML con "Seleccionar archivo" y confirma el <strong>año</strong> del informe.</li>
+        <li>Haz clic en <strong>"Cargar y previsualizar"</strong>. El sistema intentará parsear el HTML en el navegador; si no encuentra registros, enviará el fichero al servidor como fallback.</li>
+        <li>En la previsualización verás una fila por día con columnas: <em>Entrada, Salida café, Entrada café, Salida comida, Entrada comida, Salida</em> y la columna editable <em>Horas (editar)</em>. Por defecto los <strong>sábados y domingos</strong> no se muestran aunque aparezcan en el informe; si quieres verlos, edítalos manualmente antes de importar.</li>
+        <li>Para ajustar las horas de un día edítalas en <em>Horas (editar)</em>:
+          <ul>
+            <li>Si separas con <strong>comas</strong> preservamos huecos entre comas. Ejemplo: <code>08:00,,10:45</code> crea un hueco en la posición intermedia.</li>
+            <li>Puedes usar <strong>#</strong> o <strong>-</strong> como marcador explícito (se tratan como hueco y no se importan).</li>
+            <li>Si no usas comas, separadores por espacios o <code>;</code> se interpretan y se eliminan huecos vacíos.</li>
+          </ul>
+        </li>
+        <li>Marca/ desmarca la casilla <strong>Incluir</strong> para decidir qué días se importan; solo las filas marcadas se enviarán al servidor.</li>
+        <li>Cuando todo esté correcto haz clic en <strong>Importar registros</strong>. Se te pedirá confirmación y solo se enviarán las filas incluidas.</li>
       </ol>
+      <p>Notas: el parser intenta mapear las horas por posición (0=entrada, 1=salida café, 2=entrada café, 3=salida comida, 4=entrada comida, 5=salida). Si tienes dudas, edita la columna <em>Horas (editar)</em> para colocar las horas o huecos en el orden correcto.</p>
     </div>
     
     <form class="import-form" id="import-form">
@@ -252,11 +260,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
         <table class="preview-table" id="preview-table">
           <thead>
             <tr>
+              <th>Incluir</th>
               <th>Día</th>
               <th>Fecha</th>
               <th>Fecha ISO</th>
-              <th>Horas</th>
+              <th>Entrada</th>
+              <th>Salida café</th>
+              <th>Entrada café</th>
+              <th>Salida comida</th>
+              <th>Entrada comida</th>
+              <th>Salida</th>
               <th>Balance</th>
+              <th>Horas (editar)</th>
             </tr>
           </thead>
           <tbody id="preview-tbody">
@@ -334,14 +349,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
                 });
               }
 
-              const validacion = window.importFichajes.validarRegistros(registros);
+              let validacion;
+              if (window.importFichajes && typeof window.importFichajes.validarRegistros === 'function') {
+                validacion = window.importFichajes.validarRegistros(registros);
+              } else {
+                // Fallback mínimo de validación si el script cliente no está disponible
+                const errors = [];
+                if (!Array.isArray(registros) || registros.length === 0) {
+                  errors.push('No se encontraron registros en el archivo');
+                }
+                (registros || []).forEach(function(r, i) {
+                  if (!r || !r.fechaISO) errors.push('Registro ' + (i + 1) + ': falta fechaISO');
+                  if (r && !Array.isArray(r.horas)) errors.push('Registro ' + (i + 1) + ': horas debe ser un array');
+                });
+                validacion = { valid: errors.length === 0, errors: errors };
+              }
+
               if (!validacion.valid) {
                 alert('Errores en los registros:\n' + validacion.errors.join('\n'));
                 return;
               }
 
-              currentRecords = registros;
-              displayPreview(registros);
+              // Por defecto ocultamos sábados y domingos en la previsualización
+              const filtered = (registros || []).filter(function(r) {
+                if (!r || !r.fechaISO) return false;
+                const d = new Date(r.fechaISO);
+                const day = d.getDay(); // 0 = domingo, 6 = sábado
+                return day !== 0 && day !== 6;
+              });
+
+              currentRecords = filtered;
+              displayPreview(filtered);
               previewSection.classList.add('show');
               importDataInput.value = JSON.stringify(registros);
               importYearInput.value = year;
@@ -354,19 +392,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
           return; // server will finalize
         }
 
-        const validacion = window.importFichajes.validarRegistros(registros);
+        let validacion;
+        if (window.importFichajes && typeof window.importFichajes.validarRegistros === 'function') {
+          validacion = window.importFichajes.validarRegistros(registros);
+        } else {
+          const errors = [];
+          if (!Array.isArray(registros) || registros.length === 0) {
+            errors.push('No se encontraron registros en el archivo');
+          }
+          (registros || []).forEach(function(r, i) {
+            if (!r || !r.fechaISO) errors.push('Registro ' + (i + 1) + ': falta fechaISO');
+            if (r && !Array.isArray(r.horas)) errors.push('Registro ' + (i + 1) + ': horas debe ser un array');
+          });
+          validacion = { valid: errors.length === 0, errors: errors };
+        }
 
         if (!validacion.valid) {
           alert('Errores en los registros:\n' + validacion.errors.join('\n'));
           return;
         }
 
-        currentRecords = registros;
-        displayPreview(registros);
+        // Por defecto ocultamos sábados y domingos en la previsualización
+        const filtered = (registros || []).filter(function(r) {
+          if (!r || !r.fechaISO) return false;
+          const d = new Date(r.fechaISO);
+          const day = d.getDay();
+          return day !== 0 && day !== 6;
+        });
+
+        currentRecords = filtered;
+        displayPreview(filtered);
         previewSection.classList.add('show');
 
-        // Preparar datos para importación
-        importDataInput.value = JSON.stringify(registros);
+        // El valor de importDataInput lo fija updateImportData()
         importYearInput.value = year;
       } catch (error) {
         alert('Error al procesar el archivo: ' + error.message);
@@ -389,35 +447,150 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
     previewTbody.innerHTML = '';
     recordCount.textContent = registros.length;
     
-    registros.forEach(function(registro) {
+    registros.forEach(function(registro, idx) {
+      // Asegurar estructura
+      registro._include = registro._include !== false;
+
       const row = document.createElement('tr');
-      
+
+      // Incluir checkbox
+      const includeCell = document.createElement('td');
+      const includeCb = document.createElement('input');
+      includeCb.type = 'checkbox';
+      includeCb.checked = registro._include;
+      includeCb.addEventListener('change', function() {
+        registro._include = includeCb.checked;
+        updateImportData();
+        recordCount.textContent = (registros.filter(r => r._include)).length;
+      });
+      includeCell.appendChild(includeCb);
+      row.appendChild(includeCell);
+
       const diaCell = document.createElement('td');
       diaCell.textContent = registro.dia;
       row.appendChild(diaCell);
-      
+
       const fechaCell = document.createElement('td');
       fechaCell.textContent = registro.fecha;
       row.appendChild(fechaCell);
-      
+
       const fechaISOCell = document.createElement('td');
       fechaISOCell.textContent = registro.fechaISO;
       row.appendChild(fechaISOCell);
-      
-      const horasCell = document.createElement('td');
-      horasCell.textContent = registro.horas.join(', ');
-      row.appendChild(horasCell);
-      
+
+      // Mostrar horas en columnas separadas según el orden esperado
+      const getHora = function(horas, idx) {
+        if (!Array.isArray(horas)) return '';
+        const v = horas[idx];
+        if (!v) return '';
+        if (v === '#' || v === '-') return '';
+        return v;
+      };
+
+      const entradaCell = document.createElement('td');
+      entradaCell.textContent = getHora(registro.horas, 0);
+      row.appendChild(entradaCell);
+
+      const salidaCafeCell = document.createElement('td');
+      salidaCafeCell.textContent = getHora(registro.horas, 1);
+      row.appendChild(salidaCafeCell);
+
+      const entradaCafeCell = document.createElement('td');
+      entradaCafeCell.textContent = getHora(registro.horas, 2);
+      row.appendChild(entradaCafeCell);
+
+      const salidaComidaCell = document.createElement('td');
+      salidaComidaCell.textContent = getHora(registro.horas, 3);
+      row.appendChild(salidaComidaCell);
+
+      const entradaComidaCell = document.createElement('td');
+      entradaComidaCell.textContent = getHora(registro.horas, 4);
+      row.appendChild(entradaComidaCell);
+
+      const salidaFinalCell = document.createElement('td');
+      salidaFinalCell.textContent = getHora(registro.horas, 5);
+      row.appendChild(salidaFinalCell);
+
       const balanceCell = document.createElement('td');
       balanceCell.textContent = registro.balance;
       row.appendChild(balanceCell);
-      
+
+      // Horas crudas editable
+      const rawCell = document.createElement('td');
+      rawCell.contentEditable = true;
+      rawCell.style.minWidth = '140px';
+      rawCell.textContent = (Array.isArray(registro.horas) ? registro.horas.join(', ') : '');
+      rawCell.addEventListener('input', function() {
+        const text = rawCell.textContent.trim();
+        let parts = [];
+        if (text.indexOf(',') !== -1) {
+          // Si el usuario usa comas, interpretarlas como slots y preservar vacíos
+          parts = text.split(',').map(s => s.trim());
+        } else if (text.length === 0) {
+          parts = [];
+        } else {
+          // Sin comas: separar por espacios/; y eliminar tokens vacíos
+          parts = text.split(/[\s;]+/).map(s => s.trim()).filter(Boolean);
+        }
+
+        // Limitar a 6 posiciones
+        if (parts.length > 6) parts = parts.slice(0, 6);
+        registro.horas = parts;
+
+        // actualizar celdas visibles (tratando '#' y '-' como huecos)
+        entradaCell.textContent = getHora(registro.horas, 0);
+        salidaCafeCell.textContent = getHora(registro.horas, 1);
+        entradaCafeCell.textContent = getHora(registro.horas, 2);
+        salidaComidaCell.textContent = getHora(registro.horas, 3);
+        entradaComidaCell.textContent = getHora(registro.horas, 4);
+        salidaFinalCell.textContent = getHora(registro.horas, 5);
+        updateImportData();
+      });
+      row.appendChild(rawCell);
+
       previewTbody.appendChild(row);
     });
+
+    // actualizar contador y datos de import
+    recordCount.textContent = (registros.filter(r => r._include)).length;
+    updateImportData();
+  }
+
+  function updateImportData() {
+    const toImport = currentRecords.filter(r => r._include !== false).map(function(r) {
+      // Construir 'horas_slots' con 6 posiciones (vacías si no hay valor)
+      const slots = [];
+      if (Array.isArray(r.horas)) {
+        for (let i = 0; i < 6; i++) {
+          slots[i] = r.horas[i] || '';
+        }
+      } else {
+        for (let i = 0; i < 6; i++) slots[i] = '';
+      }
+
+      return {
+        dia: r.dia || '',
+        fecha: r.fecha || '',
+        fechaISO: r.fechaISO || '',
+        horas: Array.isArray(r.horas) ? r.horas.filter(h => h && h !== '#' && h !== '-') : [],
+        horas_slots: slots,
+        balance: r.balance || ''
+      };
+    });
+    importDataInput.value = JSON.stringify(toImport);
   }
   
   importSubmitForm.addEventListener('submit', function(e) {
-    if (!confirm('¿Estás seguro de que deseas importar estos ' + currentRecords.length + ' registros?')) {
+    // Asegurarse de que los datos están actualizados y contar solo los incluidos
+    updateImportData();
+    const includedCount = currentRecords.filter(r => r._include !== false).length;
+    if (!confirm('¿Estás seguro de que deseas importar estos ' + includedCount + ' registros?')) {
+      e.preventDefault();
+      return;
+    }
+    // Si no hay registros incluidos, evitar envío
+    if (includedCount === 0) {
+      alert('No hay registros seleccionados para importar.');
       e.preventDefault();
     }
   });

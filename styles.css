@@ -518,7 +518,7 @@ svg polyline { stroke: var(--brand-primary) !important; }
 
 /* Smaller buttons inside tables */
 .sheet.compact .btn { padding: 4px 8px; font-size: 0.82rem; }
-.sheet.compact .btn.btn-danger { padding: 4px 7px; }
+.sheet.compact .btn.btn-danger { padding: 4px 7px; background-color: var(--danger-color) !important; color: #ffffff !important; border-color: transparent !important; }
 
 /* Fixed column widths for critical compacting (date, time columns, actions) */
 .sheet.compact th:nth-child(1), .sheet.compact td:nth-child(1) { width: 95px; }
@@ -590,7 +590,7 @@ svg polyline { stroke: var(--brand-primary) !important; }
         box-shadow: none;
 }
 .sheet .btn.btn-primary { background: var(--brand-primary) !important; color: #fff !important; border-color: transparent !important; }
-.sheet .btn.btn-danger { background: rgba(220,38,38,0.06) !important; color: var(--danger-color) !important; border-color: rgba(220,38,38,0.12) !important; }
+.sheet .btn.btn-danger { background-color: var(--danger-color) !important; color: #ffffff !important; border-color: transparent !important; }
 .sheet .icon-btn { width: 28px; padding: 0 6px; font-size: 14px; }
 
 /* If buttons are hidden via display:none by responsive rules, ensure action column shows at least icons */
@@ -609,6 +609,8 @@ svg polyline { stroke: var(--brand-primary) !important; }
 .holiday-actions .btn, .yc-actions .btn { display: inline-block; }
 .holiday-actions form, .yc-actions form { display: inline; margin-left: 6px; }
 .yc-actions .btn-danger { padding: 4px 6px; height: 28px; }
+/* Ensure svg icons inside danger buttons are white */
+.btn-danger svg, .sheet .btn.btn-danger svg { fill: #ffffff !important; color: #ffffff !important; }
 
 /* Highlight edit button appearance (was applied inline during debugging) */
 .highlight-edit-btn { background: linear-gradient(90deg,#ffd54d,#ffb74d); color:#1b1b1b; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
@@ -1126,5 +1128,43 @@ tbody.month-group.collapsed tr.weekend td:not(.month) { opacity: 0.95; }
 .sheet tbody tr.personal td { background-color: rgba(235, 255, 230, 0.85); }
 .sheet tbody tr.illness td { background-color: rgba(255, 250, 230, 0.85); }
 .sheet tbody tr.permiso td { background-color: rgba(240, 245, 255, 0.85); }
+
+
+
+/* Ensure date column shows fully: give first column more space and avoid truncation */
+.sheet th:first-child, .sheet td:first-child {
+    min-width: 130px !important;
+    white-space: nowrap !important;
+}
+
+/* If compact mode is enabled, still allow date to expand */
+.page-index.compact .sheet th:first-child, .page-index.compact .sheet td:first-child {
+    min-width: 110px !important;
+    white-space: nowrap !important;
+}
+
+/* Strong overrides to counter earlier compact/fixed-table rules that shrink the first column */
+.sheet.compact th:nth-child(1), .sheet.compact td:nth-child(1),
+.sheet th:nth-child(1), .sheet td:nth-child(1) {
+    min-width: 130px !important;
+    max-width: none !important;
+    width: auto !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+/* If the table layout is fixed globally, allow the first column to behave like auto for visibility */
+.sheet.compact, .sheet {
+    table-layout: auto !important;
+}
+
+/* Date cell styling: center weekend labels and keep nowrap */
+.sheet td.date-cell, .sheet th.date-cell { white-space: nowrap; }
+.sheet td.date-cell.center, .sheet th.date-cell.center {
+    text-align: center !important;
+    font-weight: 600;
+}
+
 
 
