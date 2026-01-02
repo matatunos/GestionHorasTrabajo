@@ -1,0 +1,10 @@
+node_modules/
+vendor/
+.DS_Store
+*.log
+data/*.json
+data/*.db
+.env
+*.bak
+.bak_*
+/tmp/
