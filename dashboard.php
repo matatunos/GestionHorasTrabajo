@@ -169,7 +169,7 @@ function svg_compare_chart(array $dates, array $worked, array $expected, $w=700,
   $max = max(max($valsW) ?: 1, max($valsE) ?: 1);
   $min = 0;
   $count = count($dates) ?: 1;
-  $pad = 20;
+  $pad = 40; // leave space for Y labels
   $plotW = $w - $pad*2;
   $plotH = $h - $pad*2;
   $polyW = [];
@@ -184,12 +184,28 @@ function svg_compare_chart(array $dates, array $worked, array $expected, $w=700,
   $polyW = implode(' ', $polyW);
   $polyE = implode(' ', $polyE);
   $svg = '<svg width="' . $w . '" height="' . $h . '" viewBox="0 0 ' . $w . ' ' . $h . '" xmlns="http://www.w3.org/2000/svg">';
-  // axes
-  $svg .= '<rect x="' . $pad . '" y="' . $pad . '" width="' . $plotW . '" height="' . $plotH . '" fill="none" stroke="#ddd" stroke-width="0.5"/>';
+  // background / plot area
+  $svg .= '<rect x="' . $pad . '" y="' . $pad . '" width="' . $plotW . '" height="' . $plotH . '" fill="#fff" stroke="#eee" stroke-width="1"/>';
+  // y-axis ticks and labels (4 ticks)
+  $ticks = 4;
+  for ($t=0;$t<=$ticks;$t++){
+    $val = intval(round($min + ($t/$ticks) * ($max-$min)));
+    $py = $pad + ($plotH - ($t/$ticks)*$plotH);
+    $svg .= '<line x1="' . $pad . '" y1="' . $py . '" x2="' . ($pad+$plotW) . '" y2="' . $py . '" stroke="#f3f4f6" stroke-width="1" />';
+    $svg .= '<text x="' . ($pad-8) . '" y="' . ($py+4) . '" font-size="11" text-anchor="end" fill="#374151">' . htmlspecialchars(fmt($val)) . '</text>';
+  }
   // expected line (dashed)
   $svg .= '<polyline fill="none" stroke="#e11d48" stroke-width="2" stroke-dasharray="6 4" points="' . $polyE . '" />';
   // worked line
   $svg .= '<polyline fill="none" stroke="#06b6d4" stroke-width="2" points="' . $polyW . '" />';
+  // x-axis labels (sparse)
+  $maxLabels = 8;
+  $step = max(1, intval(floor($count / $maxLabels)));
+  for ($i=0;$i<$count;$i += $step){
+    $x = $pad + ($i / max(1, $count-1)) * $plotW;
+    $label = date('d/m', strtotime($dates[$i]));
+    $svg .= '<text x="' . $x . '" y="' . ($pad + $plotH + 16) . '" font-size="11" text-anchor="middle" fill="#475569">' . htmlspecialchars($label) . '</text>';
+  }
   // legend
   $svg .= '<g transform="translate(' . ($w-180) . ',10)"><rect width="160" height="36" rx="6" fill="#ffffff" stroke="#eee"/></g>';
   $svg .= '<text x="' . ($w-170) . '" y="28" font-size="12" fill="#e11d48">— Esperadas</text>';
