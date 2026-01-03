@@ -366,9 +366,18 @@ function svg_sparkline(array $values, $w=120, $h=28){
     <?php
       $alerts = [];
       
-      // Check if today's entry is missing
+      // Check if today's entry is missing (but only on working days)
       if ($todayInYear && empty($entries[$today])) {
-        $alerts[] = ['type' => 'warning', 'msg' => '⏰ No has fichado hoy'];
+        $eToday = $entries[$today] ?? ['date' => $today];
+        if (isset($holidayMap[$today])) {
+          $eToday['is_holiday'] = true;
+        }
+        $dayOfWeek = date('N', strtotime($today)); // 1=Mon, 6=Sat, 7=Sun
+        $isWorkingDay = $dayOfWeek < 6 && empty($eToday['is_holiday']);
+        
+        if ($isWorkingDay) {
+          $alerts[] = ['type' => 'warning', 'msg' => '⏰ No has fichado hoy'];
+        }
       }
       
       // Check if entry is incomplete (missing end time)
