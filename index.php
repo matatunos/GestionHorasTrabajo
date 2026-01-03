@@ -51,6 +51,12 @@ $hideWeekends = !empty($_GET['hide_weekends']);
 $hideHolidays = !empty($_GET['hide_holidays']);
 $hideVacations = !empty($_GET['hide_vacations']);
 
+// Advanced filters
+$filterDateFrom = $_GET['filter_date_from'] ?? null;
+$filterDateTo = $_GET['filter_date_to'] ?? null;
+$filterStatus = $_GET['filter_status'] ?? null;
+$filterSearch = $_GET['filter_search'] ?? null;
+
 // handle POST create/update entry for current user
 // handle inline delete via AJAX
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_date'])) {
@@ -83,6 +89,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['date'])) {
     'note' => $_POST['note'] ?: '',
     'absence_type' => $_POST['absence_type'] ?: null,
   ];
+  
+  // Validate time entry consistency
+  $validation = validate_time_entry($data);
+  if (!$validation['valid']) {
+    // Return validation error
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+      header('Content-Type: application/json');
+      echo json_encode(['ok' => false, 'error' => 'validation_failed', 'errors' => $validation['errors']]);
+      exit;
+    }
+    // For non-AJAX, redirect with error message (you could implement session flash messages)
+    header('Location: index.php?year=' . urlencode($year) . '&error=validation'); exit;
+  }
+  
   // upsert by user_id+date
   $stmt = $pdo->prepare('SELECT id FROM entries WHERE user_id = ? AND date = ? LIMIT 1');
   $stmt->execute([$user['id'], $date]);
@@ -105,11 +125,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['date'])) {
 
 // load entries for the year and build a map by date
 // load entries and holidays for the year and build maps by date
-$stmt = $pdo->prepare('SELECT * FROM entries WHERE user_id = ? AND date BETWEEN ? AND ? ORDER BY date ASC');
-$stmt->execute([$user['id'], "$year-01-01", "$year-12-31"]);
+$query = 'SELECT * FROM entries WHERE user_id = ? AND date BETWEEN ? AND ?';
+$params = [$user['id'], "$year-01-01", "$year-12-31"];
+
+// Apply advanced filters
+if ($filterDateFrom) {
+  $query .= ' AND date >= ?';
+  $params[] = $filterDateFrom;
+}
+if ($filterDateTo) {
+  $query .= ' AND date <= ?';
+  $params[] = $filterDateTo;
+}
+if ($filterSearch) {
+  $query .= ' AND note LIKE ?';
+  $params[] = '%' . $filterSearch . '%';
+}
+
+$query .= ' ORDER BY date ASC';
+
+$stmt = $pdo->prepare($query);
+$stmt->execute($params);
 $rows = $stmt->fetchAll();
 $entries = [];
 foreach ($rows as $r) { $entries[$r['date']] = $r; }
+
+// Apply status filter in application logic (after we have all entries)
+if ($filterStatus === 'complete') {
+  foreach ($entries as $d => $e) {
+    if (empty($e['start']) || empty($e['end'])) {
+      unset($entries[$d]);
+    }
+  }
+} elseif ($filterStatus === 'incomplete') {
+  foreach ($entries as $d => $e) {
+    if (!empty($e['start']) && !empty($e['end'])) {
+      unset($entries[$d]);
+    }
+  }
+} elseif ($filterStatus === 'absence') {
+  foreach ($entries as $d => $e) {
+    if (empty($e['absence_type'])) {
+      unset($entries[$d]);
+    }
+  }
+}
 
 // load holidays for year
 $holidayMap = [];
@@ -206,6 +266,20 @@ $holidayMap = [];
       <label style="display:none;"><input type="checkbox" name="hide_weekends" value="1" <?php echo $hideWeekends ? 'checked' : ''; ?>> Ocultar fines de semana</label>
       <label class="form-check"><input type="checkbox" name="hide_holidays" value="1" <?php echo $hideHolidays ? 'checked' : ''; ?>><span>Ocultar festivos</span></label>
       <label class="form-check"><input type="checkbox" name="hide_vacations" value="1" <?php echo $hideVacations ? 'checked' : ''; ?>><span>Ocultar vacaciones</span></label>
+      
+      <!-- New advanced filters -->
+      <div style="border-left:1px solid #ccc; padding-left:12px; margin-left:12px;">
+        <label class="form-label">Desde <input class="form-control" type="date" name="filter_date_from" value="<?php echo htmlspecialchars($_GET['filter_date_from'] ?? ''); ?>" style="width:150px;"></label>
+        <label class="form-label">Hasta <input class="form-control" type="date" name="filter_date_to" value="<?php echo htmlspecialchars($_GET['filter_date_to'] ?? ''); ?>" style="width:150px;"></label>
+        <label class="form-label">Estado <select class="form-control" name="filter_status" style="width:150px;">
+          <option value="">Todos</option>
+          <option value="complete" <?php echo ($_GET['filter_status'] ?? '') === 'complete' ? 'selected' : ''; ?>>Completo</option>
+          <option value="incomplete" <?php echo ($_GET['filter_status'] ?? '') === 'incomplete' ? 'selected' : ''; ?>>Incompleto</option>
+          <option value="absence" <?php echo ($_GET['filter_status'] ?? '') === 'absence' ? 'selected' : ''; ?>>Con ausencia</option>
+        </select></label>
+        <label class="form-label">Buscar <input class="form-control" type="text" name="filter_search" placeholder="Buscar en notas..." value="<?php echo htmlspecialchars($_GET['filter_search'] ?? ''); ?>" style="width:200px;"></label>
+      </div>
+      
       <button class="btn" type="submit">Aplicar filtros</button>
       <button id="toggle-all-months" class="btn" type="button">Plegar/Mostrar todo</button>
       <button class="btn btn-secondary" id="export-csv-btn" type="button">📥 Descargar CSV</button>
@@ -286,7 +360,7 @@ $holidayMap = [];
           echo "<th>Entrada comida</th>";
           echo "<th>Saldo comida</th>";
           echo "<th>Hora salida</th>";
-          echo "<th>Total h.</th>";
+          echo "<th>Rango horario</th>";
           echo "<th>Balance día</th>";
           echo "<th>Nota</th>";
           echo "<th>Acciones</th>";
@@ -392,11 +466,7 @@ $holidayMap = [];
         </td>
         <td><?php echo htmlspecialchars($e['end'] ?? ''); ?></td>
         <td>
-          <?php if ($calc['worked_minutes'] === null): ?>
-            <span class="muted">—</span>
-          <?php else: ?>
-            <?php echo $calc['worked_hours_formatted']; ?>
-          <?php endif; ?>
+          <?php echo get_hours_display($e['start'] ?? null, $e['end'] ?? null, $calc['worked_minutes'] ?? null); ?>
         </td>
         <td class="balance-cell<?php echo $dayCellClass; ?>">
           <?php if ($calc['day_balance'] === null): ?>
@@ -607,9 +677,79 @@ $holidayMap = [];
   }
 
   if (entryForm){
+    // Validate time entry before submission
+    function validateEntryForm(formData){
+      const errors = [];
+      const times = {};
+      ['start', 'coffee_out', 'coffee_in', 'lunch_out', 'lunch_in', 'end'].forEach(k => {
+        const val = formData.get(k);
+        times[k] = val ? val.trim() : null;
+      });
+      
+      // Check chronological order
+      if (times.start && times.end && times.start >= times.end) {
+        errors.push('Hora entrada debe ser anterior a hora salida');
+      }
+      
+      if (times.coffee_out && times.coffee_in && times.coffee_out >= times.coffee_in) {
+        errors.push('Salida café debe ser anterior a entrada café');
+      }
+      
+      if (times.lunch_out && times.lunch_in && times.lunch_out >= times.lunch_in) {
+        errors.push('Salida comida debe ser anterior a entrada comida');
+      }
+      
+      // Check break durations (max 2 hours = 120 minutes)
+      if (times.coffee_out && times.coffee_in) {
+        const coffeeMins = timeToMinutes(times.coffee_in) - timeToMinutes(times.coffee_out);
+        if (coffeeMins > 120) errors.push('Pausa café demasiado larga (máx 2 horas)');
+      }
+      
+      if (times.lunch_out && times.lunch_in) {
+        const lunchMins = timeToMinutes(times.lunch_in) - timeToMinutes(times.lunch_out);
+        if (lunchMins > 120) errors.push('Pausa comida demasiada larga (máx 2 horas)');
+      }
+      
+      // Check logical flow
+      if (times.start && times.coffee_out && times.start >= times.coffee_out) {
+        errors.push('Salida café debe ser después de entrada');
+      }
+      
+      if (times.end && times.coffee_in && times.end <= times.coffee_in) {
+        errors.push('Entrada café debe ser antes de salida');
+      }
+      
+      if (times.start && times.lunch_out && times.start >= times.lunch_out) {
+        errors.push('Salida comida debe ser después de entrada');
+      }
+      
+      if (times.end && times.lunch_in && times.end <= times.lunch_in) {
+        errors.push('Entrada comida debe ser antes de salida');
+      }
+      
+      return errors;
+    }
+    
+    function timeToMinutes(timeStr) {
+      if (!timeStr) return null;
+      const parts = timeStr.split(':');
+      if (parts.length !== 2) return null;
+      const h = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      return h * 60 + m;
+    }
+    
     entryForm.addEventListener('submit', function(e){
       e.preventDefault();
       const fd = new FormData(entryForm);
+      const errors = validateEntryForm(fd);
+      
+      // Show errors if any
+      if (errors.length > 0) {
+        alert('Errores en los datos:\n\n' + errors.join('\n'));
+        return;
+      }
+      
       fetch(location.pathname + location.search, {
         method: 'POST', body: fd, headers: {'X-Requested-With':'XMLHttpRequest'}
       }).then(r => r.text()).then(text => {
@@ -624,7 +764,13 @@ $holidayMap = [];
               if (dInp && keepDate) dInp.value = keepDate;
             } catch(e){}
             closeEntryModal();
-          } else { console.warn('save returned', json); alert('Error guardando entrada'); }
+          } else if (json && json.errors && Array.isArray(json.errors)) {
+            // Server validation error
+            alert('Errores en los datos:\n\n' + json.errors.join('\n'));
+          } else {
+            console.warn('save returned', json);
+            alert('Error guardando entrada');
+          }
         } catch(e) { console.warn('Non-JSON response', text); alert('Respuesta inesperada al guardar'); }
       }).catch(err=>{ console.error(err); alert('Error de red'); });
     });

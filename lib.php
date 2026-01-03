@@ -134,3 +134,89 @@ function compute_day(array $entry, array $config = null): array {
         'lunch_balance_formatted' => minutes_to_hours_formatted($lunch_balance),
     ];
 }
+
+/**
+ * Validate time entry for logical consistency
+ * Returns array with 'valid' bool and 'errors' array of error messages
+ */
+function validate_time_entry(array $entry): array {
+    $errors = [];
+    
+    $start = $entry['start'] ?? null;
+    $coffee_out = $entry['coffee_out'] ?? null;
+    $coffee_in = $entry['coffee_in'] ?? null;
+    $lunch_out = $entry['lunch_out'] ?? null;
+    $lunch_in = $entry['lunch_in'] ?? null;
+    $end = $entry['end'] ?? null;
+    
+    // Convert to minutes for comparison
+    $s = time_to_minutes($start);
+    $co = time_to_minutes($coffee_out);
+    $ci = time_to_minutes($coffee_in);
+    $lo = time_to_minutes($lunch_out);
+    $li = time_to_minutes($lunch_in);
+    $e = time_to_minutes($end);
+    
+    // Basic chronological checks
+    if ($s !== null && $e !== null && $s >= $e) {
+        $errors[] = 'Hora entrada debe ser anterior a hora salida';
+    }
+    
+    if ($co !== null && $ci !== null && $co >= $ci) {
+        $errors[] = 'Salida café debe ser anterior a entrada café';
+    }
+    
+    if ($lo !== null && $li !== null && $lo >= $li) {
+        $errors[] = 'Salida comida debe ser anterior a entrada comida';
+    }
+    
+    // Check if breaks are too long (max 2 hours reasonable)
+    if ($co !== null && $ci !== null) {
+        $coffeeDuration = $ci - $co;
+        if ($coffeeDuration > 120) {
+            $errors[] = 'Pausa café demasiado larga (máx 2 horas)';
+        }
+    }
+    
+    if ($lo !== null && $li !== null) {
+        $lunchDuration = $li - $lo;
+        if ($lunchDuration > 120) {
+            $errors[] = 'Pausa comida demasiada larga (máx 2 horas)';
+        }
+    }
+    
+    // Check logical flow: coffee breaks should be within work hours
+    if ($s !== null && $co !== null && $s >= $co) {
+        $errors[] = 'Salida café debe ser después de entrada';
+    }
+    
+    if ($e !== null && $ci !== null && $e <= $ci) {
+        $errors[] = 'Entrada café debe ser antes de salida';
+    }
+    
+    if ($s !== null && $lo !== null && $s >= $lo) {
+        $errors[] = 'Salida comida debe ser después de entrada';
+    }
+    
+    if ($e !== null && $li !== null && $e <= $li) {
+        $errors[] = 'Entrada comida debe ser antes de salida';
+    }
+    
+    return [
+        'valid' => count($errors) === 0,
+        'errors' => $errors,
+    ];
+}
+
+/**
+ * Get visual time range display with start and end times plus total hours
+ * Format: "07:32→14:16 (6h 44m)" or "— " if missing
+ */
+function get_hours_display(?string $start, ?string $end, ?int $worked_minutes): string {
+    if ($start === null || $end === null || $worked_minutes === null) {
+        return '—';
+    }
+    
+    $hours_text = minutes_to_hours_formatted($worked_minutes);
+    return htmlspecialchars($start) . '→' . htmlspecialchars($end) . ' (' . $hours_text . ')';
+}
