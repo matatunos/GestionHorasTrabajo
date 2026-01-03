@@ -548,37 +548,43 @@ $holidayMap = [];
 
   // Export CSV functionality
   document.getElementById('export-csv-btn').addEventListener('click', function(){
-    const rows = [];
-    const table = document.querySelector('.sheet');
-    
-    // Headers
-    rows.push('Fecha,Entrada,Salida,Nota,Saldo');
-    
-    // Data rows
-    document.querySelectorAll('.sheet tbody tr').forEach(function(tr){
-      if (tr.classList.contains('month') || tr.classList.contains('month-summary') || tr.classList.contains('month-columns')) return;
-      const cells = tr.querySelectorAll('td');
-      if (cells.length < 2) return;
+    try {
+      const rows = [];
+      const table = document.querySelector('.sheet');
       
-      const date = cells[0].textContent.trim();
-      const entrada = cells[2] ? cells[2].textContent.trim() : '';
-      const salida = cells[3] ? cells[3].textContent.trim() : '';
-      const nota = cells[5] ? cells[5].textContent.trim() : '';
-      const saldo = cells[6] ? cells[6].textContent.trim() : '';
+      // Headers
+      rows.push('Fecha,Entrada,Salida,Nota,Saldo');
       
-      rows.push(`"${date}","${entrada}","${salida}","${nota}","${saldo}"`);
-    });
-    
-    const csv = rows.join('\\n');
-    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'entradas-' + new Date().toISOString().split('T')[0] + '.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Data rows
+      document.querySelectorAll('.sheet tbody tr').forEach(function(tr){
+        if (tr.classList.contains('month') || tr.classList.contains('month-summary') || tr.classList.contains('month-columns')) return;
+        const cells = tr.querySelectorAll('td');
+        if (cells.length < 2) return;
+        
+        const date = cells[0].textContent.trim();
+        const entrada = cells[2] ? cells[2].textContent.trim() : '';
+        const salida = cells[3] ? cells[3].textContent.trim() : '';
+        const nota = cells[5] ? cells[5].textContent.trim() : '';
+        const saldo = cells[6] ? cells[6].textContent.trim() : '';
+        
+        rows.push(`"${date}","${entrada}","${salida}","${nota}","${saldo}"`);
+      });
+      
+      const csv = rows.join('\n');
+      const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'entradas-' + new Date().toISOString().split('T')[0] + '.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch(err) {
+      console.error('Error exporting CSV:', err);
+      alert('Error al descargar CSV');
+    }
   });
 
   function fetchTable(){
