@@ -71,7 +71,8 @@ class OCRProcessor {
   /**
    * Extract time patterns from OCR text
    * Looks for patterns like: HH:MM - HH:MM or just HH:MM
-   * Ignores: "Jornada" lines and the first time (screenshot timestamp)
+   * Ignores: "Jornada" lines, the first time (screenshot timestamp), and invalid times
+   * Valid working times: 4:00 to 23:59 (0-3 hours are likely durations or errors)
    * @param string $text OCR extracted text
    * @return array Records with extracted times
    */
@@ -104,14 +105,25 @@ class OCRProcessor {
       // Look for patterns like "7:32" or "10:26"
       if (preg_match_all($timePattern, $line, $matches, PREG_PATTERN_ORDER)) {
         foreach ($matches[0] as $time) {
+          // Parse hour and minute
+          list($hour, $minute) = explode(':', $time);
+          $hour = (int)$hour;
+          $minute = (int)$minute;
+          
           // Skip first time if it looks like a screenshot timestamp (e.g., 11:36)
           if ($skipFirstTime && $foundTimes === 0) {
             $skipFirstTime = false;
             continue;
           }
           
-          $times[] = $time;
-          $foundTimes++;
+          // Filter out invalid times:
+          // - Hours 0-3 are likely durations (e.g., "00:34" break duration)
+          // - Hours 24+ are invalid
+          // - Minutes >= 60 are invalid (OCR errors)
+          if ($hour >= 4 && $hour < 24 && $minute < 60) {
+            $times[] = $time;
+            $foundTimes++;
+          }
         }
       }
     }
