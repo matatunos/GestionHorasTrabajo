@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <div class="form-group"><label class="form-label">Nueva contraseña</label><input class="form-control" type="password" name="new_password" required></div>
         <div class="form-group"><label class="form-label">Confirmar nueva contraseña</label><input class="form-control" type="password" name="confirm_password" required></div>
       </div>
-      <div class="form-actions" style="margin-top:12px;"><button class="btn-primary" type="submit">Cambiar contraseña</button></div>
+      <div class="form-actions mt-2"><button class="btn btn-primary" type="submit">Cambiar contraseña</button></div>
     </form>
   </div>
 </div>

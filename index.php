@@ -9,6 +9,11 @@ $pdo = get_pdo();
 
 // selected year from GET or default current year
 $year = intval($_GET['year'] ?? date('Y'));
+$initialDate = $_GET['date'] ?? date('Y-m-d');
+if (!is_string($initialDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $initialDate)) {
+  $initialDate = date('Y-m-d');
+}
+$openAdd = !empty($_GET['open_add']);
 $config = get_year_config($year, $user['id']);
 
 // filters from GET
@@ -98,29 +103,69 @@ $holidayMap = [];
   <title>Registro Horas</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-<?php include __DIR__ . '/header.php'; ?>
+<body class="page-index">
+<?php $hidePageHeader = true; include __DIR__ . '/header.php'; ?>
 <div class="container">
   <div class="card">
-    <h1>Registro de Horas — <?php echo $year; ?></h1>
+    <!-- Controles globales: selector de fecha, selector de año y ocultador de fines de semana -->
+    <div id="global-controls" style="display:flex;gap:12px;align-items:center;margin-bottom:10px;">
+      <label class="form-label">Fecha global <input id="global-date" class="form-control" type="date" value="<?php echo htmlspecialchars($initialDate); ?>"></label>
+      <label class="form-label">Año <select id="entry-year" class="form-control">
+        <?php
+          // Años disponibles para este usuario (solo entries)
+          $years = [];
+          try {
+            $ystmt = $pdo->prepare('SELECT DISTINCT YEAR(date) AS y FROM entries WHERE user_id = ? AND date IS NOT NULL ORDER BY y DESC');
+            $ystmt->execute([$user['id']]);
+            foreach ($ystmt->fetchAll() as $r) { if (!empty($r['y'])) $years[] = intval($r['y']); }
+          } catch (Throwable $e) { /* ignore */ }
+          $years = array_values(array_unique(array_filter($years)));
+          rsort($years);
+          if (empty($years)) $years = [intval(date('Y'))];
+          if (!in_array(intval($year), $years, true)) array_unshift($years, intval($year));
+          foreach ($years as $y){
+            $sel = ($y === intval($year)) ? ' selected' : '';
+            echo "<option value=\"$y\"$sel>$y</option>";
+          }
+        ?>
+      </select></label>
+      <label class="form-check form-label"><input id="global-hide-weekends" type="checkbox" <?php echo $hideWeekends ? 'checked' : ''; ?>><span>Ocultar fines de semana</span></label>
+    </div>
 
-    <form id="entry-form" method="post" class="row-form" style="gap:8px;align-items:center;">
-      <label class="form-label">Fecha <input class="form-control" type="date" name="date" required value="<?php echo date('Y-m-d'); ?>"></label>
-      <label class="form-label">Entrada <input class="form-control" type="text" name="start"></label>
-      <label class="form-label">Salida café <input class="form-control" type="text" name="coffee_out"></label>
-      <label class="form-label">Entrada café <input class="form-control" type="text" name="coffee_in"></label>
-      <label class="form-label">Salida comida <input class="form-control" type="text" name="lunch_out"></label>
-      <label class="form-label">Entrada comida <input class="form-control" type="text" name="lunch_in"></label>
-      <label class="form-label">Hora salida <input class="form-control" type="text" name="end"></label>
-      <label class="form-label">Nota <input class="form-control" type="text" name="note" style="min-width:150px"></label>
-      <div class="actions"><button class="btn btn-primary" type="submit">Guardar</button></div>
-    </form>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+      <button class="btn btn-primary" type="button" id="openAddEntryBtn">Añadir</button>
+    </div>
 
-    <form id="filters-form" method="get" class="row-form" style="margin-top:10px;gap:12px;align-items:center;">
-      <input type="hidden" name="year" value="<?php echo htmlspecialchars($year); ?>">
-      <label><input type="checkbox" name="hide_weekends" value="1" <?php echo $hideWeekends ? 'checked' : ''; ?>> Ocultar fines de semana</label>
-      <label><input type="checkbox" name="hide_holidays" value="1" <?php echo $hideHolidays ? 'checked' : ''; ?>> Ocultar festivos</label>
-      <label><input type="checkbox" name="hide_vacations" value="1" <?php echo $hideVacations ? 'checked' : ''; ?>> Ocultar vacaciones</label>
+    <!-- Modal for adding a work entry (mirrors settings.php behavior) -->
+    <div id="entryModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
+      <div id="entryModal" class="modal-dialog entry-modal" role="dialog" aria-modal="true">
+        <div class="modal-header">
+          <h3 class="modal-title">Añadir fichaje</h3>
+        </div>
+        <div class="modal-body">
+        <form id="entry-form" method="post" class="row-form entry-form">
+          <label class="form-label">Fecha <input id="entry-date" class="form-control" type="date" name="date" required value="<?php echo htmlspecialchars($initialDate); ?>"></label>
+          <label class="form-label">Entrada <input class="form-control time-input" type="text" name="start"></label>
+          <label class="form-label">Salida café <input class="form-control time-input" type="text" name="coffee_out"></label>
+          <label class="form-label">Entrada café <input class="form-control time-input" type="text" name="coffee_in"></label>
+          <label class="form-label">Salida comida <input class="form-control time-input" type="text" name="lunch_out"></label>
+          <label class="form-label">Entrada comida <input class="form-control time-input" type="text" name="lunch_in"></label>
+          <label class="form-label">Hora salida <input class="form-control time-input" type="text" name="end"></label>
+          <label class="form-label">Nota <input class="form-control" type="text" name="note"></label>
+          <div class="form-actions modal-actions mt-2">
+            <button class="btn btn-secondary" type="button" id="closeEntryModal">Cancelar</button>
+            <button class="btn btn-primary" type="submit">Guardar</button>
+          </div>
+        </form>
+        </div>
+      </div>
+    </div>
+
+    <form id="filters-form" method="get" class="row-form mt-2">
+      <!-- keep server-side checkbox in sync with global control (hidden to avoid duplicate UI) -->
+      <label style="display:none;"><input type="checkbox" name="hide_weekends" value="1" <?php echo $hideWeekends ? 'checked' : ''; ?>> Ocultar fines de semana</label>
+      <label class="form-check"><input type="checkbox" name="hide_holidays" value="1" <?php echo $hideHolidays ? 'checked' : ''; ?>><span>Ocultar festivos</span></label>
+      <label class="form-check"><input type="checkbox" name="hide_vacations" value="1" <?php echo $hideVacations ? 'checked' : ''; ?>><span>Ocultar vacaciones</span></label>
       <button class="btn" type="submit">Aplicar filtros</button>
       <button id="toggle-all-months" class="btn" type="button">Plegar/Mostrar todo</button>
     </form>
@@ -129,6 +174,8 @@ $holidayMap = [];
     <table class="sheet compact">
     <?php
       $currentMonth = null;
+      $monthStats = null;
+      $monthNameForStats = null;
       // iterate every day of the year so weekends are shown even when no entry exists
       $hideWeekends = !empty($_GET['hide_weekends']);
       $dt = new DateTimeImmutable("$year-01-01");
@@ -139,9 +186,52 @@ $holidayMap = [];
         $monthKey = $cur->format('Y-m');
         if ($currentMonth !== $month) {
           if ($currentMonth !== null) {
+            // month summary row
+            if (is_array($monthStats)) {
+              $mExp = intval($monthStats['expected_minutes'] ?? 0);
+              $mWork = intval($monthStats['worked_minutes'] ?? 0);
+              $mBal = $mWork - $mExp;
+              $mBalClass = ($mBal > 0) ? 'balance--good' : (($mBal < 0) ? 'balance--bad' : 'balance--ok');
+
+              $dietas = intval($monthStats['dietas'] ?? 0);
+              $coffeeExCount = intval($monthStats['coffee_excess_days'] ?? 0);
+              $coffeeExAvg = ($coffeeExCount > 0) ? intdiv(intval($monthStats['coffee_excess_total'] ?? 0), $coffeeExCount) : 0;
+              $missing = intval($monthStats['missing_workdays'] ?? 0);
+              $workdays = intval($monthStats['workdays'] ?? 0);
+
+              echo '<tr class="month-summary">';
+              echo '<td colspan="13">';
+              echo '<div class="month-summary-row">';
+              echo '<span class="month-summary-title">Resumen '.htmlspecialchars($monthNameForStats ?? $currentMonth).'</span>';
+              echo '<span class="pill '.$mBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($mBal>0)?'↑':(($mBal<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($mBal)).'</span></span>';
+              echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Esperadas '.htmlspecialchars(minutes_to_hours_formatted($mExp)).'</span></span>';
+              echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Hechas '.htmlspecialchars(minutes_to_hours_formatted($mWork)).'</span></span>';
+              echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">🍽</span><span class="pill-value">Dietas '.$dietas.'</span></span>';
+              if ($coffeeExCount > 0) {
+                echo '<span class="pill balance--bad"><span class="pill-icon" aria-hidden="true">☕</span><span class="pill-value">Café exceso medio '.htmlspecialchars(minutes_to_hours_formatted($coffeeExAvg)).'</span></span>';
+              } else {
+                echo '<span class="pill balance--missing"><span class="pill-icon" aria-hidden="true">☕</span><span class="pill-value">Café exceso medio —</span></span>';
+              }
+              echo '<span class="month-summary-meta">Días con datos '.intval($monthStats['days_with_worked'] ?? 0).'/'.$workdays.($missing>0 ? ' · Incompletos '.$missing : '').'</span>';
+              echo '</div>';
+              echo '</td>';
+              echo '</tr>';
+            }
+
             echo "</tbody>";
           }
           $currentMonth = $month;
+          $monthNameForStats = $month;
+          $monthStats = [
+            'expected_minutes' => 0,
+            'worked_minutes' => 0,
+            'workdays' => 0,
+            'days_with_worked' => 0,
+            'missing_workdays' => 0,
+            'dietas' => 0,
+            'coffee_excess_total' => 0,
+            'coffee_excess_days' => 0,
+          ];
           echo "<tbody class=\"month-group\" data-month=\"".$monthKey."\">";
           echo "<tr class=\"month\"><td class=\"month-header\" data-month=\"".$monthKey."\" colspan=13><button class=\"month-toggle\" data-month=\"".$monthKey."\">−</button> ".htmlspecialchars($month)."</td></tr>";
           // insert a header row at the top of each month for quick reference
@@ -176,7 +266,45 @@ $holidayMap = [];
             if ($hideHolidays && $ht === 'holiday') continue;
             if ($hideVacations && $ht === 'vacation') continue;
           }
-          $calc = compute_day($e, $config);
+              $calc = compute_day($e, $config);
+
+              // Avoid showing "No café / Sin comida / Sin dietas" labels on non-working days
+              // (weekends, holidays, vacations, etc.). If data is missing there, keep it neutral.
+              $isNonWorkingDay = ($dow >= 6) || isset($holidayMap[$d]);
+
+              $coffeeBal = $calc['coffee_balance'] ?? null;
+              $coffeeCellClass = ($coffeeBal === null) ? ' balance--missing' : (($coffeeBal > 0) ? ' balance--bad' : (($coffeeBal < 0) ? ' balance--good' : ' balance--ok'));
+              $lunchBal = $calc['lunch_balance'] ?? null;
+              $lunchCellClass = ($lunchBal === null) ? ' balance--missing' : (($lunchBal > 0) ? ' balance--bad' : (($lunchBal < 0) ? ' balance--good' : ' balance--ok'));
+
+              // Daily balance: positive is good (exceso), negative is bad (defecto)
+              $dayBal = $calc['day_balance'] ?? null;
+              $dayCellClass = ($dayBal === null) ? ' balance--missing' : (($dayBal > 0) ? ' balance--good' : (($dayBal < 0) ? ' balance--bad' : ' balance--ok'));
+
+              // Aggregate per month (for summary row)
+              if (is_array($monthStats)) {
+                $exp = intval($calc['expected_minutes'] ?? 0);
+                if ($exp > 0) {
+                  $monthStats['expected_minutes'] += $exp;
+                  $monthStats['workdays'] += 1;
+                  if ($calc['worked_minutes'] === null) {
+                    $monthStats['missing_workdays'] += 1;
+                  }
+                }
+                if ($calc['worked_minutes'] !== null) {
+                  $monthStats['worked_minutes'] += intval($calc['worked_minutes']);
+                  $monthStats['days_with_worked'] += 1;
+                }
+                // Keep definition consistent with dashboard: lunch_balance >= 60
+                $lb = $calc['lunch_balance'] ?? null;
+                if ($lb !== null && intval($lb) >= 60) $monthStats['dietas'] += 1;
+
+                $cb = $calc['coffee_balance'] ?? null;
+                if ($cb !== null && intval($cb) > 0) {
+                  $monthStats['coffee_excess_total'] += intval($cb);
+                  $monthStats['coffee_excess_days'] += 1;
+                }
+              }
     ?>
       <?php
         $extraClass = '';
@@ -196,13 +324,50 @@ $holidayMap = [];
         <td><?php echo htmlspecialchars($e['start'] ?? ''); ?></td>
         <td><?php echo htmlspecialchars($e['coffee_out'] ?? ''); ?></td>
         <td><?php echo htmlspecialchars($e['coffee_in'] ?? ''); ?></td>
-        <td><?php echo $calc['coffee_balance_formatted']; ?></td>
+        <td class="balance-cell<?php echo $coffeeCellClass; ?>">
+          <?php if (($calc['coffee_taken'] ?? false) === false): ?>
+            <?php if ($isNonWorkingDay): ?>
+              <span class="muted">—</span>
+            <?php else: ?>
+              <span class="muted">No café</span>
+            <?php endif; ?>
+          <?php else: ?>
+            <?php echo $calc['coffee_balance_formatted']; ?>
+          <?php endif; ?>
+        </td>
         <td><?php echo htmlspecialchars($e['lunch_out'] ?? ''); ?></td>
         <td><?php echo htmlspecialchars($e['lunch_in'] ?? ''); ?></td>
-        <td><?php echo $calc['lunch_balance_formatted']; ?></td>
+        <td class="balance-cell<?php echo $lunchCellClass; ?>">
+          <?php if (($calc['lunch_taken'] ?? false) === false): ?>
+            <?php if ($isNonWorkingDay): ?>
+              <span class="muted">—</span>
+            <?php else: ?>
+              <span class="muted">Sin comida</span>
+              <div class="muted">Sin dietas</div>
+            <?php endif; ?>
+          <?php else: ?>
+            <?php echo $calc['lunch_balance_formatted']; ?>
+          <?php endif; ?>
+        </td>
         <td><?php echo htmlspecialchars($e['end'] ?? ''); ?></td>
-        <td><?php echo $calc['worked_hours_formatted']; ?></td>
-        <td><?php echo $calc['day_balance_formatted']; ?></td>
+        <td>
+          <?php if ($calc['worked_minutes'] === null): ?>
+            <span class="muted">—</span>
+          <?php else: ?>
+            <?php echo $calc['worked_hours_formatted']; ?>
+          <?php endif; ?>
+        </td>
+        <td class="balance-cell<?php echo $dayCellClass; ?>">
+          <?php if ($calc['day_balance'] === null): ?>
+            <span class="muted">—</span>
+          <?php else: ?>
+            <?php $pillClass = trim($dayCellClass); $db = intval($calc['day_balance']); ?>
+            <span class="pill <?php echo htmlspecialchars($pillClass); ?>">
+              <span class="pill-icon" aria-hidden="true"><?php echo ($db > 0) ? '↑' : (($db < 0) ? '↓' : '•'); ?></span>
+              <span class="pill-value"><?php echo $calc['day_balance_formatted']; ?></span>
+            </span>
+          <?php endif; ?>
+        </td>
         <td>
           <?php if (isset($holidayMap[$d])): ?>
             <?php $ht = $holidayMap[$d]['type'] ?? 'holiday'; ?>
@@ -233,7 +398,40 @@ $holidayMap = [];
         </td>
       </tr>
     <?php } // end for each day
-      if ($currentMonth !== null) echo "</tbody>";
+      if ($currentMonth !== null) {
+        // final month summary row
+        if (is_array($monthStats)) {
+          $mExp = intval($monthStats['expected_minutes'] ?? 0);
+          $mWork = intval($monthStats['worked_minutes'] ?? 0);
+          $mBal = $mWork - $mExp;
+          $mBalClass = ($mBal > 0) ? 'balance--good' : (($mBal < 0) ? 'balance--bad' : 'balance--ok');
+
+          $dietas = intval($monthStats['dietas'] ?? 0);
+          $coffeeExCount = intval($monthStats['coffee_excess_days'] ?? 0);
+          $coffeeExAvg = ($coffeeExCount > 0) ? intdiv(intval($monthStats['coffee_excess_total'] ?? 0), $coffeeExCount) : 0;
+          $missing = intval($monthStats['missing_workdays'] ?? 0);
+          $workdays = intval($monthStats['workdays'] ?? 0);
+
+          echo '<tr class="month-summary">';
+          echo '<td colspan="13">';
+          echo '<div class="month-summary-row">';
+          echo '<span class="month-summary-title">Resumen '.htmlspecialchars($monthNameForStats ?? $currentMonth).'</span>';
+          echo '<span class="pill '.$mBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($mBal>0)?'↑':(($mBal<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($mBal)).'</span></span>';
+          echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Esperadas '.htmlspecialchars(minutes_to_hours_formatted($mExp)).'</span></span>';
+          echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Hechas '.htmlspecialchars(minutes_to_hours_formatted($mWork)).'</span></span>';
+          echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">🍽</span><span class="pill-value">Dietas '.$dietas.'</span></span>';
+          if ($coffeeExCount > 0) {
+            echo '<span class="pill balance--bad"><span class="pill-icon" aria-hidden="true">☕</span><span class="pill-value">Café exceso medio '.htmlspecialchars(minutes_to_hours_formatted($coffeeExAvg)).'</span></span>';
+          } else {
+            echo '<span class="pill balance--missing"><span class="pill-icon" aria-hidden="true">☕</span><span class="pill-value">Café exceso medio —</span></span>';
+          }
+          echo '<span class="month-summary-meta">Días con datos '.intval($monthStats['days_with_worked'] ?? 0).'/'.$workdays.($missing>0 ? ' · Incompletos '.$missing : '').'</span>';
+          echo '</div>';
+          echo '</td>';
+          echo '</tr>';
+        }
+        echo "</tbody>";
+      }
     ?>
     </table>
     </div>
@@ -245,13 +443,99 @@ $holidayMap = [];
 </div>
 <script>
 // AJAX helpers: submit entry via fetch and update table fragment; apply filters without full reload
-(function(){
+  (function(){
   const filtersForm = document.getElementById('filters-form');
   const entryForm = document.getElementById('entry-form');
+  const entryModalOverlay = document.getElementById('entryModalOverlay');
+  const openAddEntryBtn = document.getElementById('openAddEntryBtn');
+  const closeEntryModalBtn = document.getElementById('closeEntryModal');
+  // Global controls sync: date picker and hide-weekends toggle
+  const globalDate = document.getElementById('global-date');
+  const entryDateInput = document.getElementById('entry-date') || (entryForm ? entryForm.querySelector('input[name="date"]') : null);
+  if (globalDate && entryDateInput) {
+    try { entryDateInput.value = entryDateInput.value || globalDate.value; globalDate.value = entryDateInput.value; } catch(e){}
+    globalDate.addEventListener('change', function(){ try{ entryDateInput.value = this.value; }catch(e){} });
+  }
+
+  // Modal open/close for adding entries
+  function openEntryModal(){
+    if (!entryModalOverlay) return;
+    entryModalOverlay.style.display = 'flex';
+    entryModalOverlay.setAttribute('aria-hidden', 'false');
+    try {
+      // keep date synced with global date
+      if (globalDate && entryDateInput) entryDateInput.value = globalDate.value;
+      const first = entryForm ? (entryForm.querySelector('input[name="start"]') || entryForm.querySelector('input,select,textarea')) : null;
+      if (first) first.focus();
+    } catch(e){}
+  }
+  function closeEntryModal(){
+    if (!entryModalOverlay) return;
+    entryModalOverlay.style.display = 'none';
+    entryModalOverlay.setAttribute('aria-hidden', 'true');
+  }
+  if (openAddEntryBtn) openAddEntryBtn.addEventListener('click', openEntryModal);
+  if (closeEntryModalBtn) closeEntryModalBtn.addEventListener('click', closeEntryModal);
+  if (entryModalOverlay) entryModalOverlay.addEventListener('click', function(e){ if (e.target === entryModalOverlay) closeEntryModal(); });
+
+  // Dashboard quick action: ?date=YYYY-MM-DD&open_add=1
+  const shouldOpenAdd = <?php echo $openAdd ? 'true' : 'false'; ?>;
+  if (shouldOpenAdd) {
+    openEntryModal();
+    try {
+      const params = new URLSearchParams(location.search);
+      params.delete('open_add');
+      history.replaceState(null, '', location.pathname + (params.toString() ? ('?' + params.toString()) : ''));
+    } catch (e) {}
+  }
+
+  const globalHide = document.getElementById('global-hide-weekends');
+  const filtersHideInput = filtersForm ? filtersForm.querySelector('input[name="hide_weekends"]') : null;
+  const entryYear = document.getElementById('entry-year');
+  function applyHideWeekendsClient(checked){ document.querySelectorAll('tr.weekend').forEach(function(tr){ tr.style.display = checked ? 'none' : ''; }); }
+  function buildQueryString(){
+    const params = new URLSearchParams(location.search);
+    if (!filtersForm) return params.toString();
+    const keys = ['hide_weekends','hide_holidays','hide_vacations'];
+    keys.forEach(function(k){
+      const inp = filtersForm.querySelector('input[name="' + k + '"]');
+      if (inp && inp.checked) params.set(k, '1');
+      else params.delete(k);
+    });
+    if (entryYear && entryYear.value) params.set('year', entryYear.value);
+    return params.toString();
+  }
+
+  if (entryYear){
+    entryYear.addEventListener('change', function(){
+      try {
+        const qs = buildQueryString();
+        // Full reload: year change affects server-side config & full dataset
+        window.location.href = location.pathname + (qs ? ('?' + qs) : '');
+      } catch(e){ console.error('year change error', e); }
+    });
+  }
+  if (globalHide){
+    try{ if (filtersHideInput) filtersHideInput.checked = globalHide.checked; applyHideWeekendsClient(globalHide.checked); }catch(e){}
+    globalHide.addEventListener('change', function(){
+      try{
+        if (filtersHideInput) filtersHideInput.checked = this.checked;
+        applyHideWeekendsClient(this.checked);
+        if (filtersForm){
+          fetchTable();
+          const qs = buildQueryString();
+          history.replaceState(null, '', location.pathname + (qs ? ('?' + qs) : ''));
+        }
+      }catch(e){}
+    });
+  }
+  // Note: year is chosen in dashboard; index preserves `year` via URL.
   const tableContainerSelector = '.table-responsive';
+
+  // No JS needed for sticky headers - CSS handles it now
+
   function fetchTable(){
-    let qs = '';
-    try { qs = filtersForm ? new URLSearchParams(new FormData(filtersForm)).toString() : ''; } catch(e){ qs = ''; }
+    try { var qs = buildQueryString(); } catch(e){ var qs = ''; }
     fetch(location.pathname + (qs ? ('?' + qs) : ''))
       .then(r => r.text())
       .then(html => {
@@ -262,10 +546,13 @@ $holidayMap = [];
       }).catch(err=>{ console.error('fetchTable error', err); });
   }
 
+
+
   if (filtersForm){
     filtersForm.addEventListener('submit', function(e){
-      e.preventDefault(); fetchTable();
-      const qs = new URLSearchParams(new FormData(filtersForm)).toString();
+      e.preventDefault();
+      fetchTable();
+      const qs = buildQueryString();
       history.replaceState(null, '', location.pathname + (qs ? ('?' + qs) : ''));
     });
   }
@@ -280,8 +567,14 @@ $holidayMap = [];
         try { const json = JSON.parse(text);
           if (json && json.ok){
             fetchTable();
-            const btn = entryForm.querySelector('button[type=submit]');
-            if (btn){ btn.textContent = 'Guardado'; setTimeout(()=> btn.textContent = 'Guardar', 1200); }
+            // reset times/note but keep date
+            try {
+              const keepDate = entryForm.querySelector('input[name="date"]')?.value || '';
+              entryForm.reset();
+              const dInp = entryForm.querySelector('input[name="date"]');
+              if (dInp && keepDate) dInp.value = keepDate;
+            } catch(e){}
+            closeEntryModal();
           } else { console.warn('save returned', json); alert('Error guardando entrada'); }
         } catch(e) { console.warn('Non-JSON response', text); alert('Respuesta inesperada al guardar'); }
       }).catch(err=>{ console.error(err); alert('Error de red'); });
@@ -297,6 +590,12 @@ $holidayMap = [];
       if (!tbody) return;
       tbody.classList.toggle('collapsed', collapse);
       if (headerTd) headerTd.classList.toggle('collapsed', collapse);
+      // Also update inline display style when toggling individual months
+      tbody.querySelectorAll('tr').forEach(function(tr){
+        if (tr.classList.contains('month')) return;
+        if (tr.classList.contains('month-summary')) return;
+        tr.style.display = collapse ? 'none' : '';
+      });
       if (debugEl) debugEl.textContent = 'month-js: toggled ' + (tbody.getAttribute('data-month')||'') + (collapse? ' collapsed' : ' expanded');
     }
     function setHeaderStateFromTd(headerTd, collapsed){
@@ -355,7 +654,11 @@ $holidayMap = [];
       container.querySelectorAll('tbody.month-group').forEach(function(tbody){
         const td = tbody.querySelector('td.month-header');
         if (td) setHeaderStateFromTd(td, collapsed);
-        tbody.querySelectorAll('tr').forEach(function(tr){ if (tr.classList.contains('month')) return; tr.style.display = collapsed ? 'none' : ''; });
+        tbody.querySelectorAll('tr').forEach(function(tr){
+          if (tr.classList.contains('month')) return;
+          if (tr.classList.contains('month-summary')) return;
+          tr.style.display = collapsed ? 'none' : '';
+        });
       });
       try { localStorage.setItem('months_all_collapsed', collapsed ? '1' : '0'); } catch(e){}
       if (toggleAllBtn) toggleAllBtn.textContent = collapsed ? 'Mostrar todo' : 'Plegar todo';

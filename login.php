@@ -31,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'){
         <div class="form-group"><label class="form-label">Contraseña <input class="form-control" type="password" name="password" required></label></div>
         <div class="actions"><button class="btn btn-primary" type="submit">Entrar</button></div>
       </form>
-      <p class="hint"><a href="index.php">Volver</a></p>
     </div>
   </div>
 </body>

@@ -76,9 +76,9 @@ a:hover { color: var(--primary-dark); }
 .app-container { display: flex; min-height: 100vh; }
 .sidebar { width: var(--sidebar-width); background-color: var(--surface-color); border-right: 1px solid var(--border-color); box-shadow: var(--shadow-sm); position: fixed; height: 100vh; overflow-y: auto; z-index: 100; }
 .main-content { flex: 1; margin-left: var(--sidebar-width); min-height: 100vh; display: flex; flex-direction: column; }
-.header { height: var(--header-height); background-color: var(--surface-color); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; box-shadow: var(--shadow-sm); }
+.header { height: var(--header-height); background-color: var(--surface-color); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; box-shadow: var(--shadow-sm); }
 /* Make header a positioning context for absolute dropdowns */
-.header { position: relative; }
+.header { position: relative; display: none; }
 .content { flex: 1; padding: 1.5rem; }
 
 /* Top menu alignment: push menu items to the right and style user dropdown */
@@ -106,7 +106,7 @@ a:hover { color: var(--primary-dark); }
    Modern colorful theme (Pi-hole-like)
    ========================== */
 :root {
-    --brand-primary: #ff4757;    /* coral/red */
+    --brand-primary: #3742fa;    /* vivid blue */
     --brand-accent: #1dd1a1;     /* mint */
     --brand-secondary: #3742fa;  /* vivid blue */
     --bg-color: #0f1724;         /* deep navy */
@@ -126,7 +126,7 @@ body {
 }
 
 /* Header and sidebar vibrant */
-.header { background: linear-gradient(90deg, rgba(55,66,250,0.95), rgba(255,71,87,0.95)); color: white; box-shadow: 0 8px 30px rgba(8,10,20,0.6); }
+.header { background: rgba(55,66,250,0.95); color: white; box-shadow: 0 8px 30px rgba(8,10,20,0.6); }
 .sidebar { background: linear-gradient(180deg, rgba(8,10,20,0.6), rgba(12,18,28,0.6)); border-right: 1px solid rgba(255,255,255,0.03); }
 .sidebar .menu-item { color: var(--text-muted); }
 .sidebar .menu-item:hover, .sidebar .menu-item.active { background: rgba(255,255,255,0.04); color: var(--text-primary); }
@@ -170,7 +170,7 @@ svg polyline { stroke: var(--brand-accent) !important; stroke-linecap: round; st
 
 
 /* ===== Sidebar ===== */
-.sidebar-header { padding: 1.5rem; border-bottom: 1px solid var(--border-color); }
+.sidebar-header { padding: 1.5rem; }
 .logo { font-size: 1.5rem; font-weight: 700; color: var(--primary-color); display: flex; align-items: center; gap: 0.75rem; }
 .logo img { max-height: 40px; max-width: 150px; width: auto; height: auto; object-fit: contain; }
 /* Visually hidden utility for screen-readers (when logo image is present we hide textual site name) */
@@ -192,9 +192,13 @@ body.mobile-menu-open .sidebar {
     transform: translateX(0);
 }
 
-/* Ensure sidebar header takes minimal width and profile doesn't create extra column */
-.sidebar { width: 100%; height: var(--header-height); min-width: 100%; top: 0; left: 0; right: 0; border-right: none; border-bottom: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; align-items: center; }
-.main-content { margin-left: 0; margin-top: var(--header-height); }
+/* Topbar layout: make sidebar act as a horizontal nav bar */
+/* (This matches the UI you had: more horizontal room than a left sidebar.) */
+.app-container { flex-direction: column; }
+.sidebar { width: 100%; min-width: 100%; height: var(--header-height); border-right: none; border-bottom: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; align-items: center; }
+/* Keep topbar visible without overlaying content (better sticky offsets for tables) */
+.sidebar { position: sticky; top: 0; z-index: 200; overflow: visible; }
+.main-content { margin-left: 0; margin-top: 0; }
 .menu-section { display: flex; gap: 8px; align-items: center; padding: 0 1rem; }
 .menu-item { display: inline-flex; padding: 0.5rem 0.75rem; border-radius: 6px; }
 .menu-item { display: flex; align-items: center; padding: 0.75rem 1.5rem; color: var(--text-color); transition: all 0.2s; cursor: pointer; }
@@ -237,18 +241,37 @@ body.mobile-menu-open .sidebar {
     color: var(--text-on-primary, #ffffff);
 }
 /* Dashboard-specific card tweaks */
-.dashboard-cards .card { padding: 14px; display:flex; flex-direction:column; justify-content:space-between; min-height:110px; }
+.dashboard-cards .card { padding: 14px; display:flex; flex-direction:column; justify-content:space-between; min-height:110px; min-width:0; }
 .dashboard-cards .card h4 { margin: 0 0 8px 0; font-size: 0.95rem; font-weight:600; color:var(--text-secondary); }
 .dashboard-cards .card .muted { margin-top:6px; font-size:0.85rem; }
 .dashboard-cards .card a.card-link { color: inherit; text-decoration: none; display:block; height:100%; }
 .dashboard-cards .card .value { font-size:1.35rem; font-weight:700; color:var(--primary-color); }
-.dashboard-cards .card .sparkline { width:120px; height:28px; display:inline-block; vertical-align:middle; }
+.dashboard-cards .card .sparkline { width:100%; height:34px; display:block; overflow:hidden; }
+
+/* Week balance cards: visual cues for positive (green) and negative (red) balances */
+.week-cards .card.week-card { display:flex; align-items:center; gap:8px; padding:10px; min-width:220px; }
+.week-cards .card.week-card.positive { border-left: 6px solid var(--success-color); color: var(--text-primary); }
+.week-cards .card.week-card.positive strong { color: var(--success-color); }
+.week-cards .card.week-card.negative { border-left: 6px solid var(--danger-color); color: var(--text-primary); }
+.week-cards .card.week-card.negative strong { color: var(--danger-color); }
 
 /* Table sparkline cell */
 .sheet td .sparkline { width:160px; height:32px; display:inline-block; }
 
 /* Make cards responsive */
 @media (max-width: 720px) { .dashboard-cards { grid-template-columns: 1fr !important; } }
+
+/* Wide card variant spans two columns on wider viewports */
+.dashboard-cards .card.card--wide {
+    grid-column: span 2;
+}
+@media (max-width: 900px) {
+    .dashboard-cards .card.card--wide { grid-column: auto; }
+}
+
+/* Inside wide card: make inner week cards each take 50% of parent's width */
+.card.card--wide .week-cards { display:flex; gap:12px; }
+.card.card--wide .week-cards .card { flex: 1 1 50%; min-width: 0; }
 
 /* Utility helpers to avoid inline styles */
 .card-header--padded {
@@ -531,8 +554,8 @@ svg polyline { stroke: var(--brand-primary) !important; }
 .sheet.compact th:nth-child(11), .sheet.compact td:nth-child(11) { width: 85px; }
 .sheet.compact th:nth-child(12), .sheet.compact td:nth-child(12) { width: 140px; }
 
-/* Make table container allow horizontal scroll but avoid unnecessary overflow */
-.table-responsive { overflow-x: auto; max-width: 100%; }
+/* Table container: keep full height; only use horizontal scroll when needed */
+.table-responsive { overflow: visible; max-width: 100%; }
 
 @media (max-width: 900px) {
     .sheet.compact th, .sheet.compact td { padding: 5px 6px; font-size: 12px; }
@@ -827,15 +850,6 @@ svg polyline { stroke: var(--brand-primary) !important; }
     color: var(--text-on-primary);
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
-.btn-primary:hover:not(:disabled) { background-color: var(--primary-dark); }
-.btn-secondary { background-color: var(--secondary-color); color: white; }
-.btn-success { background-color: var(--success-color); color: white; }
-.btn-danger { background-color: var(--danger-color); color: white; }
-.btn-warning { background-color: var(--warning-color); color: white; }
-.btn-outline { background-color: transparent; border-color: var(--border-color); color: var(--text-color); }
-.btn-outline:hover { background-color: var(--bg-color); }
-.btn-sm { padding: 0.375rem 0.875rem; font-size: 0.8125rem; }
-.btn-lg { padding: 0.875rem 1.75rem; font-size: 1rem; }
 
 /* ===== Forms ===== */
 .form-group { margin-bottom: 1.25rem; }
@@ -853,7 +867,11 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .form-error { color: var(--danger-color); font-size: 0.8125rem; margin-top: 0.25rem; }
 
 /* ===== Tables ===== */
-.table-responsive { overflow-x: auto; }
+.table-responsive { overflow: visible; }
+
+@media (max-width: 1100px) {
+    .table-responsive { overflow-x: auto; }
+}
 .table { width: 100%; border-collapse: collapse; }
 .table thead th { background-color: var(--bg-color); padding: 0.875rem 1rem; text-align: left; font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; border-bottom: 2px solid var(--border-color); }
 .table tbody td { padding: 0.875rem 1rem; border-bottom: 1px solid var(--border-color); }
@@ -876,14 +894,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .badge-secondary { background-color: #f1f5f9; color: #475569; }
 
 /* ===== Modals ===== */
-.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center; }
-.modal.active { display: flex; }
-.modal-dialog { background-color: var(--surface-color); border-radius: var(--radius-lg); max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); }
-.modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; }
-.modal-title { font-size: 1.125rem; font-weight: 600; }
-.modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); line-height: 1; }
-.modal-body { padding: 1.5rem; }
-.modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; gap: 0.75rem; justify-content: flex-end; }
+/* (legacy .modal styles removed; project uses .modal-overlay + .modal-dialog block at the end) */
 
 /* ===== Login Page ===== */
 .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
@@ -973,12 +984,57 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 /* Keep this block at the end so it overrides upstream rules */
 .main-content .container { padding: 1.5rem; max-width: 1100px; margin: 1rem auto; }
 
+/* Hours register needs more horizontal room (wide table) */
+.page-index .main-content .container { max-width: none; }
+.page-index .table-responsive { overflow: visible; }
+
+/* Align month summary with month toggle indent */
+.page-index .month-summary-row { padding-left: 42px; }
+
+/* Keep month summary clearly separated from next month */
+.sheet tr.month-summary td { border-bottom: 2px solid var(--border-color); }
+
+/* Sticky month column headers: avoid clipped text on first paint */
+.sheet tr.month-columns th { line-height: 1.2; vertical-align: middle; background: var(--bg-color); }
+
 /* Make .sheet look more like the theme's tables */
-.sheet { width: 100%; border-collapse: collapse; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+/* NOTE: keep overflow visible + border-collapse separate so sticky headers work in Chrome */
+.sheet { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; overflow: visible; }
 .sheet thead th { background-color: var(--bg-color); padding: 0.85rem 1rem; text-align: left; font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; color: var(--text-muted); border-bottom: 2px solid var(--border-color); }
 .sheet tbody td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
 .sheet tbody tr:hover { background-color: var(--bg-secondary); }
 .sheet.compact thead th, .sheet.compact tbody td { padding: 0.5rem 0.75rem; font-size: 13px; }
+
+/* Floating month column headers: fixed position when scrolling over table */
+.page-index .table-responsive { position: relative; }
+.sheet tr.month-columns { opacity: 1; transition: opacity 0.1s; }
+.sheet tr.month-columns th { background: var(--bg-color); padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; color: var(--text-muted); border-bottom: 2px solid var(--border-color); }
+.sheet tr.month-columns { position: sticky; top: 60px; z-index: 99; background: var(--bg-secondary); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.sheet td.month-header { position: relative; z-index: 30; background: var(--bg-secondary); box-shadow: 0 1px 0 var(--border-color); }
+
+/* Schedule balance cells (coffee/lunch): color by sign vs configured minutes */
+.sheet td.balance-cell { font-weight: 700; }
+.sheet td.balance-cell.balance--good { color: var(--success-color); box-shadow: inset 3px 0 0 var(--success-color); }
+.sheet td.balance-cell.balance--bad { color: var(--danger-color); box-shadow: inset 3px 0 0 var(--danger-color); }
+.sheet td.balance-cell.balance--ok { color: var(--text-secondary); }
+.sheet td.balance-cell.balance--missing { color: var(--text-muted); font-weight: 600; }
+
+/* Pills (compact badges with icon) */
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid currentColor; font-weight: 700; font-size: 12px; line-height: 18px; white-space: nowrap; background: var(--bg-color); }
+.pill .pill-icon { font-weight: 900; width: 1em; text-align: center; }
+.pill.balance--good { color: var(--success-color); }
+.pill.balance--bad { color: var(--danger-color); }
+.pill.balance--ok { color: var(--text-secondary); }
+.pill.balance--missing { color: var(--text-muted); }
+
+/* Month summary row */
+.sheet tr.month-summary td { background: var(--bg-secondary); border-top: 1px solid var(--border-color); }
+.month-summary-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.month-summary-title { font-weight: 800; color: var(--text-primary); margin-right: 6px; }
+.month-summary-meta { color: var(--text-muted); font-weight: 600; font-size: 12px; margin-left: auto; }
+@media (max-width: 900px){
+    .month-summary-meta { width: 100%; margin-left: 0; }
+}
 
 /* Make month rows stand out */
 .sheet tr.month td { background: var(--bg-secondary); font-weight: 700; text-transform: uppercase; }
@@ -989,19 +1045,25 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .row-form label { display: block; font-size: 0.9rem; color: var(--text-primary); margin-bottom: 6px; }
 .form-control { width: 100%; }
 
+/* Keep inline/toolbar forms tight */
+form.row-form { margin: 0; }
+
+/* Keep table action forms from adding vertical whitespace */
+.table td form, .sheet td form { margin: 0; display: inline; }
+
 /* Global form styles */
-.form-wrapper { background: var(--surface-color); border: 1px solid var(--border-color); padding: 16px; border-radius: 8px; }
-.form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.form-wrapper { background: var(--surface-color); border: 1px solid var(--border-color); padding: 18px; border-radius: 10px; }
+.form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .form-grid.single-column { grid-template-columns: 1fr; }
-.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+label.form-label { display: flex; flex-direction: column; gap: 6px; margin: 0; font-weight: 600; color: var(--text-primary); }
 .form-label { font-weight: 600; color: var(--text-primary); }
 .form-help { font-size: 12px; color: var(--text-muted); }
-.form-control, .form-select, .form-textarea { background: var(--bg-color); border: 1px solid var(--border-color); padding: 8px 10px; border-radius: 6px; color: var(--text-primary); }
-.form-control:focus, .form-select:focus, .form-textarea:focus { outline: none; box-shadow: 0 6px 18px rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.12); }
+.form-control, .form-select, .form-textarea { background: var(--bg-color); border: 1px solid var(--border-color); padding: 8px 10px; border-radius: 6px; color: var(--text-primary); min-height: 36px; }
+.form-control::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
+.form-control:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
 .form-textarea { min-height: 90px; resize: vertical; }
 .form-actions { display:flex; gap:8px; align-items:center; }
-.btn-primary { background: var(--primary-color); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
-.btn-secondary { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; cursor: pointer; }
 .btn:disabled, .btn[disabled] { opacity: 0.6; cursor: not-allowed; }
 
 /* Checkbox / radio modern look */
@@ -1012,17 +1074,18 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 @media (max-width:900px){ .form-grid { grid-template-columns: 1fr; } }
 
 /* Config form specific tweaks: give it a subtle card look */
-.config-card { padding: 14px; border-radius: 10px; background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent); border:1px solid rgba(0,0,0,0.04); }
+.config-card { padding: 14px; border-radius: 10px; background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent); border: 1px solid var(--border-color); }
 
 /* Error / validation state */
-.field-error { border-color: #d9534f !important; }
-.form-error { color: #d9534f; font-size: 12px; margin-top: 6px; }
+.field-error { border-color: var(--danger-color) !important; }
+.form-error { color: var(--danger-color); font-size: 12px; margin-top: 6px; }
 
 /* Small utility */
 .muted { color: var(--text-muted); font-size: 12px; }
 
 /* Buttons */
 .actions .btn { min-width: 120px; }
+.actions { display: flex; gap: 10px; align-items: center; }
 
 /* Badges slightly larger for calendar view */
 .badge { font-size: 0.78rem; padding: 0.3rem 0.6rem; }
@@ -1037,13 +1100,113 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     .main-content { margin-left: 0; }
 }
 
+/* ===== Modal (reusable) ===== */
+.modal-overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 16px;
+}
+.modal-dialog{
+    width: min(980px, 100%);
+    max-height: calc(100vh - 32px);
+    overflow: auto;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+}
+.modal-header{
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+}
+.modal-title{ margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-primary); }
+.modal-body{ padding: 14px 16px; }
+.modal-actions{ gap: 10px; justify-content: flex-end; width: 100%; }
+
+@media (max-width: 720px){
+    .modal-dialog{ width: 100%; }
+}
+
 
 /* Custom tweaks: compact inline entry form widths and responsive behavior */
 .row-form label { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
 .row-form .form-label { display: inline-flex !important; align-items: center; gap: 8px; margin: 0 !important; }
 .row-form label input { width: 120px; padding: 6px 8px; }
+.row-form label select { width: 150px; padding: 6px 8px; }
 .row-form label input[type="date"] { width: 150px; }
 .row-form label input[type="text"] { min-width: 220px; }
+.row-form label input.time-input { width: 92px; min-width: 92px; }
+.entry-form input[name="note"] { min-width: 150px; }
+
+/* ===== Dashboard layout helpers (replace inline styles) ===== */
+.dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.week-cards {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.dashboard-split-cards {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.dashboard-mini-card {
+    padding: 8px;
+}
+
+.dashboard-mini-card--half {
+    flex: 1 1 50%;
+    min-width: 0;
+}
+
+.dashboard-note {
+    margin-top: 6px;
+}
+
+.dashboard-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+.dashboard-value--sm {
+    font-size: 1.2rem;
+}
+
+.dashboard-section-title {
+    margin-top: 18px;
+}
+
+.dashboard-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Sparklines: use theme accent via currentColor */
+.sparkline { color: var(--accent-color); }
+.sparkline-svg { display: block; width: 100%; height: 100%; }
 .row-form .actions { margin: 0 0 0 6px; }
 .row-form { gap: 10px; }
 @media (max-width: 900px) {
@@ -1053,6 +1216,138 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     .row-form label input[type="text"] { width: 100%; }
     .row-form .actions { margin-top: 8px; }
 }
+
+/* ===== Buttons (unified polish) =====
+   Many templates use either `.btn btn-primary` or just `.btn-primary`.
+   This block standardizes all button-like elements at the end of the file.
+*/
+.btn,
+button.btn-primary, button.btn-secondary, button.btn-danger, button.btn-success, button.btn-warning, button.btn-outline,
+a.btn-primary, a.btn-secondary, a.btn-danger, a.btn-success, a.btn-warning, a.btn-outline,
+input[type="submit"].btn-primary, input[type="submit"].btn-secondary, input[type="submit"].btn-danger,
+input[type="submit"].btn-success, input[type="submit"].btn-warning, input[type="submit"].btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 8px 12px;
+    min-height: 36px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.1;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    cursor: pointer;
+    user-select: none;
+    text-decoration: none;
+    transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease, background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.btn:hover,
+button.btn-primary:hover, button.btn-secondary:hover, button.btn-danger:hover, button.btn-success:hover, button.btn-warning:hover, button.btn-outline:hover,
+a.btn-primary:hover, a.btn-secondary:hover, a.btn-danger:hover, a.btn-success:hover, a.btn-warning:hover, a.btn-outline:hover {
+    transform: translateY(-1px);
+}
+
+.btn:active,
+button.btn-primary:active, button.btn-secondary:active, button.btn-danger:active, button.btn-success:active, button.btn-warning:active, button.btn-outline:active,
+a.btn-primary:active, a.btn-secondary:active, a.btn-danger:active, a.btn-success:active, a.btn-warning:active, a.btn-outline:active {
+    transform: translateY(0);
+}
+
+.btn:focus-visible,
+button.btn-primary:focus-visible, button.btn-secondary:focus-visible, button.btn-danger:focus-visible,
+button.btn-success:focus-visible, button.btn-warning:focus-visible, button.btn-outline:focus-visible,
+a.btn-primary:focus-visible, a.btn-secondary:focus-visible, a.btn-danger:focus-visible,
+a.btn-success:focus-visible, a.btn-warning:focus-visible, a.btn-outline:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.12);
+}
+
+.btn:disabled,
+button.btn-primary:disabled, button.btn-secondary:disabled, button.btn-danger:disabled,
+button.btn-success:disabled, button.btn-warning:disabled, button.btn-outline:disabled,
+input[type="submit"].btn-primary:disabled, input[type="submit"].btn-secondary:disabled,
+input[type="submit"].btn-danger:disabled, input[type="submit"].btn-success:disabled,
+input[type="submit"].btn-warning:disabled, input[type="submit"].btn-outline:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Default `.btn` (no variant) behaves like an outline button */
+.btn {
+    background: var(--surface-color);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+}
+.btn:hover { background: var(--bg-secondary); box-shadow: var(--shadow-md); }
+
+/* Variant buttons */
+button.btn-primary, a.btn-primary, input[type="submit"].btn-primary,
+.btn.btn-primary {
+    background: var(--primary-color) !important;
+    color: var(--text-on-primary) !important;
+    border-color: transparent !important;
+    box-shadow: var(--shadow-sm);
+}
+button.btn-primary:hover, a.btn-primary:hover, .btn.btn-primary:hover { filter: brightness(0.96); box-shadow: var(--shadow-md); }
+
+button.btn-secondary, a.btn-secondary, input[type="submit"].btn-secondary,
+.btn.btn-secondary {
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+    box-shadow: none;
+}
+button.btn-secondary:hover, a.btn-secondary:hover, .btn.btn-secondary:hover { background: var(--bg-secondary) !important; box-shadow: none; }
+
+button.btn-danger, a.btn-danger, input[type="submit"].btn-danger,
+.btn.btn-danger {
+    background: var(--danger-color) !important;
+    color: var(--text-on-primary) !important;
+    border-color: transparent !important;
+    box-shadow: var(--shadow-sm);
+}
+button.btn-danger:hover, a.btn-danger:hover, .btn.btn-danger:hover { filter: brightness(0.96); box-shadow: var(--shadow-md); }
+
+button.btn-success, a.btn-success, input[type="submit"].btn-success,
+.btn.btn-success {
+    background: var(--success-color) !important;
+    color: var(--text-on-primary) !important;
+    border-color: transparent !important;
+    box-shadow: var(--shadow-sm);
+}
+button.btn-success:hover, a.btn-success:hover, .btn.btn-success:hover { filter: brightness(0.96); box-shadow: var(--shadow-md); }
+
+button.btn-warning, a.btn-warning, input[type="submit"].btn-warning,
+.btn.btn-warning {
+    background: var(--warning-color) !important;
+    color: var(--text-on-primary) !important;
+    border-color: transparent !important;
+    box-shadow: var(--shadow-sm);
+}
+button.btn-warning:hover, a.btn-warning:hover, .btn.btn-warning:hover { filter: brightness(0.96); box-shadow: var(--shadow-md); }
+
+button.btn-outline, a.btn-outline, input[type="submit"].btn-outline,
+.btn.btn-outline {
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+    box-shadow: none;
+}
+button.btn-outline:hover, a.btn-outline:hover, .btn.btn-outline:hover { background: var(--bg-secondary) !important; }
+
+/* Edit icon button variant (used in settings tables) */
+.btn-edit {
+    background: var(--warning-color) !important;
+    color: var(--text-on-primary) !important;
+    border-color: transparent !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+.btn-edit:hover { filter: brightness(0.96); box-shadow: var(--shadow-md) !important; }
+.btn-edit svg { width: 16px; height: 16px; }
 
 /* Month toggle button inside month header */
 .sheet tr.month td { position: relative; }
@@ -1078,8 +1373,8 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 #month-debug.hidden { display: none; }
 .month-toggle:focus { outline: none; box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
 
-/* Collapsed month: hide all rows except the header row */
-tbody.month-group.collapsed tr:not(.month) { display: none; }
+/* Collapsed month: hide all rows except the header + summary */
+tbody.month-group.collapsed tr:not(.month):not(.month-summary) { display: none; }
 tbody.month-group .month-header.collapsed { opacity: 0.85; }
 
 /* Weekend highlight */
