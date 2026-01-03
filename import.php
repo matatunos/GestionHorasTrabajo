@@ -1,9 +1,11 @@
 <?php
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/ocr_processor.php';
 
 // Constants
 define('IMPORT_NOTE_TEXT', 'Importado');
+define('MAX_UPLOAD_SIZE', 10 * 1024 * 1024); // 10MB
 
 $user = current_user();
 require_login();
@@ -11,6 +13,39 @@ $pdo = get_pdo();
 
 $message = '';
 $messageType = '';
+$ocrData = null;
+
+// Handle image upload with OCR
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image_file'])) {
+  $file = $_FILES['image_file'];
+  
+  if ($file['error'] === UPLOAD_ERR_OK) {
+    if ($file['size'] > MAX_UPLOAD_SIZE) {
+      $message = 'El archivo es demasiado grande (máximo 10MB)';
+      $messageType = 'error';
+    } else {
+      $ocr = new OCRProcessor();
+      $result = $ocr->processImage($file['tmp_name']);
+      
+      if (isset($result['error'])) {
+        $message = 'Error procesando imagen: ' . $result['error'];
+        $messageType = 'error';
+      } else {
+        $message = 'Imagen procesada exitosamente. Revisa los datos extraídos abajo.';
+        $messageType = 'success';
+        $ocrData = [
+          'records' => $result['records'] ?? [],
+          'raw_text' => $result['raw_text'] ?? ''
+        ];
+      }
+      
+      $ocr->cleanup($file['tmp_name']);
+    }
+  } elseif ($file['error'] !== UPLOAD_ERR_NO_FILE) {
+    $message = 'Error cargando archivo: ' . $file['error'];
+    $messageType = 'error';
+  }
+}
 
 // Handle import submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
@@ -208,6 +243,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
       <div class="button-group">
         <button type="button" id="load-preview-btn" class="btn btn-primary">Cargar y previsualizar</button>
         <button type="button" id="clear-btn" class="btn btn-secondary">Limpiar</button>
+      </div>
+    </form>
+    
+    <hr style="margin: 30px 0; border: 1px solid rgba(255,255,255,0.1);">
+    
+    <h2>O importar desde captura de pantalla (OCR)</h2>
+    <p class="muted">Carga una captura de pantalla de tu app móvil y el sistema extraerá automáticamente los horarios usando OCR.</p>
+    
+    <form method="post" enctype="multipart/form-data" class="import-form form-wrapper">
+      <div class="form-group">
+        <label for="image_file">Captura de pantalla:</label>
+        <input type="file" id="image_file" name="image_file" accept="image/*" class="form-control">
+        <div class="muted">Soporta: JPG, PNG, GIF. Máximo 10MB.</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="image_year">Año:</label>
+        <input type="number" id="image_year" name="year" min="2020" max="2030" value="<?php echo date('Y'); ?>" required class="form-control">
+      </div>
+      
+      <button type="submit" class="btn btn-primary">Procesar imagen</button>
+    </form>
+    
+    <?php if ($ocrData): ?>
+      <div style="margin-top: 20px; padding: 15px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
+        <h3>Datos extraídos de la imagen</h3>
+        <p><strong>Texto OCR detectado:</strong></p>
+        <pre style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; overflow-x: auto; max-height: 200px;"><?php echo htmlspecialchars(substr($ocrData['raw_text'], 0, 500)); ?></pre>
+        
+        <?php if (!empty($ocrData['records'])): ?>
+          <p><strong>Registros extraídos:</strong></p>
+          <div class="table-responsive">
+            <table class="sheet compact">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Entrada</th>
+                  <th>Salida café</th>
+                  <th>Entrada café</th>
+                  <th>Salida comida</th>
+                  <th>Entrada comida</th>
+                  <th>Salida</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($ocrData['records'] as $rec): ?>
+                  <tr>
+                    <td><?php echo htmlspecialchars($rec['fechaISO']); ?></td>
+                    <?php for ($i = 0; $i < 6; $i++): ?>
+                      <td><?php echo htmlspecialchars($rec['horas_slots'][$i] ?? ''); ?></td>
+                    <?php endfor; ?>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+          
+          <form method="post" class="mt-2">
+            <input type="hidden" name="import_data" value="<?php echo htmlspecialchars(json_encode($ocrData['records'])); ?>">
+            <input type="hidden" name="year" value="<?php echo htmlspecialchars($_POST['year'] ?? date('Y')); ?>">
+            <button type="submit" class="btn btn-primary">Importar estos datos</button>
+          </form>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
       </div>
     </form>
     
