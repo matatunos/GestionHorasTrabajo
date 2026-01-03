@@ -71,6 +71,7 @@ class OCRProcessor {
   /**
    * Extract time patterns from OCR text
    * Looks for patterns like: HH:MM - HH:MM or just HH:MM
+   * Ignores: "Jornada" lines and the first time (screenshot timestamp)
    * @param string $text OCR extracted text
    * @return array Records with extracted times
    */
@@ -90,13 +91,27 @@ class OCRProcessor {
     }
     
     $times = [];
+    $skipFirstTime = true; // Skip the first time (screenshot timestamp)
+    $foundTimes = 0;
     
     // Extract all time occurrences from text
     foreach ($lines as $line) {
+      // Skip "Jornada" lines (expected working hours)
+      if (stripos($line, 'jornada') !== false) {
+        continue;
+      }
+      
       // Look for patterns like "7:32" or "10:26"
       if (preg_match_all($timePattern, $line, $matches, PREG_PATTERN_ORDER)) {
         foreach ($matches[0] as $time) {
+          // Skip first time if it looks like a screenshot timestamp (e.g., 11:36)
+          if ($skipFirstTime && $foundTimes === 0) {
+            $skipFirstTime = false;
+            continue;
+          }
+          
           $times[] = $time;
+          $foundTimes++;
         }
       }
     }
