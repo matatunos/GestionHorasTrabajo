@@ -7,6 +7,36 @@ $user = current_user();
 require_login();
 $pdo = get_pdo();
 
+// Handle CSV export request
+if (!empty($_GET['export_csv'])) {
+  $year = intval($_GET['year'] ?? date('Y'));
+  
+  // Get all entries for this user in the selected year
+  $stmt = $pdo->prepare('SELECT date, start, end, note FROM entries WHERE user_id = ? AND YEAR(date) = ? ORDER BY date ASC');
+  $stmt->execute([$user['id'], $year]);
+  $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  
+  // Generate CSV
+  $csv = "Fecha,Entrada,Salida,Nota\n";
+  foreach ($entries as $e) {
+    $date = $e['date'];
+    $start = $e['start'] ?? '';
+    $end = $e['end'] ?? '';
+    $note = $e['note'] ?? '';
+    
+    // Escape quotes in note
+    $note = str_replace('"', '""', $note);
+    
+    $csv .= "\"$date\",\"$start\",\"$end\",\"$note\"\n";
+  }
+  
+  // Send as download
+  header('Content-Type: text/csv; charset=utf-8');
+  header('Content-Disposition: attachment; filename="entradas-' . date('Y-m-d') . '.csv"');
+  echo $csv;
+  exit;
+}
+
 // selected year from GET or default current year
 $year = intval($_GET['year'] ?? date('Y'));
 $initialDate = $_GET['date'] ?? date('Y-m-d');
@@ -546,59 +576,11 @@ $holidayMap = [];
   // Note: year is chosen in dashboard; index preserves `year` via URL.
   // No JS needed for sticky headers - CSS handles it now
 
-  // Export CSV functionality
+  // Export CSV functionality - direct download from server
   document.getElementById('export-csv-btn').addEventListener('click', function(){
-    try {
-      // Build CSV from visible table rows (includes all months even if collapsed)
-      // First expand all months to ensure all data is in DOM
-      document.querySelectorAll('tr.month-row').forEach(function(row){
-        if (row.classList.contains('collapsed')) {
-          row.classList.remove('collapsed');
-          const tbody = row.parentNode;
-          const tableKey = tbody.dataset.table_key;
-          const rows = tbody.querySelectorAll('tr[data-row_key="' + tableKey + '"]');
-          rows.forEach(function(r){ r.style.display = ''; });
-        }
-      });
-      
-      // Now collect data
-      const rows = [];
-      rows.push('Fecha,Entrada,Salida,Nota,Saldo');
-      
-      document.querySelectorAll('.sheet tbody tr').forEach(function(tr){
-        // Skip header and summary rows
-        if (tr.classList.contains('month') || tr.classList.contains('month-summary') || tr.classList.contains('month-columns') || tr.classList.contains('month-row')) return;
-        
-        const cells = tr.querySelectorAll('td');
-        if (cells.length < 2) return;
-        
-        const date = cells[0].textContent.trim();
-        // Skip if it's a header or empty row
-        if (!date || date === 'Fecha' || date.length === 0) return;
-        
-        const entrada = cells[2] ? cells[2].textContent.trim() : '';
-        const salida = cells[3] ? cells[3].textContent.trim() : '';
-        const nota = cells[5] ? cells[5].textContent.trim() : '';
-        const saldo = cells[6] ? cells[6].textContent.trim() : '';
-        
-        rows.push(`"${date}","${entrada}","${salida}","${nota}","${saldo}"`);
-      });
-      
-      const csv = rows.join('\n');
-      const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', 'entradas-' + new Date().toISOString().split('T')[0] + '.csv');
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch(err) {
-      console.error('Error exporting CSV:', err);
-      alert('Error al descargar CSV');
-    }
+    const year = document.getElementById('entry-year').value;
+    // Simple redirect to download
+    window.location.href = '?export_csv=1&year=' + encodeURIComponent(year);
   });
 
   function fetchTable(){
