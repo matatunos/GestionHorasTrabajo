@@ -7,6 +7,57 @@ require_once __DIR__ . '/ocr_processor.php';
 define('IMPORT_NOTE_TEXT', 'Importado');
 define('MAX_UPLOAD_SIZE', 10 * 1024 * 1024); // 10MB
 
+/**
+ * Map raw time array to horas_slots intelligently based on count
+ * Logic: uses same mapping as HTML importer
+ * @param array $times Array of time strings
+ * @return array horas_slots (6 elements: start, coffee_out, coffee_in, lunch_out, lunch_in, end)
+ */
+function mapTimesToSlots($times) {
+  $horas_slots = array_fill(0, 6, '');
+  $timeCount = count($times);
+  
+  if ($timeCount === 0) {
+    return $horas_slots;
+  }
+  
+  if ($timeCount === 1) {
+    // Single time: could be entry or exit, use as entry
+    $horas_slots[0] = $times[0];
+  } elseif ($timeCount === 2) {
+    // Two times: entry and exit
+    $horas_slots[0] = $times[0];  // start
+    $horas_slots[5] = $times[1];  // end
+  } elseif ($timeCount === 3) {
+    // Three times: entry, break start, break end (or entry, exit coffee, exit)
+    // Assume: entry, coffee_out, rest (could be coffee_in or end)
+    $horas_slots[0] = $times[0];  // start
+    $horas_slots[1] = $times[1];  // coffee_out
+    $horas_slots[5] = $times[2];  // end (last time is always end)
+  } elseif ($timeCount === 4) {
+    // Four times: entry, coffee_out, coffee_in, exit (no lunch break)
+    $horas_slots[0] = $times[0];  // start
+    $horas_slots[1] = $times[1];  // coffee_out
+    $horas_slots[2] = $times[2];  // coffee_in
+    $horas_slots[5] = $times[3];  // end
+  } elseif ($timeCount === 5) {
+    // Five times: entry, coffee_out, coffee_in, lunch_out, lunch_in (or + end)
+    // More likely: entry, coffee_out, coffee_in, lunch_out, exit (missing lunch_in)
+    $horas_slots[0] = $times[0];  // start
+    $horas_slots[1] = $times[1];  // coffee_out
+    $horas_slots[2] = $times[2];  // coffee_in
+    $horas_slots[3] = $times[3];  // lunch_out
+    $horas_slots[5] = $times[4];  // end (last is always end)
+  } else {
+    // Six or more times: standard full day
+    for ($i = 0; $i < 6 && $i < $timeCount; $i++) {
+      $horas_slots[$i] = $times[$i];
+    }
+  }
+  
+  return $horas_slots;
+}
+
 $user = current_user();
 require_login();
 $pdo = get_pdo();
@@ -83,19 +134,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
 
       // Extraer horas del registro importado
       // Preferimos recibir un array `horas_slots` con 6 posiciones (puede contener cadenas vacías o marcadores)
+      // Si viene `horas` como array simple, aplicamos mapeo inteligente
       $horas_slots = null;
       if (isset($record['horas_slots']) && is_array($record['horas_slots'])) {
         $horas_slots = $record['horas_slots'];
+      } elseif (isset($record['horas']) && is_array($record['horas'])) {
+        // Use intelligent mapping based on number of times (same as HTML importer)
+        $horas_slots = mapTimesToSlots($record['horas']);
       }
 
-      // Si no hay `horas_slots`, caemos en el antiguo comportamiento usando 'horas'
+      // Fallback: if still no horas_slots, create empty
       if ($horas_slots === null) {
-        $horas = $record['horas'] ?? [];
-        // mapear por posición asumida
-        $horas_slots = [];
-        for ($i = 0; $i < 6; $i++) {
-          $horas_slots[$i] = $horas[$i] ?? '';
-        }
+        $horas_slots = array_fill(0, 6, '');
       } else {
         // Asegurar exactamente 6 posiciones
         for ($i = 0; $i < 6; $i++) {

@@ -116,36 +116,14 @@ class OCRProcessor {
       }
     }
     
-    // Group times into work segments (usually pairs: in/out)
-    // Logic: if 4 times = entrada, salida_cafe, entrada_cafe, salida_final (no lunch)
-    //        if 6 times = entrada, salida_cafe, entrada_cafe, salida_comida, entrada_comida, salida_final
-    if (count($times) >= 2) {
-      $horas_slots = array_fill(0, 6, '');
-      
-      $timeCount = count($times);
-      
-      if ($timeCount === 4) {
-        // entrada, salida_cafe, entrada_cafe, salida_final (sin comida)
-        $horas_slots[0] = $times[0];  // start
-        $horas_slots[1] = $times[1];  // coffee_out
-        $horas_slots[2] = $times[2];  // coffee_in
-        $horas_slots[5] = $times[3];  // end (salida del trabajo)
-      } elseif ($timeCount >= 6) {
-        // Standard 6 slots
-        for ($i = 0; $i < 6; $i++) {
-          $horas_slots[$i] = $times[$i];
-        }
-      } else {
-        // 2 or 3 times: assign sequentially and put last time as end
-        for ($i = 0; $i < $timeCount - 1; $i++) {
-          $horas_slots[$i] = $times[$i];
-        }
-        $horas_slots[5] = $times[$timeCount - 1];  // Last time is end
-      }
-      
+    // Group times using intelligent mapping (same as HTML importer)
+    // The mapTimesToSlots logic is imported from import.php
+    if (count($times) >= 1) {
+      // Use the intelligent mapping that considers the number of times
+      // This will be validated and remapped by the import.php mapTimesToSlots function
       $records[] = [
         'fechaISO' => $currentDate,
-        'horas_slots' => $horas_slots,
+        'horas' => $times,  // Raw times array - will be intelligently mapped on server
         'raw_times' => $times
       ];
     }
