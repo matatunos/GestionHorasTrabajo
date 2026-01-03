@@ -84,8 +84,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image_file'])) {
       } else {
         $message = 'Imagen procesada exitosamente. Revisa los datos extraídos abajo.';
         $messageType = 'success';
+        
+        // Map times to slots using intelligent mapping
+        $mappedRecords = [];
+        if (!empty($result['records'])) {
+          foreach ($result['records'] as $record) {
+            $slots = mapTimesToSlots($record['horas']);
+            $mappedRecords[] = [
+              'fechaISO' => $record['fechaISO'],
+              'horas' => $record['horas'],
+              'horas_slots' => $slots
+            ];
+          }
+        }
+        
         $ocrData = [
-          'records' => $result['records'] ?? [],
+          'records' => $mappedRecords,
           'raw_text' => $result['raw_text'] ?? ''
         ];
       }
