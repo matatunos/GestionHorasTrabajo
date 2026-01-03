@@ -117,13 +117,30 @@ class OCRProcessor {
     }
     
     // Group times into work segments (usually pairs: in/out)
-    // For the example: 7:32, 10:26 (morning), 11:00, 14:16 (afternoon)
+    // Logic: if 4 times = entrada, salida_cafe, entrada_cafe, salida_final (no lunch)
+    //        if 6 times = entrada, salida_cafe, entrada_cafe, salida_comida, entrada_comida, salida_final
     if (count($times) >= 2) {
       $horas_slots = array_fill(0, 6, '');
       
-      // Assign times to slots: start, coffee_out, coffee_in, lunch_out, lunch_in, end
-      for ($i = 0; $i < min(6, count($times)); $i++) {
-        $horas_slots[$i] = $times[$i];
+      $timeCount = count($times);
+      
+      if ($timeCount === 4) {
+        // entrada, salida_cafe, entrada_cafe, salida_final (sin comida)
+        $horas_slots[0] = $times[0];  // start
+        $horas_slots[1] = $times[1];  // coffee_out
+        $horas_slots[2] = $times[2];  // coffee_in
+        $horas_slots[5] = $times[3];  // end (salida del trabajo)
+      } elseif ($timeCount >= 6) {
+        // Standard 6 slots
+        for ($i = 0; $i < 6; $i++) {
+          $horas_slots[$i] = $times[$i];
+        }
+      } else {
+        // 2 or 3 times: assign sequentially and put last time as end
+        for ($i = 0; $i < $timeCount - 1; $i++) {
+          $horas_slots[$i] = $times[$i];
+        }
+        $horas_slots[5] = $times[$timeCount - 1];  // Last time is end
       }
       
       $records[] = [
