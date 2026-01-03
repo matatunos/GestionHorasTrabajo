@@ -23,6 +23,7 @@ try { $current = current_user(); } catch (Throwable $e) { $current = null; }
         <!-- 'Años' link removed: management consolidated into settings.php -->
         <a class="menu-item" href="import.php">Importar Fichajes</a>
         <?php if (!empty($current) && $current['is_admin']): ?>
+          <a class="menu-item" href="reports.php">Reportes</a>
           <a class="menu-item" href="settings.php">Configuración</a>
           <a class="menu-item" href="users.php">Usuarios</a>
         <?php endif; ?>

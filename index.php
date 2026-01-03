@@ -51,17 +51,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['date'])) {
     'lunch_in' => $_POST['lunch_in'] ?: null,
     'end' => $_POST['end'] ?: null,
     'note' => $_POST['note'] ?: '',
+    'absence_type' => $_POST['absence_type'] ?: null,
   ];
   // upsert by user_id+date
   $stmt = $pdo->prepare('SELECT id FROM entries WHERE user_id = ? AND date = ? LIMIT 1');
   $stmt->execute([$user['id'], $date]);
   $row = $stmt->fetch();
   if ($row){
-    $stmt = $pdo->prepare('UPDATE entries SET start=?,coffee_out=?,coffee_in=?,lunch_out=?,lunch_in=?,end=?,note=? WHERE id=?');
-    $stmt->execute([$data['start'],$data['coffee_out'],$data['coffee_in'],$data['lunch_out'],$data['lunch_in'],$data['end'],$data['note'],$row['id']]);
+    $stmt = $pdo->prepare('UPDATE entries SET start=?,coffee_out=?,coffee_in=?,lunch_out=?,lunch_in=?,end=?,note=?,absence_type=? WHERE id=?');
+    $stmt->execute([$data['start'],$data['coffee_out'],$data['coffee_in'],$data['lunch_out'],$data['lunch_in'],$data['end'],$data['note'],$data['absence_type'],$row['id']]);
   } else {
-    $stmt = $pdo->prepare('INSERT INTO entries (user_id,date,start,coffee_out,coffee_in,lunch_out,lunch_in,end,note) VALUES (?,?,?,?,?,?,?,?,?)');
-    $stmt->execute([$user['id'],$date,$data['start'],$data['coffee_out'],$data['coffee_in'],$data['lunch_out'],$data['lunch_in'],$data['end'],$data['note']]);
+    $stmt = $pdo->prepare('INSERT INTO entries (user_id,date,start,coffee_out,coffee_in,lunch_out,lunch_in,end,note,absence_type) VALUES (?,?,?,?,?,?,?,?,?,?)');
+    $stmt->execute([$user['id'],$date,$data['start'],$data['coffee_out'],$data['coffee_in'],$data['lunch_out'],$data['lunch_in'],$data['end'],$data['note'],$data['absence_type']]);
   }
   // if AJAX request, return JSON success instead of redirect
   if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
@@ -145,12 +146,21 @@ $holidayMap = [];
         <div class="modal-body">
         <form id="entry-form" method="post" class="row-form entry-form">
           <label class="form-label">Fecha <input id="entry-date" class="form-control" type="date" name="date" required value="<?php echo htmlspecialchars($initialDate); ?>"></label>
-          <label class="form-label">Entrada <input class="form-control time-input" type="text" name="start"></label>
-          <label class="form-label">Salida café <input class="form-control time-input" type="text" name="coffee_out"></label>
-          <label class="form-label">Entrada café <input class="form-control time-input" type="text" name="coffee_in"></label>
-          <label class="form-label">Salida comida <input class="form-control time-input" type="text" name="lunch_out"></label>
-          <label class="form-label">Entrada comida <input class="form-control time-input" type="text" name="lunch_in"></label>
-          <label class="form-label">Hora salida <input class="form-control time-input" type="text" name="end"></label>
+          <label class="form-label">Tipo de día <select class="form-control" id="entry-absence-type" name="absence_type" onchange="document.getElementById('entry-times').style.display = this.value ? 'none' : 'block';">
+            <option value="">Día normal (con fichaje)</option>
+            <option value="vacation">Vacaciones</option>
+            <option value="illness">Enfermedad</option>
+            <option value="permit">Permiso</option>
+            <option value="other">Otro (especificar)</option>
+          </select></label>
+          <div id="entry-times">
+            <label class="form-label">Entrada <input class="form-control time-input" type="text" name="start"></label>
+            <label class="form-label">Salida café <input class="form-control time-input" type="text" name="coffee_out"></label>
+            <label class="form-label">Entrada café <input class="form-control time-input" type="text" name="coffee_in"></label>
+            <label class="form-label">Salida comida <input class="form-control time-input" type="text" name="lunch_out"></label>
+            <label class="form-label">Entrada comida <input class="form-control time-input" type="text" name="lunch_in"></label>
+            <label class="form-label">Hora salida <input class="form-control time-input" type="text" name="end"></label>
+          </div>
           <label class="form-label">Nota <input class="form-control" type="text" name="note"></label>
           <div class="form-actions modal-actions mt-2">
             <button class="btn btn-secondary" type="button" id="closeEntryModal">Cancelar</button>
@@ -168,6 +178,7 @@ $holidayMap = [];
       <label class="form-check"><input type="checkbox" name="hide_vacations" value="1" <?php echo $hideVacations ? 'checked' : ''; ?>><span>Ocultar vacaciones</span></label>
       <button class="btn" type="submit">Aplicar filtros</button>
       <button id="toggle-all-months" class="btn" type="button">Plegar/Mostrar todo</button>
+      <button class="btn btn-secondary" id="export-csv-btn" type="button">📥 Descargar CSV</button>
     </form>
 
     <div class="table-responsive">
@@ -369,7 +380,10 @@ $holidayMap = [];
           <?php endif; ?>
         </td>
         <td>
-          <?php if (isset($holidayMap[$d])): ?>
+          <?php if (!empty($e['absence_type'])): ?>
+            <?php $absenceLabels = ['vacation' => '🏖️ Vacaciones', 'illness' => '🤒 Enfermedad', 'permit' => '📋 Permiso', 'other' => '📌 Otro']; ?>
+            <span class="badge badge-primary"><?php echo htmlspecialchars($absenceLabels[$e['absence_type']] ?? $e['absence_type']); ?></span>
+          <?php elseif (isset($holidayMap[$d])): ?>
             <?php $ht = $holidayMap[$d]['type'] ?? 'holiday'; ?>
             <?php $hlabel = htmlspecialchars($holidayMap[$d]['label'] ?? ''); ?>
             <?php if ($ht === 'vacation'): ?>
@@ -389,7 +403,7 @@ $holidayMap = [];
           <?php endif; ?>
         </td>
         <td>
-          <button class="btn btn-secondary edit-entry icon-btn" type="button" title="Editar" data-date="<?php echo $d; ?>" data-start="<?php echo htmlspecialchars($e['start'] ?? ''); ?>" data-coffee_out="<?php echo htmlspecialchars($e['coffee_out'] ?? ''); ?>" data-coffee_in="<?php echo htmlspecialchars($e['coffee_in'] ?? ''); ?>" data-lunch_out="<?php echo htmlspecialchars($e['lunch_out'] ?? ''); ?>" data-lunch_in="<?php echo htmlspecialchars($e['lunch_in'] ?? ''); ?>" data-end="<?php echo htmlspecialchars($e['end'] ?? ''); ?>" data-note="<?php echo htmlspecialchars($e['note'] ?? ''); ?>">
+          <button class="btn btn-secondary edit-entry icon-btn" type="button" title="Editar" data-date="<?php echo $d; ?>" data-start="<?php echo htmlspecialchars($e['start'] ?? ''); ?>" data-coffee_out="<?php echo htmlspecialchars($e['coffee_out'] ?? ''); ?>" data-coffee_in="<?php echo htmlspecialchars($e['coffee_in'] ?? ''); ?>" data-lunch_out="<?php echo htmlspecialchars($e['lunch_out'] ?? ''); ?>" data-lunch_in="<?php echo htmlspecialchars($e['lunch_in'] ?? ''); ?>" data-end="<?php echo htmlspecialchars($e['end'] ?? ''); ?>" data-note="<?php echo htmlspecialchars($e['note'] ?? ''); ?>" data-absence_type="<?php echo htmlspecialchars($e['absence_type'] ?? ''); ?>">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.41l-2.34-2.34a1.003 1.003 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
           </button>
           <button class="btn btn-danger delete-entry icon-btn" type="button" title="Borrar" data-date="<?php echo $d; ?>" onclick="(function(e){ e.stopPropagation(); handleDeleteDate('<?php echo $d; ?>'); })(event)">
@@ -530,9 +544,42 @@ $holidayMap = [];
     });
   }
   // Note: year is chosen in dashboard; index preserves `year` via URL.
-  const tableContainerSelector = '.table-responsive';
-
   // No JS needed for sticky headers - CSS handles it now
+
+  // Export CSV functionality
+  document.getElementById('export-csv-btn').addEventListener('click', function(){
+    const rows = [];
+    const table = document.querySelector('.sheet');
+    
+    // Headers
+    rows.push('Fecha,Entrada,Salida,Nota,Saldo');
+    
+    // Data rows
+    document.querySelectorAll('.sheet tbody tr').forEach(function(tr){
+      if (tr.classList.contains('month') || tr.classList.contains('month-summary') || tr.classList.contains('month-columns')) return;
+      const cells = tr.querySelectorAll('td');
+      if (cells.length < 2) return;
+      
+      const date = cells[0].textContent.trim();
+      const entrada = cells[2] ? cells[2].textContent.trim() : '';
+      const salida = cells[3] ? cells[3].textContent.trim() : '';
+      const nota = cells[5] ? cells[5].textContent.trim() : '';
+      const saldo = cells[6] ? cells[6].textContent.trim() : '';
+      
+      rows.push(`"${date}","${entrada}","${salida}","${nota}","${saldo}"`);
+    });
+    
+    const csv = rows.join('\\n');
+    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'entradas-' + new Date().toISOString().split('T')[0] + '.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
 
   function fetchTable(){
     try { var qs = buildQueryString(); } catch(e){ var qs = ''; }
@@ -730,6 +777,8 @@ $holidayMap = [];
       tds[6].innerHTML = mkInput('time', editBtn.getAttribute('data-lunch_in') || '', 'lunch_in');
       tds[8].innerHTML = mkInput('time', editBtn.getAttribute('data-end') || '', 'end');
       tds[11].innerHTML = mkInput('text', editBtn.getAttribute('data-note') || '', 'note');
+      // Add absence_type to form data
+      tr.dataset._absence_type = editBtn.getAttribute('data-absence_type') || '';
       tds[12].innerHTML = '<button class="btn btn-primary save-entry" type="button">Guardar</button> <button class="btn btn-secondary cancel-entry" type="button">Cancelar</button>';
       tr.dataset._date = date;
       return;
@@ -751,6 +800,7 @@ $holidayMap = [];
       fd.append('lunch_in', getVal(6,'lunch_in'));
       fd.append('end', getVal(8,'end'));
       fd.append('note', getVal(11,'note'));
+      if (tr.dataset._absence_type) fd.append('absence_type', tr.dataset._absence_type);
       fetch(location.pathname + location.search, { method: 'POST', body: fd, headers: {'X-Requested-With':'XMLHttpRequest'} })
         .then(r => r.json()).then(j => { if (j && j.ok){ tr.classList.remove('editing'); fetchTable(); } else { alert('Error guardando'); } })
         .catch(err => { console.error(err); alert('Error de red'); });

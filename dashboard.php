@@ -362,6 +362,32 @@ function svg_sparkline(array $values, $w=120, $h=28){
       <a class="btn btn-secondary" href="import.php">Importar fichajes</a>
     </div>
 
+    <!-- Alertas -->
+    <?php
+      $alerts = [];
+      
+      // Check if today's entry is missing
+      if ($todayInYear && empty($entries[$today])) {
+        $alerts[] = ['type' => 'warning', 'msg' => '⏰ No has fichado hoy'];
+      }
+      
+      // Check if entry is incomplete (missing end time)
+      if ($todayInYear && !empty($entries[$today]) && empty($entries[$today]['end'])) {
+        $alerts[] = ['type' => 'warning', 'msg' => '⏰ Entrada de hoy incompleta (falta hora de salida)'];
+      }
+      
+      // Show alerts
+      if (!empty($alerts)):
+    ?>
+      <div style="margin-top: 1rem;">
+        <?php foreach ($alerts as $alert): ?>
+          <div style="padding: 0.75rem 1rem; background: <?php echo $alert['type'] === 'warning' ? 'rgba(217, 119, 6, 0.1)' : 'rgba(220, 38, 38, 0.1)'; ?>; border-left: 4px solid <?php echo $alert['type'] === 'warning' ? '#d97706' : '#dc2626'; ?>; border-radius: 4px; margin-bottom: 0.5rem;">
+            <?php echo $alert['msg']; ?>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
     <div class="dashboard-cards">
       <?php
         // Calcular saldo semanal SIEMPRE relativo a hoy (semana actual y la anterior),
