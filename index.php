@@ -549,19 +549,33 @@ $holidayMap = [];
   // Export CSV functionality
   document.getElementById('export-csv-btn').addEventListener('click', function(){
     try {
-      const rows = [];
-      const table = document.querySelector('.sheet');
+      // Build CSV from visible table rows (includes all months even if collapsed)
+      // First expand all months to ensure all data is in DOM
+      document.querySelectorAll('tr.month-row').forEach(function(row){
+        if (row.classList.contains('collapsed')) {
+          row.classList.remove('collapsed');
+          const tbody = row.parentNode;
+          const tableKey = tbody.dataset.table_key;
+          const rows = tbody.querySelectorAll('tr[data-row_key="' + tableKey + '"]');
+          rows.forEach(function(r){ r.style.display = ''; });
+        }
+      });
       
-      // Headers
+      // Now collect data
+      const rows = [];
       rows.push('Fecha,Entrada,Salida,Nota,Saldo');
       
-      // Data rows
       document.querySelectorAll('.sheet tbody tr').forEach(function(tr){
-        if (tr.classList.contains('month') || tr.classList.contains('month-summary') || tr.classList.contains('month-columns')) return;
+        // Skip header and summary rows
+        if (tr.classList.contains('month') || tr.classList.contains('month-summary') || tr.classList.contains('month-columns') || tr.classList.contains('month-row')) return;
+        
         const cells = tr.querySelectorAll('td');
         if (cells.length < 2) return;
         
         const date = cells[0].textContent.trim();
+        // Skip if it's a header or empty row
+        if (!date || date === 'Fecha' || date.length === 0) return;
+        
         const entrada = cells[2] ? cells[2].textContent.trim() : '';
         const salida = cells[3] ? cells[3].textContent.trim() : '';
         const nota = cells[5] ? cells[5].textContent.trim() : '';
