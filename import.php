@@ -116,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image_file'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
   $importData = json_decode($_POST['import_data'], true);
   $year = intval($_POST['year']);
+  $isOcrImport = false; // Will be set to true if we detect OCR imports
   
   if ($importData && is_array($importData)) {
     $imported = 0;
@@ -139,10 +140,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
         $errors[] = "Fecha inválida (fechaISO) '$fechaISO'";
         continue;
       }
-      // Guardrail: avoid silently importing into a different year than the one selected.
+      // Extract year from the date itself (from OCR or HTML parser)
       $fechaYear = intval(substr($fechaISO, 0, 4));
-      // Some files span year boundaries (e.g. late Dec + early Jan). Allow it but warn.
-      if ($year > 0 && $fechaYear !== $year) {
+      
+      // Detect if this is OCR import: OCR records have 'horas' array (not just horas_slots)
+      $isOcrRecord = isset($record['horas']) && is_array($record['horas']);
+      if ($isOcrRecord) {
+        $isOcrImport = true;
+      }
+      
+      // For OCR imports, use the year from the extracted date (ignore form selection)
+      // For HTML imports, validate year matches selection
+      if (!$isOcrRecord && $year > 0 && $fechaYear !== $year) {
         $yearMismatchYears[$fechaYear] = true;
       }
 
@@ -196,7 +205,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
       $message = "Se importaron correctamente $imported registros.";
       $messageType = 'success';
     }
-    if (!empty($yearMismatchYears)) {
+    if (!empty($yearMismatchYears) && !$isOcrImport) {
+      // Only show year mismatch warning for HTML imports (OCR uses date extraction)
       $yrs = array_keys($yearMismatchYears);
       sort($yrs);
       $message .= " Aviso: el fichero contiene fechas de año distinto a $year (" . implode(', ', $yrs) . "). Se han importado igualmente.";
@@ -313,7 +323,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
     <hr style="margin: 30px 0; border: 1px solid rgba(255,255,255,0.1);">
     
     <h2>O importar desde captura de pantalla (OCR)</h2>
-    <p class="muted">Carga una captura de pantalla de tu app móvil y el sistema extraerá automáticamente los horarios usando OCR.</p>
+    <p class="muted">Carga una captura de pantalla de tu app móvil y el sistema extraerá automáticamente los horarios usando OCR. La fecha completa (incluyendo año) se detectará de la imagen.</p>
     
     <form method="post" enctype="multipart/form-data" class="import-form form-wrapper">
       <div class="form-group">
@@ -323,8 +333,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
       </div>
       
       <div class="form-group">
-        <label for="image_year">Año:</label>
-        <input type="number" id="image_year" name="year" min="2020" max="2030" value="<?php echo date('Y'); ?>" required class="form-control">
+        <label for="image_year">Año (detectado automáticamente de la imagen):</label>
+        <input type="number" id="image_year" name="year" min="2020" max="2030" value="<?php echo date('Y'); ?>" class="form-control" disabled style="opacity: 0.6; cursor: not-allowed;">
+        <div class="muted">El año se extraerá automáticamente de la fecha en la imagen, no es necesario seleccionar.</div>
       </div>
       
       <button type="submit" class="btn btn-primary">Procesar imagen</button>
