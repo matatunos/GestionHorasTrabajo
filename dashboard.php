@@ -390,8 +390,8 @@ function svg_sparkline(array $values, $w=120, $h=28){
     ?>
       <div style="margin-top: 1rem;">
         <?php foreach ($alerts as $alert): ?>
-          <div style="padding: 0.75rem 1rem; background: <?php echo $alert['type'] === 'warning' ? 'rgba(217, 119, 6, 0.1)' : 'rgba(220, 38, 38, 0.1)'; ?>; border-left: 4px solid <?php echo $alert['type'] === 'warning' ? '#d97706' : '#dc2626'; ?>; border-radius: 4px; margin-bottom: 0.5rem;">
-            <?php echo $alert['msg']; ?>
+          <div style="padding: 1rem; background: <?php echo $alert['type'] === 'warning' ? 'rgba(217, 119, 6, 0.15)' : 'rgba(220, 38, 38, 0.15)'; ?>; border-left: 5px solid <?php echo $alert['type'] === 'warning' ? '#f59e0b' : '#ef4444'; ?>; border-radius: 6px; margin-bottom: 0.75rem; border: 1px solid <?php echo $alert['type'] === 'warning' ? 'rgba(217, 119, 6, 0.3)' : 'rgba(220, 38, 38, 0.3)'; ?>;">
+            <strong style="color: <?php echo $alert['type'] === 'warning' ? '#f59e0b' : '#ef4444'; ?>;"><?php echo $alert['msg']; ?></strong>
           </div>
         <?php endforeach; ?>
       </div>
