@@ -669,7 +669,7 @@ if ($hol_pdo) {
     deleteOverlay.addEventListener('click', (e)=>{ if (e.target===deleteOverlay) { deleteOverlay.style.display='none'; deleteOverlay.setAttribute('aria-hidden','true'); } });
   }
 })();
-</script>
+
 // Holidays date picker and AJAX glue (migrated from holidays.php)
 (function(){
   const monthSel = document.getElementById('hd_month');
@@ -712,8 +712,7 @@ if ($hol_pdo) {
       }).catch(err => { console.error(err); if (submitBtn){ submitBtn.disabled = false; submitBtn.innerText = origText; } alert('Error de red'); });
   }, false);
 })();
-</script>
-<script>
+
 // Modal open/close for holiday add (mirrors year modal behavior)
 (function(){
   const openBtn = document.getElementById('openAddHolidayBtn');
@@ -725,7 +724,6 @@ if ($hol_pdo) {
   closeBtn && closeBtn.addEventListener('click', () => { overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); });
   overlay.addEventListener('click', (e)=>{ if (e.target===overlay) { overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); } });
 })();
-</script>
 <style>
 /* Settings page: force listing panels to have white background for readability */
 .table-responsive { background: #ffffff !important; padding: 12px !important; border-radius: 8px; }
