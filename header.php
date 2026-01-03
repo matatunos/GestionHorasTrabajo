@@ -24,13 +24,7 @@ try { $current = current_user(); } catch (Throwable $e) { $current = null; }
         <a class="menu-item" href="import.php">Importar Fichajes</a>
         <?php if (!empty($current) && $current['is_admin']): ?>
           <a class="menu-item" href="reports.php">Reportes</a>
-          <div class="menu-item menu-submenu" tabindex="0">
-            <span>Configuración</span>
-            <div class="menu-submenu-dropdown" role="menu">
-              <a class="dropdown-item" href="settings.php">Configuración general</a>
-              <a class="dropdown-item" href="users.php">Usuarios</a>
-            </div>
-          </div>
+          <a class="menu-item" href="settings.php">Configuración</a>
         <?php endif; ?>
 
         <?php if (!empty($current)): ?>
@@ -74,24 +68,11 @@ try { $current = current_user(); } catch (Throwable $e) { $current = null; }
         }
       });
       
-      // Handle menu-submenu dropdown
-      document.addEventListener('click', function(e){
-        const ms = document.querySelector('.menu-submenu');
-        if(!ms) return;
-        if (ms.contains(e.target)) {
-          ms.classList.toggle('open');
-        } else {
-          ms.classList.remove('open');
-        }
-      });
-      
       // Close menus on Escape
       document.addEventListener('keydown', function(e){
         if (e.key === 'Escape') {
           const mu = document.querySelector('.menu-user');
-          const ms = document.querySelector('.menu-submenu');
           if(mu) mu.classList.remove('open');
-          if(ms) ms.classList.remove('open');
         }
       });
     })();
