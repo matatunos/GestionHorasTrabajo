@@ -98,6 +98,14 @@ a:hover { color: var(--primary-dark); }
 .menu-user-dropdown .dropdown-item:hover { background: var(--bg-color); }
 .menu-user .user-avatar { width: 32px; height: 32px; font-size: 0.95rem; }
 
+/* Submenu styling for sidebar items */
+.menu-submenu { position: relative; cursor: pointer; display: flex; align-items: center; padding: 0.5rem 0.8rem; border-radius: 6px; user-select: none; }
+.menu-submenu:hover { background-color: var(--bg-color); }
+.menu-submenu-dropdown { display: none; position: absolute; left: calc(100% + 8px); top: 0; background: var(--surface-color); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); border-radius: 8px; min-width: 180px; z-index: 250; overflow: hidden; }
+.menu-submenu.open .menu-submenu-dropdown { display: block; }
+.menu-submenu-dropdown .dropdown-item { display: block; padding: 0.6rem 0.9rem; color: var(--text-primary); text-decoration: none; white-space: nowrap; }
+.menu-submenu-dropdown .dropdown-item:hover { background: var(--bg-color); }
+
 @media (max-width: 700px) {
     .menu-user .menu-user-name { display: none; }
 }
