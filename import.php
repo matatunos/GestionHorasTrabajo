@@ -285,21 +285,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
     <div class="instructions">
       <h3>Instrucciones</h3>
       <ol>
-        <li>Descarga tu informe de fichajes en formato HTML desde el portal externo (opción "Guardar como" del navegador).</li>
-        <li>Selecciona el archivo HTML con "Seleccionar archivo" y confirma el <strong>año</strong> del informe.</li>
-        <li>Haz clic en <strong>"Cargar y previsualizar"</strong>. El sistema intentará parsear el HTML en el navegador; si no encuentra registros, enviará el fichero al servidor como fallback.</li>
-        <li>En la previsualización verás una fila por día con columnas: <em>Entrada, Salida café, Entrada café, Salida comida, Entrada comida, Salida</em> y la columna editable <em>Horas (editar)</em>. Por defecto los <strong>sábados y domingos</strong> no se muestran aunque aparezcan en el informe; si quieres verlos, edítalos manualmente antes de importar.</li>
-        <li>Para ajustar las horas de un día edítalas en <em>Horas (editar)</em>:
-          <ul>
-            <li>Si separas con <strong>comas</strong> preservamos huecos entre comas. Ejemplo: <code>08:00,,10:45</code> crea un hueco en la posición intermedia.</li>
-            <li>Puedes usar <strong>#</strong> o <strong>-</strong> como marcador explícito (se tratan como hueco y no se importan).</li>
-            <li>Si no usas comas, separadores por espacios o <code>;</code> se interpretan y se eliminan huecos vacíos.</li>
-          </ul>
-        </li>
-        <li>Marca/ desmarca la casilla <strong>Incluir</strong> para decidir qué días se importan; solo las filas marcadas se enviarán al servidor.</li>
-        <li>Cuando todo esté correcto haz clic en <strong>Importar registros</strong>. Se te pedirá confirmación y solo se enviarán las filas incluidas.</li>
+        <li>Descarga el informe HTML desde el portal externo ("Guardar como" del navegador).</li>
+        <li>Selecciona el archivo y confirma el año.</li>
+        <li>Haz clic en <strong>"Cargar y previsualizar"</strong>. Edita los datos si es necesario (puedes usar comas para espacios: <code>08:00,,10:45</code>).</li>
+        <li>Marca los días a importar y haz clic en <strong>Importar registros</strong>.</li>
       </ol>
-      <p>Notas: el parser intenta mapear las horas por posición (0=entrada, 1=salida café, 2=entrada café, 3=salida comida, 4=entrada comida, 5=salida). Si tienes dudas, edita la columna <em>Horas (editar)</em> para colocar las horas o huecos en el orden correcto.</p>
     </div>
     
     <form class="import-form form-wrapper" id="import-form">
