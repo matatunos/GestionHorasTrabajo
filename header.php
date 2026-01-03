@@ -27,9 +27,6 @@ try { $current = current_user(); } catch (Throwable $e) { $current = null; }
           <a class="menu-item" href="settings.php">Configuración</a>
           <a class="menu-item" href="users.php">Usuarios</a>
         <?php endif; ?>
-        <?php if (!empty($current)): ?>
-          <a class="menu-item" href="dashboard.php">Dashboard</a>
-        <?php endif; ?>
 
         <?php if (!empty($current)): ?>
           <div class="menu-item menu-user" tabindex="0">
