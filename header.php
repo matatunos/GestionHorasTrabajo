@@ -28,7 +28,7 @@ try { $current = current_user(); } catch (Throwable $e) { $current = null; }
             <span>Configuración</span>
             <div class="menu-submenu-dropdown" role="menu">
               <a class="dropdown-item" href="settings.php">Configuración general</a>
-              <a class="dropdown-item" href="settings.php?tab=users">Usuarios</a>
+              <a class="dropdown-item" href="users.php">Usuarios</a>
             </div>
           </div>
         <?php endif; ?>
