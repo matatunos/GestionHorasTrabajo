@@ -126,24 +126,18 @@ function extractTragsaData() {
       return null;
     }
     
-    // ✅ NUEVO: Detectar si hay cambio de año (ej: diciembre 2025 + enero 2026)
-    // Si hay enero y diciembre en los mismos datos, ajustar diciembre a año anterior
-    const months = {};
+    // ✅ NUEVA LOGICA: Si una fecha es posterior a HOY, asumir que es del año anterior
+    const today = new Date();
     for (let dateStr of Object.keys(data)) {
-      const month = dateStr.split('-')[1];
-      if (!months[month]) months[month] = [];
-      months[month].push(dateStr);
-    }
-    
-    if (months['01'] && months['12']) {
-      // Hay tanto enero como diciembre - ajustar diciembre
-      for (let dateStr of months['12']) {
+      const parsedDate = new Date(dateStr);
+      // Si la fecha parseada es posterior a hoy, mover al año anterior
+      if (parsedDate > today) {
         const parts = dateStr.split('-');
         const correctedDate = `${parseInt(parts[0]) - 1}-${parts[1]}-${parts[2]}`;
         data[correctedDate] = data[dateStr];
         delete data[dateStr];
+        console.log(`[GestionHoras] 📅 ${dateStr} → ${correctedDate} (es posterior a hoy)`);
       }
-      console.log('[GestionHoras] ✅ Años ajustados: diciembre movido a año anterior');
     }
     
     return Object.keys(data).length > 0 ? data : null;
