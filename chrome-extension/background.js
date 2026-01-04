@@ -148,11 +148,22 @@ async function importFichajes(data, sourceFormat, appUrl) {
     
     console.log('[Background] 🚀 Iniciando fetch...');
     
-    const response = await fetch(`${finalUrl}/api.php`, {
+    const fetchPromise = fetch(`${finalUrl}/api.php`, {
       method: 'POST',
       headers: headers,
       credentials: 'include',  // Para sesión
       body: JSON.stringify(body)
+    });
+    
+    const response = await fetchPromise.catch(err => {
+      console.error('[Background] 🌐 Error de red:', err.message);
+      console.error('[Background] Detalles:', {
+        url: `${finalUrl}/api.php`,
+        method: 'POST',
+        hasCredentials: true,
+        error: err.toString()
+      });
+      throw err;
     });
     
     console.log('[Background] 📥 Respuesta HTTP:', response.status, response.statusText);
