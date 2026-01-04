@@ -37,7 +37,7 @@ $auth_method = null;
 // 1. Intentar autenticación por sesión
 session_start();
 if (!empty($_SESSION['user_id'])) {
-  $user = get_current_user();
+  $user = current_user();
   $auth_method = 'session';
 }
 

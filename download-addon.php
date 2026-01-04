@@ -9,7 +9,7 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/lib.php';
 require_login(); // Solo usuarios autenticados pueden descargar
 
-$user = get_current_user();
+$user = current_user();
 
 // Validar que sea HTTPS en producción
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';

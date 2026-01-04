@@ -3,7 +3,7 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/lib.php';
 require_login();
 
-$user = get_current_user();
+$user = current_user();
 $user_id = $user['id'];
 
 // Obtener tokens del usuario
