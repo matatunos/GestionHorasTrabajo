@@ -38,6 +38,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   <div class="card">
     <h3>Perfil de usuario</h3>
     <p>Usuario: <strong><?php echo htmlspecialchars($user['username']); ?></strong></p>
+    
+    <div style="background: #e7f3ff; border: 1px solid #007bff; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
+      <h4 style="margin-top: 0;">🧩 Extensión Chrome</h4>
+      <p style="margin-bottom: 10px;">Descarga nuestra extensión de Chrome para importar datos de fichajes con un solo click.</p>
+      <a href="chrome-addon-help.php" class="btn btn-primary">📥 Ver instrucciones de instalación</a>
+    </div>
+
     <?php if ($msg): ?><div class="alert alert-success"><?php echo htmlspecialchars($msg); ?></div><?php endif; ?>
     <?php if ($err): ?><div class="alert alert-danger"><?php echo htmlspecialchars($err); ?></div><?php endif; ?>
 
