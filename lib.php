@@ -301,7 +301,7 @@ function generate_extension_token(): string {
  * @return array ['token' => '...', 'expires_at' => '...'] o null si falla
  */
 function create_extension_token(int $user_id, string $name = 'Extension Token', int $days_valid = 7): ?array {
-    global $pdo;
+    $pdo = get_pdo();
     
     try {
         $token = generate_extension_token();
@@ -330,7 +330,7 @@ function create_extension_token(int $user_id, string $name = 'Extension Token', 
  * @return int|null user_id si válido, null si inválido/expirado
  */
 function validate_extension_token(string $token): ?int {
-    global $pdo;
+    $pdo = get_pdo();
     
     try {
         $stmt = $pdo->prepare(
@@ -363,7 +363,7 @@ function validate_extension_token(string $token): ?int {
  * Obtener todos los tokens activos del usuario
  */
 function get_user_extension_tokens(int $user_id): array {
-    global $pdo;
+    $pdo = get_pdo();
     
     try {
         $stmt = $pdo->prepare(
@@ -385,7 +385,7 @@ function get_user_extension_tokens(int $user_id): array {
  * Revocar token de extensión
  */
 function revoke_extension_token(int $token_id, int $user_id, string $reason = 'User revoked'): bool {
-    global $pdo;
+    $pdo = get_pdo();
     
     try {
         $stmt = $pdo->prepare(
