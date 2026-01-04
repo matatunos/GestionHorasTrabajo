@@ -86,16 +86,34 @@ function extractTragsaData() {
       return null;
     }
     
-    // Obtener el año de la página o del selector de semana
+    // Obtener el año - estrategia:
+    // 1. Intentar detectar del HTML si hay indicación del año
+    // 2. Si hay datos de diciembre/noviembre y estamos en enero-marzo → año pasado
+    // 3. Si no, usar el año actual
     let year = new Date().getFullYear();
-    const weekSelect = document.getElementById('ddl_semanas');
-    if (weekSelect && weekSelect.value) {
-      const [day, month] = weekSelect.value.split('-');
-      const selectedDate = new Date(year, 
-        new Date(`${month} 1, ${year}`).getMonth(), 
-        parseInt(day)
-      );
-      if (selectedDate > new Date()) year--;
+    
+    // Intenta encontrar el año en la página (busca textos como "2025", "2026", etc)
+    const bodyText = document.body.innerText;
+    const yearMatch = bodyText.match(/20\d{2}/);
+    if (yearMatch && yearMatch[0]) {
+      year = parseInt(yearMatch[0]);
+      console.log('[GestionHoras] TRAGSA: Año detectado del HTML:', year);
+    }
+    
+    // Si estamos en enero-marzo y hay meses de nov-dic en los datos, podría ser año pasado
+    const today = new Date();
+    if (today.getMonth() <= 2) { // enero=0, febrero=1, marzo=2
+      // Chequear si hay fechas con mes dic o nov
+      const hasDecOrNov = dates.some(d => {
+        const monthText = d.split('-')[1].toLowerCase();
+        return ['dic', 'diciembre', 'dec', 'december', 'nov', 'noviembre', 'november'].includes(monthText);
+      });
+      
+      if (hasDecOrNov && year === today.getFullYear()) {
+        // Si hay diciembre/noviembre y estamos en enero-marzo, el año debería ser anterior
+        year = year - 1;
+        console.log('[GestionHoras] TRAGSA: Año corregido a año anterior:', year);
+      }
     }
     
     // Extraer tiempos de la fila de horas
@@ -153,41 +171,8 @@ function extractTragsaData() {
       return null;
     }
     
-    // ✅ LOGICA DE AÑO MEJORADA: Detectar si una fecha es del año anterior
-    // Partimos de la base de que todo va al año actual
-    // Pero si la fecha parseada es "posterior" en el calendario a hoy, asumimos año anterior
-    const today = new Date();
-    
-    for (let dateStr of Object.keys(data)) {
-      const parsedDate = new Date(dateStr);
-      const dateMonth = parsedDate.getMonth();
-      const dateDay = parsedDate.getDate();
-      const todayMonth = today.getMonth();
-      const todayDay = today.getDate();
-      
-      // Detectar si la fecha está "en el pasado" dentro del año
-      let isFromPreviousYear = false;
-      
-      if (dateMonth < todayMonth) {
-        // Mes anterior → definitivamente del año pasado
-        isFromPreviousYear = true;
-      } else if (dateMonth === todayMonth && dateDay < todayDay) {
-        // Mismo mes pero día anterior → año pasado
-        isFromPreviousYear = true;
-      } else if (dateMonth > todayMonth && todayMonth <= 2 && dateMonth >= 10) {
-        // Caso especial: enero-marzo con nov-dic → año pasado
-        // (ej: hoy 4 de enero vemos diciembre → es del año pasado)
-        isFromPreviousYear = true;
-      }
-      
-      if (isFromPreviousYear) {
-        const parts = dateStr.split('-');
-        const correctedDate = `${parseInt(parts[0]) - 1}-${parts[1]}-${parts[2]}`;
-        data[correctedDate] = data[dateStr];
-        delete data[dateStr];
-        console.log(`[GestionHoras] 📅 ${dateStr} → ${correctedDate} (es anterior en el calendario)`);
-      }
-    }
+    // Nota: La lógica de ajuste de año para marzo/diciembre está arriba
+    // en la sección de obtención del año
     
     return Object.keys(data).length > 0 ? data : null;
   } catch (error) {
