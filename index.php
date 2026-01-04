@@ -376,18 +376,16 @@ $holidayMap = [];
       
       <!-- New advanced filters -->
       <div style="border-left:1px solid #ccc; padding-left:12px; margin-left:12px;">
-        <label class="form-label">Desde <input class="form-control" type="date" name="filter_date_from" value="<?php echo htmlspecialchars($_GET['filter_date_from'] ?? ''); ?>" style="width:150px;"></label>
-        <label class="form-label">Hasta <input class="form-control" type="date" name="filter_date_to" value="<?php echo htmlspecialchars($_GET['filter_date_to'] ?? ''); ?>" style="width:150px;"></label>
-        <label class="form-label">Estado <select class="form-control" name="filter_status" style="width:150px;">
+        <label class="form-label">Desde <input class="form-control auto-filter-trigger" type="date" name="filter_date_from" value="<?php echo htmlspecialchars($_GET['filter_date_from'] ?? ''); ?>" style="width:150px;"></label>
+        <label class="form-label">Hasta <input class="form-control auto-filter-trigger" type="date" name="filter_date_to" value="<?php echo htmlspecialchars($_GET['filter_date_to'] ?? ''); ?>" style="width:150px;"></label>
+        <label class="form-label">Estado <select class="form-control auto-filter-trigger" name="filter_status" style="width:150px;">
           <option value="">Todos</option>
           <option value="complete" <?php echo ($_GET['filter_status'] ?? '') === 'complete' ? 'selected' : ''; ?>>Completo</option>
           <option value="incomplete" <?php echo ($_GET['filter_status'] ?? '') === 'incomplete' ? 'selected' : ''; ?>>Incompleto</option>
           <option value="absence" <?php echo ($_GET['filter_status'] ?? '') === 'absence' ? 'selected' : ''; ?>>Con ausencia</option>
         </select></label>
-        <label class="form-label">Buscar <input class="form-control" type="text" name="filter_search" placeholder="Buscar en notas..." value="<?php echo htmlspecialchars($_GET['filter_search'] ?? ''); ?>" style="width:200px;"></label>
+        <label class="form-label">Buscar <input class="form-control auto-filter-trigger" type="text" name="filter_search" placeholder="Buscar en notas..." value="<?php echo htmlspecialchars($_GET['filter_search'] ?? ''); ?>" style="width:200px;"></label>
       </div>
-      
-      <button class="btn" type="submit">Aplicar filtros avanzados</button>
       <button id="toggle-all-months" class="btn" type="button">Plegar/Mostrar todo</button>
       <button class="btn btn-secondary" id="export-csv-btn" type="button">📥 Descargar CSV</button>
     </form>
@@ -869,14 +867,27 @@ $holidayMap = [];
     });
   }
 
-  // Auto-trigger AJAX for hide_holidays and hide_vacations (no submit button needed)
-  const autoFilterCheckboxes = document.querySelectorAll('.auto-filter-trigger');
-  autoFilterCheckboxes.forEach(function(checkbox){
-    checkbox.addEventListener('change', function(){
+  // Auto-trigger AJAX for all auto-filter-trigger elements (no submit button needed)
+  let filterTimeout = null;
+  const autoFilterElements = document.querySelectorAll('.auto-filter-trigger');
+  autoFilterElements.forEach(function(elem){
+    const eventType = elem.tagName === 'INPUT' && elem.type === 'text' ? 'input' : 'change';
+    elem.addEventListener(eventType, function(){
       try {
-        fetchTable();
-        const qs = buildQueryString();
-        history.replaceState(null, '', location.pathname + (qs ? ('?' + qs) : ''));
+        // Debounce for text input (search)
+        if (eventType === 'input') {
+          clearTimeout(filterTimeout);
+          filterTimeout = setTimeout(function() {
+            fetchTable();
+            const qs = buildQueryString();
+            history.replaceState(null, '', location.pathname + (qs ? ('?' + qs) : ''));
+          }, 500);
+        } else {
+          // Immediate for checkboxes, dates, selects
+          fetchTable();
+          const qs = buildQueryString();
+          history.replaceState(null, '', location.pathname + (qs ? ('?' + qs) : ''));
+        }
       } catch(e){ console.error('auto-filter error', e); }
     });
   });
@@ -901,17 +912,6 @@ $holidayMap = [];
         const cur = document.querySelector(tableContainerSelector);
         if (newTable && cur) cur.innerHTML = newTable.innerHTML;
       }).catch(err=>{ console.error('fetchTable error', err); });
-  }
-
-
-
-  if (filtersForm){
-    filtersForm.addEventListener('submit', function(e){
-      e.preventDefault();
-      fetchTable();
-      const qs = buildQueryString();
-      history.replaceState(null, '', location.pathname + (qs ? ('?' + qs) : ''));
-    });
   }
 
   if (entryForm){
