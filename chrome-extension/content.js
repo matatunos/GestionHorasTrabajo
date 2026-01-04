@@ -126,6 +126,26 @@ function extractTragsaData() {
       return null;
     }
     
+    // ✅ NUEVO: Detectar si hay cambio de año (ej: diciembre 2025 + enero 2026)
+    // Si hay enero y diciembre en los mismos datos, ajustar diciembre a año anterior
+    const months = {};
+    for (let dateStr of Object.keys(data)) {
+      const month = dateStr.split('-')[1];
+      if (!months[month]) months[month] = [];
+      months[month].push(dateStr);
+    }
+    
+    if (months['01'] && months['12']) {
+      // Hay tanto enero como diciembre - ajustar diciembre
+      for (let dateStr of months['12']) {
+        const parts = dateStr.split('-');
+        const correctedDate = `${parseInt(parts[0]) - 1}-${parts[1]}-${parts[2]}`;
+        data[correctedDate] = data[dateStr];
+        delete data[dateStr];
+      }
+      console.log('[GestionHoras] ✅ Años ajustados: diciembre movido a año anterior');
+    }
+    
     return Object.keys(data).length > 0 ? data : null;
   } catch (error) {
     console.error('[GestionHoras] Error en extractTragsaData:', error);
