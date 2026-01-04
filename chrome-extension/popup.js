@@ -23,9 +23,22 @@ function captureData() {
   captureBtn.textContent = 'Capturando...';
   
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (!tabs || tabs.length === 0) {
+      alert('❌ No se encontró pestaña activa');
+      captureBtn.disabled = false;
+      captureBtn.textContent = '📥 Capturar datos';
+      return;
+    }
+    
     chrome.tabs.sendMessage(tabs[0].id, { action: 'captureFichajes' }, (response) => {
       captureBtn.disabled = false;
       captureBtn.textContent = '📥 Capturar datos';
+      
+      if (chrome.runtime.lastError) {
+        console.error('[Popup] Error de comunicación:', chrome.runtime.lastError);
+        alert('❌ Error: No se pudo comunicar con la página.\n\nVerifica que:\n1. Estés en una página web (no en chrome://, edge://, etc)\n2. La extensión esté habilitada');
+        return;
+      }
       
       if (response && response.success) {
         showCapturedData(response.data, response.count, response.sourceFormat);
@@ -33,7 +46,16 @@ function captureData() {
         window.capturedData = response.data;
         window.sourceFormat = response.sourceFormat;
       } else {
-        alert('❌ Error: ' + (response?.error || 'No se pudieron capturar datos'));
+        const errorMsg = response?.error || 'Error desconocido';
+        console.error('[Popup] Error de captura:', response);
+        
+        // Si hay debug info, mostrarla
+        if (response?.debug) {
+          console.table(response.debug);
+          alert('❌ No se encontraron datos\n\n' + errorMsg + '\n\n📋 Verifica la consola (F12) para más detalles.\n\nDebug:\n' + JSON.stringify(response.debug, null, 2));
+        } else {
+          alert('❌ ' + errorMsg + '\n\n💡 Abre la consola (F12) para ver detalles');
+        }
       }
     });
   });
