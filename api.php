@@ -30,6 +30,10 @@ if ($protocol === 'http' && $_SERVER['HTTP_HOST'] !== 'localhost' && $_SERVER['H
   exit;
 }
 
+// ⚠️ IMPORTANTE: Leer php://input UNA SOLA VEZ al inicio (no se puede leer dos veces)
+$raw_input = file_get_contents('php://input');
+$global_input = json_decode($raw_input, true);
+
 // Autenticación HÍBRIDA: Sesión O Token
 $user = null;
 $auth_method = null;
@@ -43,8 +47,7 @@ if (!empty($_SESSION['user_id'])) {
 
 // 2. Si no hay sesión, intentar token
 if (!$user) {
-  $input = json_decode(file_get_contents('php://input'), true);
-  $token = $input['token'] ?? null;
+  $token = $global_input['token'] ?? null;
   
   if ($token) {
     $user_id = validate_extension_token($token);
@@ -81,7 +84,7 @@ $path = str_replace('/api.php', '', $path);
 
 // POST /api.php/import - Importar múltiples fichajes
 if ($method === 'POST' && ($path === '' || $path === '/')) {
-  handleImportFichajes();
+  handleImportFichajes($global_input);
 }
 // GET /api.php/status - Estado de la extensión
 else if ($method === 'GET' && ($path === '' || $path === '/')) {
@@ -99,7 +102,7 @@ else if ($method === 'GET' && ($path === '' || $path === '/')) {
 }
 // POST /api.php/entry - Crear/actualizar entrada
 else if ($method === 'POST' && $path === '/entry') {
-  handleCreateEntry();
+  handleCreateEntry($global_input);
 }
 // DELETE /api.php/entry/{date} - Eliminar entrada
 else if ($method === 'DELETE' && preg_match('#^/entry/(.+)$#', $path, $matches)) {
@@ -117,10 +120,8 @@ else {
  * POST /api.php/import
  * Body: { entries: [{ date, start, end, coffee_out, coffee_in, lunch_out, lunch_in, note }] }
  */
-function handleImportFichajes() {
+function handleImportFichajes($input) {
   global $pdo, $user;
-  
-  $input = json_decode(file_get_contents('php://input'), true);
   
   // DEBUG: Loguear qué se recibe
   $debug_log = fopen('/tmp/gestion_import_debug.log', 'a');
@@ -217,10 +218,8 @@ function handleImportFichajes() {
  * POST /api.php/entry
  * Body: { date, start, end, ... }
  */
-function handleCreateEntry() {
+function handleCreateEntry($input) {
   global $pdo, $user;
-  
-  $input = json_decode(file_get_contents('php://input'), true);
   
   if (!isset($input['date'])) {
     http_response_code(400);
