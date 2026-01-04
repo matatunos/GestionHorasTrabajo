@@ -16,9 +16,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['revoke_token_id'])) {
   header('Location: ' . $_SERVER['PHP_SELF']);
   exit;
 }
-
-require_once __DIR__ . '/header.php';
 ?>
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tokens de Extensión</title><link rel="stylesheet" href="styles.css"></head><body>
+<?php require_once __DIR__ . '/header.php'; ?>
 
 <div class="container">
   <div class="card">
