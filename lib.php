@@ -284,3 +284,118 @@ function get_incidents_for_date(int $user_id, string $date, ?PDO $pdo = null): a
         return [];
     }
 }
+
+/**
+ * Generar token seguro para extensión
+ * @return string Token aleatorio de 64 caracteres
+ */
+function generate_extension_token(): string {
+    return bin2hex(random_bytes(32));
+}
+
+/**
+ * Crear nuevo token de extensión para el usuario actual
+ * @param int $user_id ID del usuario
+ * @param string $name Nombre descriptivo del token
+ * @param int $days_valid Días que el token es válido (default: 7)
+ * @return array ['token' => '...', 'expires_at' => '...'] o null si falla
+ */
+function create_extension_token(int $user_id, string $name = 'Extension Token', int $days_valid = 7): ?array {
+    global $pdo;
+    
+    try {
+        $token = generate_extension_token();
+        $expires_at = date('Y-m-d H:i:s', strtotime("+$days_valid days"));
+        
+        $stmt = $pdo->prepare(
+            'INSERT INTO extension_tokens (user_id, token, name, expires_at) 
+             VALUES (?, ?, ?, ?)'
+        );
+        $stmt->execute([$user_id, $token, $name, $expires_at]);
+        
+        return [
+            'token' => $token,
+            'expires_at' => $expires_at,
+            'name' => $name
+        ];
+    } catch (Throwable $e) {
+        error_log('Error creating extension token: ' . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Validar token de extensión
+ * @param string $token Token a validar
+ * @return int|null user_id si válido, null si inválido/expirado
+ */
+function validate_extension_token(string $token): ?int {
+    global $pdo;
+    
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT user_id FROM extension_tokens 
+             WHERE token = ? 
+             AND expires_at > NOW() 
+             AND revoked_at IS NULL 
+             LIMIT 1'
+        );
+        $stmt->execute([$token]);
+        $row = $stmt->fetch();
+        
+        if ($row) {
+            // Actualizar last_used_at
+            $stmt = $pdo->prepare(
+                'UPDATE extension_tokens SET last_used_at = NOW() WHERE token = ?'
+            );
+            $stmt->execute([$token]);
+            
+            return $row['user_id'];
+        }
+    } catch (Throwable $e) {
+        error_log('Error validating extension token: ' . $e->getMessage());
+    }
+    
+    return null;
+}
+
+/**
+ * Obtener todos los tokens activos del usuario
+ */
+function get_user_extension_tokens(int $user_id): array {
+    global $pdo;
+    
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT id, name, created_at, expires_at, last_used_at, 
+                    (expires_at > NOW() AND revoked_at IS NULL) as is_active 
+             FROM extension_tokens 
+             WHERE user_id = ? 
+             ORDER BY created_at DESC'
+        );
+        $stmt->execute([$user_id]);
+        return $stmt->fetchAll();
+    } catch (Throwable $e) {
+        error_log('Error getting extension tokens: ' . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Revocar token de extensión
+ */
+function revoke_extension_token(int $token_id, int $user_id, string $reason = 'User revoked'): bool {
+    global $pdo;
+    
+    try {
+        $stmt = $pdo->prepare(
+            'UPDATE extension_tokens 
+             SET revoked_at = NOW(), revoke_reason = ? 
+             WHERE id = ? AND user_id = ?'
+        );
+        return $stmt->execute([$reason, $token_id, $user_id]);
+    } catch (Throwable $e) {
+        error_log('Error revoking extension token: ' . $e->getMessage());
+        return false;
+    }
+}

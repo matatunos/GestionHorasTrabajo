@@ -21,9 +21,55 @@ if (empty($_SERVER['HTTP_X_REQUESTED_WITH']) || $_SERVER['HTTP_X_REQUESTED_WITH'
   exit;
 }
 
-// Requiere login
-require_login();
-$user = get_current_user();
+// Validar HTTPS en producción
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+if ($protocol === 'http' && $_SERVER['HTTP_HOST'] !== 'localhost' && $_SERVER['HTTP_HOST'] !== '127.0.0.1') {
+  http_response_code(403);
+  header('Content-Type: application/json');
+  echo json_encode(['ok' => false, 'error' => 'insecure', 'message' => 'API solo disponible por HTTPS']);
+  exit;
+}
+
+// Autenticación HÍBRIDA: Sesión O Token
+$user = null;
+$auth_method = null;
+
+// 1. Intentar autenticación por sesión
+session_start();
+if (!empty($_SESSION['user_id'])) {
+  $user = get_current_user();
+  $auth_method = 'session';
+}
+
+// 2. Si no hay sesión, intentar token
+if (!$user) {
+  $input = json_decode(file_get_contents('php://input'), true);
+  $token = $input['token'] ?? null;
+  
+  if ($token) {
+    $user_id = validate_extension_token($token);
+    if ($user_id) {
+      // Validar usuario existe
+      $pdo = get_pdo();
+      $stmt = $pdo->prepare('SELECT id, username, email, name FROM users WHERE id = ?');
+      $stmt->execute([$user_id]);
+      $user = $stmt->fetch();
+      $auth_method = 'token';
+    }
+  }
+}
+
+// Si no se autenticó por ningún método, rechazar
+if (!$user) {
+  http_response_code(401);
+  header('Content-Type: application/json');
+  echo json_encode([
+    'ok' => false, 
+    'error' => 'unauthorized', 
+    'message' => 'Sesión expirada o token inválido. Por favor, descarga la extensión nuevamente.'
+  ]);
+  exit;
+}
 
 // Responder JSON
 header('Content-Type: application/json');
@@ -47,7 +93,7 @@ else if ($method === 'GET' && ($path === '' || $path === '/')) {
       'name' => $user['name'],
       'email' => $user['email']
     ],
-    'message' => 'GestionHorasTrabajo API v1.0 - Extensión Chrome'
+    'message' => 'GestionHorasTrabajo API v1.1 - Extensión Chrome con autenticación híbrida'
   ]);
   exit;
 }

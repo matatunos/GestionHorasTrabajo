@@ -125,14 +125,24 @@ async function importFichajes(data, sourceFormat, appUrl) {
   
   try {
     // Enviar al nuevo endpoint /api.php
+    // Incluir token si está disponible
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    };
+    
+    const body = { entries: entries };
+    
+    // Si está disponible, incluir token en el payload
+    if (typeof EXTENSION_TOKEN !== 'undefined' && EXTENSION_TOKEN) {
+      body.token = EXTENSION_TOKEN;
+    }
+    
     const response = await fetch(`${finalUrl}/api.php`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      credentials: 'include',
-      body: JSON.stringify({ entries: entries })
+      headers: headers,
+      credentials: 'include',  // Para sesión
+      body: JSON.stringify(body)
     });
     
     if (!response.ok) {

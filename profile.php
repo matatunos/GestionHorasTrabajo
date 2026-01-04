@@ -42,7 +42,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <div style="background: #e7f3ff; border: 1px solid #007bff; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
       <h4 style="margin-top: 0;">🧩 Extensión Chrome</h4>
       <p style="margin-bottom: 10px;">Descarga nuestra extensión de Chrome para importar datos de fichajes con un solo click.</p>
-      <a href="chrome-addon-help.php" class="btn btn-primary">📥 Ver instrucciones de instalación</a>
+      <div style="display: flex; gap: 10px;">
+        <a href="download-addon.php" class="btn btn-primary" download>📥 Descargar extensión</a>
+        <a href="chrome-addon-help.php" class="btn btn-secondary">📖 Ver instrucciones</a>
+        <a href="extension-tokens.php" class="btn btn-secondary">🔐 Gestionar tokens</a>
+      </div>
+      <style>
+        .btn-secondary {
+          background: #6c757d;
+          color: white;
+          padding: 8px 16px;
+          border: none;
+          border-radius: 4px;
+          text-decoration: none;
+          cursor: pointer;
+          display: inline-block;
+        }
+        .btn-secondary:hover {
+          background: #5a6268;
+          text-decoration: none;
+        }
+      </style>
     </div>
 
     <?php if ($msg): ?><div class="alert alert-success"><?php echo htmlspecialchars($msg); ?></div><?php endif; ?>
