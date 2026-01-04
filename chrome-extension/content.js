@@ -126,17 +126,39 @@ function extractTragsaData() {
       return null;
     }
     
-    // ✅ NUEVA LOGICA: Si una fecha es posterior a HOY, asumir que es del año anterior
+    // ✅ LOGICA DE AÑO MEJORADA: Detectar si una fecha es del año anterior
+    // Partimos de la base de que todo va al año actual
+    // Pero si la fecha parseada es "posterior" en el calendario a hoy, asumimos año anterior
     const today = new Date();
+    
     for (let dateStr of Object.keys(data)) {
       const parsedDate = new Date(dateStr);
-      // Si la fecha parseada es posterior a hoy, mover al año anterior
-      if (parsedDate > today) {
+      const dateMonth = parsedDate.getMonth();
+      const dateDay = parsedDate.getDate();
+      const todayMonth = today.getMonth();
+      const todayDay = today.getDate();
+      
+      // Detectar si la fecha está "en el pasado" dentro del año
+      let isFromPreviousYear = false;
+      
+      if (dateMonth < todayMonth) {
+        // Mes anterior → definitivamente del año pasado
+        isFromPreviousYear = true;
+      } else if (dateMonth === todayMonth && dateDay < todayDay) {
+        // Mismo mes pero día anterior → año pasado
+        isFromPreviousYear = true;
+      } else if (dateMonth > todayMonth && todayMonth <= 2 && dateMonth >= 10) {
+        // Caso especial: enero-marzo con nov-dic → año pasado
+        // (ej: hoy 4 de enero vemos diciembre → es del año pasado)
+        isFromPreviousYear = true;
+      }
+      
+      if (isFromPreviousYear) {
         const parts = dateStr.split('-');
         const correctedDate = `${parseInt(parts[0]) - 1}-${parts[1]}-${parts[2]}`;
         data[correctedDate] = data[dateStr];
         delete data[dateStr];
-        console.log(`[GestionHoras] 📅 ${dateStr} → ${correctedDate} (es posterior a hoy)`);
+        console.log(`[GestionHoras] 📅 ${dateStr} → ${correctedDate} (es anterior en el calendario)`);
       }
     }
     

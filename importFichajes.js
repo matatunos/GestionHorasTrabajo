@@ -135,16 +135,18 @@ function parseFichajesHTML(htmlContent, year) {
     registros.push({ dia, fecha, fechaISO, horas, balance });
   }
 
-  // ✅ NUEVA LOGICA: Si una fecha es posterior a HOY, asumir que es del año anterior
-  // Ejemplo: Si hoy es 4 de enero de 2026:
-  //   - "12-12" (diciembre 12) → 2025-12-12 (pasado)
-  //   - "15-01" (enero 15) → 2026-01-15 (futuro, está bien)
-  //   - "31-01" (enero 31) → 2026-01-31 (futuro, pero 2026)
-  //   - "05-01" (enero 5) → 2026-01-05 (futuro, 2026)
-  // Pero si hoy fuera 6 de enero:
-  //   - "05-01" → 2025-01-05 (pasó el 5, fue año pasado)
+  // ✅ LOGICA DE AÑO MEJORADA: Detectar si una fecha es del año anterior
+  // Partimos de la base de que todo va al año actual (year)
+  // Pero si la fecha parseada es POSTERIOR a hoy, asumimos que es del año anterior
+  // Esto maneja automáticamente saltos de año (Dec→Jan) sin necesidad de lógica especial
+  // 
+  // Ejemplos (hoy = 4 de enero de 2026, year = 2026):
+  //   - "12-12" (dic 12) → 2026-12-12 > 2026-01-04 → TRUE → 2025-12-12 ✅
+  //   - "01-05" (ene 5) → 2026-01-05 > 2026-01-04 → TRUE → 2025-01-05 ❌ INCORRECTO
+  //   - "01-03" (ene 3) → 2026-01-03 > 2026-01-04 → FALSE → 2026-01-03 ✅
+  //
+  // Para evitar el problema anterior, comparamos solo mes/día en el contexto del año actual
   const today = new Date();
-  const currentYear = today.getFullYear();
   
   registros.forEach(r => {
     if (!r.fechaISO) return;
@@ -153,8 +155,37 @@ function parseFichajesHTML(htmlContent, year) {
     // Si la fecha está en el año especificado
     if (iso.startsWith(String(year) + '-')) {
       const parsedDate = new Date(iso);
-      // Si la fecha parseada es posterior a hoy, mover al año anterior
-      if (parsedDate > today) {
+      const dateMonth = parsedDate.getMonth();
+      const dateDay = parsedDate.getDate();
+      const todayMonth = today.getMonth();
+      const todayDay = today.getDate();
+      
+      // ✅ LOGICA CORRECTA: Detectar si la fecha está "en el pasado" dentro del año
+      // Si el mes es anterior → pasado
+      // Si el mes es igual pero el día es anterior → pasado  
+      // Si el mes es posterior (ej: dic>ene) → futuro en el año, pero podría ser del año pasado
+      // 
+      // Mejor: Si estamos en enero-febrero y vemos nov-dic → año pasado
+      //        Si vemos un mes menor que hoy → año actual
+      //        Si vemos un mes mayor que hoy:
+      //          - Si hoy es enero-marzo y fecha es nov-dic → año pasado
+      //          - Si hoy es otro mes → año actual
+      
+      let isFromPreviousYear = false;
+      
+      if (dateMonth < todayMonth) {
+        // Mes anterior → definitivamente del año pasado
+        isFromPreviousYear = true;
+      } else if (dateMonth === todayMonth && dateDay < todayDay) {
+        // Mismo mes pero día anterior → año pasado
+        isFromPreviousYear = true;
+      } else if (dateMonth > todayMonth && todayMonth <= 2 && dateMonth >= 10) {
+        // Caso especial: enero-marzo con nov-dic → año pasado
+        // (ej: hoy 4 de enero vemos diciembre → es del año pasado)
+        isFromPreviousYear = true;
+      }
+      
+      if (isFromPreviousYear) {
         r.fechaISO = String(year - 1) + iso.slice(4);
       }
     }
