@@ -135,12 +135,18 @@ async function importFichajes(data, sourceFormat, appUrl) {
     
     // DEBUG: Log what we're sending
     console.log('[Background] 📤 Enviando entradas:', JSON.stringify(body, null, 2));
+    console.log('[Background] 🌐 URL:', `${finalUrl}/api.php`);
+    console.log('[Background] 📨 Headers:', headers);
     
     // Si está disponible, incluir token en el payload
     if (typeof EXTENSION_TOKEN !== 'undefined' && EXTENSION_TOKEN) {
       body.token = EXTENSION_TOKEN;
-      console.log('[Background] 🔐 Token incluido');
+      console.log('[Background] 🔐 Token incluido (primeros 10 caracteres):', EXTENSION_TOKEN.substring(0, 10) + '...');
+    } else {
+      console.log('[Background] ⚠️ No hay token, usando sesión');
     }
+    
+    console.log('[Background] 🚀 Iniciando fetch...');
     
     const response = await fetch(`${finalUrl}/api.php`, {
       method: 'POST',
@@ -152,7 +158,9 @@ async function importFichajes(data, sourceFormat, appUrl) {
     console.log('[Background] 📥 Respuesta HTTP:', response.status, response.statusText);
     
     if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status}`);
+      const text = await response.text();
+      console.error('[Background] ❌ HTTP Error body:', text);
+      throw new Error(`HTTP Error: ${response.status} - ${text.substring(0, 100)}`);
     }
     
     const result = await response.json();
@@ -166,7 +174,8 @@ async function importFichajes(data, sourceFormat, appUrl) {
       throw new Error(result.message || 'Error del servidor');
     }
   } catch (error) {
-    console.error('[Background] Error de importación:', error);
+    console.error('[Background] ❌ Error de importación:', error);
+    console.error('[Background] Stack:', error.stack);
     return { count: 0, errors: [error.message] };
   }
 }

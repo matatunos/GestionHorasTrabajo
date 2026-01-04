@@ -82,6 +82,20 @@ $method = $_SERVER['REQUEST_METHOD'];
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $path = str_replace('/api.php', '', $path);
 
+// GET /api.php/debug - Ver datos que llegan (solo para debugging)
+if ($method === 'GET' && $path === '/debug') {
+  echo json_encode([
+    'debug' => 'API funcionando',
+    'method' => $_SERVER['REQUEST_METHOD'],
+    'path' => $path,
+    'user' => ['id' => $user['id'], 'email' => $user['email']],
+    'raw_input_length' => strlen($raw_input),
+    'parsed_input_keys' => $global_input ? array_keys($global_input) : [],
+    'timestamp' => date('Y-m-d H:i:s')
+  ]);
+  exit;
+}
+
 // POST /api.php/import - Importar múltiples fichajes
 if ($method === 'POST' && ($path === '' || $path === '/')) {
   handleImportFichajes($global_input);
