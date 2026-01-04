@@ -30,3 +30,15 @@ CREATE TABLE IF NOT EXISTS app_config (
   k VARCHAR(100) PRIMARY KEY,
   v TEXT
 );
+
+CREATE TABLE IF NOT EXISTS incidents (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  date DATE NOT NULL,
+  incident_type ENUM('full_day', 'hours') NOT NULL DEFAULT 'hours',
+  hours_lost INT NULL COMMENT 'Minutes lost (only for hours type)',
+  reason TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  KEY user_date (user_id, date)
+);

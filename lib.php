@@ -97,6 +97,16 @@ function compute_day(array $entry, array $config = null): array {
         // coffee counts as work. Lunch does NOT count as work.
         // Subtract actual lunch duration when recorded; otherwise assume no lunch.
         $worked_minutes = ($end - $start) - intval($lunch_duration ?? 0);
+        
+        // Subtract incident hours if any (only for 'hours' type incidents)
+        try {
+            $incidents_lost = get_incidents_minutes($entry['user_id'] ?? 0, $entry['date']);
+            if ($incidents_lost > 0) {
+                $worked_minutes = max(0, $worked_minutes - $incidents_lost);
+            }
+        } catch (Throwable $e) {
+            // If incidents table doesn't exist or other error, just skip
+        }
     }
 
     $day_balance = ($worked_minutes === null) ? null : ($worked_minutes - $expected_minutes);
@@ -219,4 +229,58 @@ function get_hours_display(?string $start, ?string $end, ?int $worked_minutes): 
     
     $hours_text = minutes_to_hours_formatted($worked_minutes);
     return htmlspecialchars($start) . '→' . htmlspecialchars($end) . ' (' . $hours_text . ')';
+}
+
+/**
+ * Get total minutes lost due to incidents for a given date and user
+ * Only counts 'hours' type incidents (full_day incidents are handled separately)
+ */
+function get_incidents_minutes(int $user_id, string $date, ?PDO $pdo = null): int {
+    if (!$pdo) {
+        try { $pdo = get_pdo(); } catch (Throwable $e) { return 0; }
+    }
+    
+    try {
+        $stmt = $pdo->prepare('SELECT COALESCE(SUM(hours_lost), 0) as total FROM incidents WHERE user_id = ? AND date = ? AND incident_type = ?');
+        $stmt->execute([$user_id, $date, 'hours']);
+        $row = $stmt->fetch();
+        return intval($row['total'] ?? 0);
+    } catch (Throwable $e) {
+        return 0;
+    }
+}
+
+/**
+ * Check if there's a full-day incident for a given date and user
+ */
+function has_fullday_incident(int $user_id, string $date, ?PDO $pdo = null): bool {
+    if (!$pdo) {
+        try { $pdo = get_pdo(); } catch (Throwable $e) { return false; }
+    }
+    
+    try {
+        $stmt = $pdo->prepare('SELECT COUNT(*) as cnt FROM incidents WHERE user_id = ? AND date = ? AND incident_type = ?');
+        $stmt->execute([$user_id, $date, 'full_day']);
+        $row = $stmt->fetch();
+        return intval($row['cnt'] ?? 0) > 0;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+/**
+ * Get all incidents for a given date and user
+ */
+function get_incidents_for_date(int $user_id, string $date, ?PDO $pdo = null): array {
+    if (!$pdo) {
+        try { $pdo = get_pdo(); } catch (Throwable $e) { return []; }
+    }
+    
+    try {
+        $stmt = $pdo->prepare('SELECT id, incident_type, hours_lost, reason, created_at FROM incidents WHERE user_id = ? AND date = ? ORDER BY created_at DESC');
+        $stmt->execute([$user_id, $date]);
+        return $stmt->fetchAll();
+    } catch (Throwable $e) {
+        return [];
+    }
 }

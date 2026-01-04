@@ -57,6 +57,17 @@ $filterDateTo = $_GET['filter_date_to'] ?? null;
 $filterStatus = $_GET['filter_status'] ?? null;
 $filterSearch = $_GET['filter_search'] ?? null;
 
+// Handle AJAX GET for incidents
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_incidents') {
+  $date = $_GET['date'] ?? null;
+  if ($date && !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+    $incidents = get_incidents_for_date($user['id'], $date, $pdo);
+    header('Content-Type: application/json');
+    echo json_encode(['incidents' => $incidents]);
+    exit;
+  }
+}
+
 // handle POST create/update entry for current user
 // handle inline delete via AJAX
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_date'])) {
@@ -121,6 +132,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['date'])) {
     exit;
   }
   header('Location: index.php?year=' . urlencode($year)); exit;
+}
+
+// handle POST create/update incident for current user
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['incident_action'])) {
+  $action = $_POST['incident_action'];
+  
+  if ($action === 'add') {
+    $incident_date = $_POST['incident_date'] ?? null;
+    $incident_type = $_POST['incident_type'] ?? null;
+    $incident_reason = $_POST['incident_reason'] ?? null;
+    $incident_hours = null;
+    
+    if ($incident_type === 'hours') {
+      $incident_hours = intval($_POST['incident_hours'] ?? 0);
+    }
+    
+    if ($incident_date && $incident_type && $incident_reason) {
+      try {
+        $stmt = $pdo->prepare('INSERT INTO incidents (user_id, date, incident_type, hours_lost, reason) VALUES (?, ?, ?, ?, ?)');
+        $stmt->execute([$user['id'], $incident_date, $incident_type, $incident_hours, $incident_reason]);
+        
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+          header('Content-Type: application/json');
+          echo json_encode(['ok' => true]);
+          exit;
+        }
+      } catch (Throwable $e) {
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+          header('Content-Type: application/json');
+          echo json_encode(['ok' => false, 'error' => 'insert_failed']);
+          exit;
+        }
+      }
+    }
+  } elseif ($action === 'delete') {
+    $incident_id = intval($_POST['incident_id'] ?? 0);
+    if ($incident_id > 0) {
+      try {
+        $stmt = $pdo->prepare('DELETE FROM incidents WHERE id = ? AND user_id = ?');
+        $stmt->execute([$incident_id, $user['id']]);
+        
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+          header('Content-Type: application/json');
+          echo json_encode(['ok' => true]);
+          exit;
+        }
+      } catch (Throwable $e) {
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+          header('Content-Type: application/json');
+          echo json_encode(['ok' => false, 'error' => 'delete_failed']);
+          exit;
+        }
+      }
+    }
+  }
 }
 
 // load entries for the year and build a map by date
@@ -225,6 +291,7 @@ $holidayMap = [];
 
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
       <button class="btn btn-primary" type="button" id="openAddEntryBtn">Añadir</button>
+      <button class="btn btn-secondary" type="button" id="openIncidentBtn">📋 Gestionar incidencias</button>
     </div>
 
     <!-- Modal for adding a work entry (mirrors settings.php behavior) -->
@@ -257,6 +324,46 @@ $holidayMap = [];
             <button class="btn btn-primary" type="submit">Guardar</button>
           </div>
         </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for managing incidents -->
+    <div id="incidentModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
+      <div id="incidentModal" class="modal-dialog entry-modal" role="dialog" aria-modal="true" style="width:600px;">
+        <div class="modal-header">
+          <h3 class="modal-title">Gestionar incidencias</h3>
+        </div>
+        <div class="modal-body">
+          <form id="incident-form" method="post" class="row-form">
+            <input type="hidden" name="incident_action" value="add">
+            <label class="form-label">Fecha <input id="incident-date" class="form-control" type="date" name="incident_date" required></label>
+            <label class="form-label">Tipo <select class="form-control" id="incident-type" name="incident_type" required onchange="document.getElementById('hours-group').style.display = this.value === 'hours' ? 'block' : 'none';">
+              <option value="">Seleccionar...</option>
+              <option value="hours">Por horas (descuento de horas trabajadas)</option>
+              <option value="full_day">Día completo (festivo sin repetición)</option>
+            </select></label>
+            <div id="hours-group" class="form-group" style="display:none;">
+              <label class="form-label">Horas perdidas <input id="incident-hours" class="form-control" type="number" name="incident_hours" min="0" max="480" step="15" placeholder="Minutos (ej: 30, 60, 120)"></label>
+            </div>
+            <label class="form-label">Razón <input id="incident-reason" class="form-control" type="text" name="incident_reason" placeholder="Ej: Cita médica, gestión admin..." required></label>
+            <div class="form-actions modal-actions mt-2">
+              <button class="btn btn-secondary" type="button" id="closeIncidentModal">Cancelar</button>
+              <button class="btn btn-primary" type="submit">Añadir incidencia</button>
+            </div>
+          </form>
+
+          <!-- List of incidents for selected date -->
+          <div id="incidents-list" style="margin-top:20px; padding-top:20px; border-top:1px solid #ccc; display:none;">
+            <h4>Incidencias para <strong id="incidents-list-date"></strong></h4>
+            <table class="sheet compact" style="width:100%;">
+              <thead>
+                <tr><th>Tipo</th><th>Detalles</th><th>Razón</th><th>Acciones</th></tr>
+              </thead>
+              <tbody id="incidents-tbody">
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -371,6 +478,7 @@ $holidayMap = [];
           $rowClass = ($dow >= 6) ? 'weekend' : '';
           if ($hideWeekends && $dow >= 6) continue;
           $e = isset($entries[$d]) ? $entries[$d] : ['date' => $d];
+          $e['user_id'] = $user['id']; // Add user_id for incident calculation
           if (isset($holidayMap[$d])) {
             $e['is_holiday'] = true;
             $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
@@ -480,7 +588,25 @@ $holidayMap = [];
           <?php endif; ?>
         </td>
         <td>
-          <?php if (!empty($e['absence_type'])): ?>
+          <?php 
+            $incidents = get_incidents_for_date($user['id'], $d, $pdo);
+            $hasIncidents = count($incidents) > 0;
+            $fullDayIncident = false;
+            $hoursIncident = 0;
+            foreach ($incidents as $inc) {
+              if ($inc['incident_type'] === 'full_day') $fullDayIncident = true;
+              elseif ($inc['incident_type'] === 'hours') $hoursIncident += ($inc['hours_lost'] ?? 0);
+            }
+          ?>
+          <?php if ($hasIncidents): ?>
+            <span class="badge badge-warning" title="Incidencias registradas">📌 Incidencias
+            <?php if ($fullDayIncident): ?>
+              <br><small>(Día completo)</small>
+            <?php elseif ($hoursIncident > 0): ?>
+              <br><small>(<?php echo intval($hoursIncident / 60); ?>h <?php echo $hoursIncident % 60; ?>m)</small>
+            <?php endif; ?>
+            </span>
+          <?php elseif (!empty($e['absence_type'])): ?>
             <?php $absenceLabels = ['vacation' => '🏖️ Vacaciones', 'illness' => '🤒 Enfermedad', 'permit' => '📋 Permiso', 'other' => '📌 Otro']; ?>
             <span class="badge badge-primary"><?php echo htmlspecialchars($absenceLabels[$e['absence_type']] ?? $e['absence_type']); ?></span>
           <?php elseif (isset($holidayMap[$d])): ?>
@@ -591,6 +717,105 @@ $holidayMap = [];
   if (openAddEntryBtn) openAddEntryBtn.addEventListener('click', openEntryModal);
   if (closeEntryModalBtn) closeEntryModalBtn.addEventListener('click', closeEntryModal);
   if (entryModalOverlay) entryModalOverlay.addEventListener('click', function(e){ if (e.target === entryModalOverlay) closeEntryModal(); });
+
+  // Modal open/close for managing incidents
+  const openIncidentBtn = document.getElementById('openIncidentBtn');
+  const incidentModalOverlay = document.getElementById('incidentModalOverlay');
+  const closeIncidentModalBtn = document.getElementById('closeIncidentModal');
+  const incidentForm = document.getElementById('incident-form');
+  const incidentDateInput = document.getElementById('incident-date');
+  
+  function openIncidentModal(){
+    if (!incidentModalOverlay) return;
+    incidentModalOverlay.style.display = 'flex';
+    incidentModalOverlay.setAttribute('aria-hidden', 'false');
+    try {
+      // Set date to global date
+      if (globalDate && incidentDateInput) incidentDateInput.value = globalDate.value;
+      if (incidentDateInput) incidentDateInput.focus();
+      loadIncidentsForDate(globalDate.value);
+    } catch(e){}
+  }
+  function closeIncidentModal(){
+    if (!incidentModalOverlay) return;
+    incidentModalOverlay.style.display = 'none';
+    incidentModalOverlay.setAttribute('aria-hidden', 'true');
+  }
+  
+  function loadIncidentsForDate(date) {
+    if (!date) return;
+    try {
+      fetch(location.pathname + '?action=get_incidents&date=' + encodeURIComponent(date), {
+        headers: {'X-Requested-With':'XMLHttpRequest'}
+      }).then(r => r.json()).then(data => {
+        if (!data.incidents || data.incidents.length === 0) {
+          document.getElementById('incidents-list').style.display = 'none';
+        } else {
+          document.getElementById('incidents-list').style.display = 'block';
+          document.getElementById('incidents-list-date').textContent = date;
+          const tbody = document.getElementById('incidents-tbody');
+          tbody.innerHTML = '';
+          data.incidents.forEach(inc => {
+            const tr = document.createElement('tr');
+            const typeLabel = inc.incident_type === 'full_day' ? 'Día completo' : (inc.hours_lost ? inc.hours_lost + ' min' : '');
+            tr.innerHTML = `
+              <td>${inc.incident_type === 'full_day' ? '📅' : '⏱'}</td>
+              <td>${typeLabel}</td>
+              <td>${inc.reason}</td>
+              <td><button class="btn btn-sm btn-danger" type="button" onclick="deleteIncident(${inc.id})">Eliminar</button></td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      }).catch(e => console.error('Error loading incidents', e));
+    } catch(e){}
+  }
+  
+  window.deleteIncident = function(incidentId) {
+    if (confirm('¿Eliminar esta incidencia?')) {
+      fetch(location.pathname, {
+        method: 'POST',
+        body: new FormData((() => {
+          const f = document.createElement('form');
+          f.innerHTML = '<input name="incident_action" value="delete"><input name="incident_id" value="' + incidentId + '">';
+          return f;
+        })()),
+        headers: {'X-Requested-With':'XMLHttpRequest'}
+      }).then(r => r.json()).then(data => {
+        if (data.ok) {
+          const date = incidentDateInput.value;
+          loadIncidentsForDate(date);
+          fetchTable();
+        } else {
+          alert('Error al eliminar');
+        }
+      }).catch(e => { console.error(e); alert('Error de red'); });
+    }
+  };
+  
+  if (openIncidentBtn) openIncidentBtn.addEventListener('click', openIncidentModal);
+  if (closeIncidentModalBtn) closeIncidentModalBtn.addEventListener('click', closeIncidentModal);
+  if (incidentModalOverlay) incidentModalOverlay.addEventListener('click', function(e){ if (e.target === incidentModalOverlay) closeIncidentModal(); });
+  
+  if (incidentForm) {
+    incidentForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      const fd = new FormData(incidentForm);
+      fetch(location.pathname + location.search, {
+        method: 'POST', body: fd, headers: {'X-Requested-With':'XMLHttpRequest'}
+      }).then(r => r.json()).then(data => {
+        if (data && data.ok) {
+          const date = incidentDateInput.value;
+          incidentForm.reset();
+          incidentDateInput.value = date;
+          loadIncidentsForDate(date);
+          fetchTable();
+        } else {
+          alert('Error al guardar incidencia');
+        }
+      }).catch(err => { console.error(err); alert('Error de red'); });
+    });
+  }
 
   // Dashboard quick action: ?date=YYYY-MM-DD&open_add=1
   const shouldOpenAdd = <?php echo $openAdd ? 'true' : 'false'; ?>;
