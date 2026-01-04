@@ -371,8 +371,8 @@ $holidayMap = [];
     <form id="filters-form" method="get" class="row-form mt-2">
       <!-- keep server-side checkbox in sync with global control (hidden to avoid duplicate UI) -->
       <label style="display:none;"><input type="checkbox" name="hide_weekends" value="1" <?php echo $hideWeekends ? 'checked' : ''; ?>> Ocultar fines de semana</label>
-      <label class="form-check"><input type="checkbox" name="hide_holidays" value="1" <?php echo $hideHolidays ? 'checked' : ''; ?>><span>Ocultar festivos</span></label>
-      <label class="form-check"><input type="checkbox" name="hide_vacations" value="1" <?php echo $hideVacations ? 'checked' : ''; ?>><span>Ocultar vacaciones</span></label>
+      <label class="form-check"><input type="checkbox" class="auto-filter-trigger" name="hide_holidays" value="1" <?php echo $hideHolidays ? 'checked' : ''; ?>><span>Ocultar festivos</span></label>
+      <label class="form-check"><input type="checkbox" class="auto-filter-trigger" name="hide_vacations" value="1" <?php echo $hideVacations ? 'checked' : ''; ?>><span>Ocultar vacaciones</span></label>
       
       <!-- New advanced filters -->
       <div style="border-left:1px solid #ccc; padding-left:12px; margin-left:12px;">
@@ -387,7 +387,7 @@ $holidayMap = [];
         <label class="form-label">Buscar <input class="form-control" type="text" name="filter_search" placeholder="Buscar en notas..." value="<?php echo htmlspecialchars($_GET['filter_search'] ?? ''); ?>" style="width:200px;"></label>
       </div>
       
-      <button class="btn" type="submit">Aplicar filtros</button>
+      <button class="btn" type="submit">Aplicar filtros avanzados</button>
       <button id="toggle-all-months" class="btn" type="button">Plegar/Mostrar todo</button>
       <button class="btn btn-secondary" id="export-csv-btn" type="button">📥 Descargar CSV</button>
     </form>
@@ -868,6 +868,19 @@ $holidayMap = [];
       }catch(e){}
     });
   }
+
+  // Auto-trigger AJAX for hide_holidays and hide_vacations (no submit button needed)
+  const autoFilterCheckboxes = document.querySelectorAll('.auto-filter-trigger');
+  autoFilterCheckboxes.forEach(function(checkbox){
+    checkbox.addEventListener('change', function(){
+      try {
+        fetchTable();
+        const qs = buildQueryString();
+        history.replaceState(null, '', location.pathname + (qs ? ('?' + qs) : ''));
+      } catch(e){ console.error('auto-filter error', e); }
+    });
+  });
+
   // Note: year is chosen in dashboard; index preserves `year` via URL.
   // No JS needed for sticky headers - CSS handles it now
 
