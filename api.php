@@ -13,6 +13,20 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/lib.php';
 
+// ⚠️ CORS Headers para permitir solicitudes desde la extensión Chrome
+// Las extensiones pueden hacer solicitudes cross-origin si el servidor lo permite
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, X-Requested-With, X-CSRF-Token');
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Max-Age: 86400');
+
+// Manejar preflight requests (OPTIONS)
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+  http_response_code(200);
+  exit;
+}
+
 // Solo AJAX
 if (empty($_SERVER['HTTP_X_REQUESTED_WITH']) || $_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest') {
   http_response_code(403);
@@ -28,6 +42,7 @@ if ($protocol === 'http' && $_SERVER['HTTP_HOST'] !== 'localhost' && $_SERVER['H
   header('Content-Type: application/json');
   echo json_encode(['ok' => false, 'error' => 'insecure', 'message' => 'API solo disponible por HTTPS']);
   exit;
+}
 }
 
 // ⚠️ IMPORTANTE: Leer php://input UNA SOLA VEZ al inicio (no se puede leer dos veces)
