@@ -153,8 +153,67 @@ function extractTragsaData() {
   }
 }
 
-// Extraer datos formato estándar - MÁS FLEXIBLE
+// Extraer datos formato estándar - USA importFichajes.js
 function extractStandardData() {
+  // Usar la lógica sofisticada de importFichajes.js
+  if (typeof window.importFichajes === 'undefined' || !window.importFichajes.parseFichajesHTML) {
+    console.log('[GestionHoras] importFichajes.js no disponible, usando parser básico');
+    return extractStandardDataBasic();
+  }
+  
+  try {
+    // Obtener año - preferir del selector de semana o usar actual
+    let year = new Date().getFullYear();
+    const weekSelect = document.getElementById('ddl_semanas');
+    if (weekSelect && weekSelect.value) {
+      const [day, month] = weekSelect.value.split('-');
+      const selectedDate = new Date(year, 
+        new Date(`${month} 1, ${year}`).getMonth(), 
+        parseInt(day)
+      );
+      if (selectedDate > new Date()) year--;
+    }
+    
+    // Obtener HTML de la página
+    const htmlContent = document.documentElement.innerHTML;
+    
+    // Usar parseFichajesHTML que tiene:
+    // - Detección de cambio de año (enero+diciembre)
+    // - Parsing robusto de fechas
+    // - Extracción de horarios
+    const registros = window.importFichajes.parseFichajesHTML(htmlContent, year);
+    
+    if (!registros || registros.length === 0) {
+      console.log('[GestionHoras] parseFichajesHTML no encontró datos');
+      return null;
+    }
+    
+    // Convertir array de registros a formato compatible con extensión
+    const data = {};
+    registros.forEach(reg => {
+      if (reg.fechaISO && reg.horas && reg.horas.length > 0) {
+        data[reg.fechaISO] = {
+          times: reg.horas,
+          format: 'standard-via-importFichajes'
+        };
+      }
+    });
+    
+    if (Object.keys(data).length > 0) {
+      console.log('[GestionHoras] ✅ Datos parseados por importFichajes: ' + Object.keys(data).length + ' registros');
+      return data;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[GestionHoras] Error en extractStandardData:', error);
+    // Fallback a parser básico
+    return extractStandardDataBasic();
+  }
+}
+
+// Parser estándar básico (fallback)
+function extractStandardDataBasic() {
   // Buscar cualquier tabla con datos
   const tables = document.querySelectorAll('table');
   if (tables.length === 0) return null;
@@ -214,7 +273,7 @@ function extractStandardData() {
       });
       
       if (Object.keys(data).length > 0) {
-        console.log('[GestionHoras] Tabla estándar detectada: ' + Object.keys(data).length + ' registros');
+        console.log('[GestionHoras] Tabla estándar detectada (básica): ' + Object.keys(data).length + ' registros');
         return data;
       }
     } catch (error) {
