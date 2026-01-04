@@ -1,23 +1,40 @@
 /**
- * Content script para detectar páginas de fichajes y agregar botón de importación
+ * Content script para capturar datos de fichajes cuando el usuario lo solicite
  */
 
-// Detectar si estamos en una página de fichajes
-function detectFicharPage() {
-  // Buscar tabla de fichajes (TRAGSA format)
-  const tragsaTable = document.getElementById('tabla_fichajes');
-  const isTragsaFormat = !!tragsaTable;
-  
-  // Buscar tablas estándar de fichajes
-  const standardTable = document.querySelector('table[border="1"]');
-  const hasDataColumns = standardTable && (
-    Array.from(standardTable.querySelectorAll('th')).some(th => 
-      ['Entrada', 'Salida', 'Fecha', 'Día'].some(text => th.textContent.includes(text))
-    )
-  );
-  
-  return isTragsaFormat || hasDataColumns;
-}
+// Escuchar mensajes del popup/background
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'captureFichajes') {
+    try {
+      const tragsaData = extractTragsaData();
+      const standardData = extractStandardData();
+      const data = tragsaData || standardData;
+      
+      if (!data || Object.keys(data).length === 0) {
+        sendResponse({ 
+          success: false, 
+          error: 'No se encontraron datos de fichajes en esta página',
+          debug: {
+            tragsaDetected: !!tragsaData,
+            standardDetected: !!standardData
+          }
+        });
+      } else {
+        sendResponse({ 
+          success: true, 
+          data: data,
+          sourceFormat: (tragsaData ? 'tragsa' : 'standard'),
+          count: Object.keys(data).length
+        });
+      }
+    } catch (error) {
+      sendResponse({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
+});
 
 // Extraer datos formato TRAGSA
 function extractTragsaData() {
@@ -116,66 +133,4 @@ function extractStandardData() {
   });
   
   return Object.keys(data).length > 0 ? data : null;
-}
-
-// Agregar botón de importación
-function addImportButton() {
-  if (document.getElementById('gestionhoras-import-btn')) return; // Ya existe
-  
-  const button = document.createElement('button');
-  button.id = 'gestionhoras-import-btn';
-  button.textContent = '📥 Importar a GestionHorasTrabajo';
-  button.style.cssText = `
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 12px 20px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    z-index: 10000;
-    transition: background-color 0.3s;
-  `;
-  
-  button.onmouseover = () => button.style.backgroundColor = '#0056b3';
-  button.onmouseout = () => button.style.backgroundColor = '#007bff';
-  
-  button.addEventListener('click', importData);
-  
-  document.body.appendChild(button);
-}
-
-// Importar datos
-function importData() {
-  const tragsaData = extractTragsaData();
-  const standardData = extractStandardData();
-  const data = tragsaData || standardData;
-  
-  if (!data || Object.keys(data).length === 0) {
-    alert('No se encontraron datos de fichajes para importar');
-    return;
-  }
-  
-  // Enviar mensaje al background script
-  chrome.runtime.sendMessage({
-    action: 'importFichajes',
-    data: data,
-    sourceFormat: (tragsaData ? 'tragsa' : 'standard')
-  }, response => {
-    if (response && response.success) {
-      alert(`✅ ${response.count} fichajes importados correctamente`);
-    } else {
-      alert('❌ Error al importar fichajes: ' + (response?.error || 'Error desconocido'));
-    }
-  });
-}
-
-// Inicializar
-if (detectFicharPage()) {
-  addImportButton();
 }

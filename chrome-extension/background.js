@@ -2,12 +2,10 @@
  * Background service worker para manejar importaciones
  */
 
-const API_BASE = 'http://localhost'; // Cambia esto a tu dominio
-
-// Escuchar mensajes del content script
+// Escuchar mensajes del content script y popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'importFichajes') {
-    importFichajes(request.data, request.sourceFormat)
+    importFichajes(request.data, request.sourceFormat, request.appUrl)
       .then(result => {
         sendResponse({ success: true, count: result.count });
       })
@@ -80,10 +78,13 @@ function parseStandardEntry(rowData, headers) {
 }
 
 // Función principal de importación
-async function importFichajes(data, sourceFormat) {
-  // Obtener la URL de la aplicación desde storage
-  const settings = await chrome.storage.sync.get(['appUrl', 'userId']);
-  const appUrl = settings.appUrl || API_BASE;
+async function importFichajes(data, sourceFormat, appUrl) {
+  // Usar la URL proporcionada o buscar en storage
+  let finalUrl = appUrl;
+  if (!finalUrl) {
+    const settings = await chrome.storage.sync.get(['appUrl']);
+    finalUrl = settings.appUrl || 'http://localhost';
+  }
   
   let imported = 0;
   const errors = [];
@@ -104,7 +105,7 @@ async function importFichajes(data, sourceFormat) {
       }
       
       // Enviar al servidor
-      const response = await fetch(`${appUrl}/index.php`, {
+      const response = await fetch(`${finalUrl}/index.php`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -152,8 +153,9 @@ function formatDate(dateStr) {
     const [day, monthText] = dateStr.split('-');
     const months = {
       'ene': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
-      'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12',
-      'dic': '12'
+      'jul': '07', 'ago': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12',
+      'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
+      'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
     };
     const month = months[monthText.toLowerCase()];
     const year = new Date().getFullYear();

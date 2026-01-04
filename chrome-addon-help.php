@@ -38,7 +38,6 @@ require_once __DIR__ . '/header.php';
       </ul>
     </div>
 
-    <!-- Installation -->
     <div class="help-section">
       <h3>📥 Descarga e Instalación</h3>
       
@@ -58,6 +57,100 @@ cd GestionHorasTrabajo/chrome-extension</div>
 
       <div class="step">
         <span class="step-number">2</span>
+        <strong>Ir a la página de extensiones de Chrome</strong>
+        <p>Abre Chrome y ve a <code>chrome://extensions</code> (o Menú → Más herramientas → Extensiones)</p>
+      </div>
+
+      <div class="step">
+        <span class="step-number">3</span>
+        <strong>Habilitar modo de desarrollador</strong>
+        <p>En la esquina superior derecha de la página, activa el interruptor <strong>"Modo de desarrollador"</strong></p>
+      </div>
+
+      <div class="step">
+        <span class="step-number">4</span>
+        <strong>Cargar la extensión</strong>
+        <p>Haz clic en <strong>"Cargar extensión sin empaquetar"</strong> y selecciona la carpeta <code>chrome-extension</code> que descargaste</p>
+      </div>
+
+      <div class="step">
+        <span class="step-number">5</span>
+        <strong>¡Listo!</strong>
+        <p>Verás la extensión en tu lista de extensiones. El icono azul aparecerá en la barra de herramientas de Chrome.</p>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="help-section">
+      <h3>🚀 ¿Cómo usar la extensión?</h3>
+      
+      <p><strong>El proceso es muy simple:</strong></p>
+      
+      <div class="step">
+        <span class="step-number">1</span>
+        <strong>Ve a tu página de fichajes</strong>
+        <p>Abre en el navegador la página donde ves tus datos de fichajes (puede ser TRAGSA, HTML personalizado, etc.)</p>
+      </div>
+
+      <div class="step">
+        <span class="step-number">2</span>
+        <strong>Haz clic en el icono azul</strong>
+        <p>En la barra de herramientas superior derecha, verás el icono azul de GestionHorasTrabajo. Haz clic en él.</p>
+      </div>
+
+      <div class="step">
+        <span class="step-number">3</span>
+        <strong>Captura los datos</strong>
+        <p>Aparecerá un popup con un botón <strong>"📥 Capturar datos de esta página"</strong>. Haz clic para extraer los fichajes.</p>
+      </div>
+
+      <div class="step">
+        <span class="step-number">4</span>
+        <strong>Revisa la vista previa</strong>
+        <p>Verás una lista con los datos capturados. Confirma que son correctos.</p>
+      </div>
+
+      <div class="step">
+        <span class="step-number">5</span>
+        <strong>Importa a GestionHorasTrabajo</strong>
+        <p>Haz clic en <strong>"✅ Importar fichajes"</strong> y los datos se guardarán automáticamente en tu aplicación.</p>
+      </div>
+
+      <div class="step">
+        <span class="step-number">6</span>
+        <strong>¡Confirmación!</strong>
+        <p>Verás un mensaje de éxito indicando cuántos fichajes se importaron. ¡Listo!</p>
+      </div>
+    </div>
+
+    <!-- Configuration -->
+    <div class="help-section">
+      <h3>⚙️ Configuración</h3>
+      
+      <p>Si la extensión se descargó desde esta página, la URL de tu aplicación ya está preconfigurada.</p>
+      
+      <p><strong>Si necesitas cambiar la URL:</strong></p>
+      
+      <div class="step">
+        <strong>1. Abre el popup de la extensión</strong>
+        <p>Haz clic en el icono azul</p>
+      </div>
+
+      <div class="step">
+        <strong>2. Haz clic en "⚙️ Configuración"</strong>
+        <p>Expandirá una sección donde puedes cambiar la URL</p>
+      </div>
+
+      <div class="step">
+        <strong>3. Ingresa tu URL</strong>
+        <p>Ejemplo: <code>http://192.168.1.100</code> o <code>http://miapp.com</code></p>
+      </div>
+
+      <div class="step">
+        <strong>4. Guarda los cambios</strong>
+        <p>Haz clic en "💾 Guardar" para almacenarla</p>
+      </div>
+    </div>
         <strong>Descomprime el archivo</strong>
         <p>Descomprime el ZIP que descargaste. Debería crear una carpeta con el siguiente contenido:</p>
         <div class="code-block">manifest.json

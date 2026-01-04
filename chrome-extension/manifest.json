@@ -1,17 +1,19 @@
 {
   "manifest_version": 3,
   "name": "GestionHorasTrabajo - Importador de Fichajes",
-  "version": "1.0.0",
-  "description": "Importa datos de fichajes directamente desde la página HTML de visualización",
+  "version": "1.1.0",
+  "description": "Extrae datos de fichajes y los importa directamente a tu aplicación",
   "permissions": [
     "activeTab",
     "scripting",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "file://*",
     "http://localhost/*",
-    "http://127.0.0.1/*"
+    "http://127.0.0.1/*",
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
@@ -21,15 +23,17 @@
       "matches": [
         "file://*/*.html",
         "http://localhost/*",
-        "http://127.0.0.1/*"
+        "http://127.0.0.1/*",
+        "<all_urls>"
       ],
       "js": ["content.js"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": false
     }
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "GestionHorasTrabajo"
+    "default_title": "Haz clic para capturar datos de fichajes"
   },
   "icons": {
     "16": "images/icon-16.png",
