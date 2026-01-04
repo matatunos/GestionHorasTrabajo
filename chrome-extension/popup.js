@@ -2,7 +2,9 @@
  * Popup script para configuración de la extensión
  */
 
-const DEFAULT_URL = 'http://localhost';
+// DEFAULT_URL puede ser definido en config.js si está disponible (inyectado dinámicamente)
+// Si no está disponible, usar localhost como fallback
+const DEFAULT_URL = (typeof DEFAULT_APP_URL !== 'undefined') ? DEFAULT_APP_URL : 'http://localhost';
 
 // Elementos del DOM
 const appUrlInput = document.getElementById('appUrl');

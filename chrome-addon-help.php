@@ -105,6 +105,10 @@ images/
     <div class="help-section">
       <h3>⚙️ Configuración</h3>
       
+      <div class="info-box">
+        <strong>✨ Preconfigured:</strong> La extensión viene automáticamente configurada con la URL de donde la descargaste. Si necesitas cambiarla, sigue los pasos abajo.
+      </div>
+      
       <div class="step">
         <span class="step-number">1</span>
         <strong>Abre el panel de configuración</strong>
@@ -113,8 +117,8 @@ images/
 
       <div class="step">
         <span class="step-number">2</span>
-        <strong>Establece la URL de tu aplicación</strong>
-        <p>En el campo "URL de la aplicación", ingresa la dirección donde está hospedada GestionHorasTrabajo:</p>
+        <strong>Verifica/Modifica la URL de tu aplicación</strong>
+        <p>En el campo "URL de la aplicación", verás preconfigurada la URL desde donde descargaste la extensión. Puedes cambiarla si lo necesitas:</p>
         <div class="code-block">http://localhost
 http://192.168.1.100
 https://miapp.com</div>
@@ -123,7 +127,7 @@ https://miapp.com</div>
       <div class="step">
         <span class="step-number">3</span>
         <strong>Guarda la configuración</strong>
-        <p>Haz clic en el botón "💾 Guardar" y listo.</p>
+        <p>Haz clic en el botón "💾 Guardar" si realizaste cambios.</p>
       </div>
     </div>
 
