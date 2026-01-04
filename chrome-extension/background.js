@@ -86,9 +86,8 @@ async function importFichajes(data, sourceFormat, appUrl) {
     finalUrl = settings.appUrl || 'http://localhost';
   }
   
-  let imported = 0;
-  const errors = [];
-  
+  // Construir entrada para cada fecha
+  const entries = [];
   for (const [date, entry] of Object.entries(data)) {
     try {
       let entryData = {};
@@ -100,45 +99,58 @@ async function importFichajes(data, sourceFormat, appUrl) {
       }
       
       if (!entryData || !entryData.start) {
-        errors.push(`${date}: No se encontraron tiempos válidos`);
+        console.warn(`[Background] ${date}: No se encontraron tiempos válidos`);
         continue;
       }
       
-      // Enviar al servidor
-      const response = await fetch(`${finalUrl}/index.php`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'include',
-        body: new URLSearchParams({
-          date: formatDate(date),
-          start: entryData.start,
-          end: entryData.end || '',
-          coffee_out: entryData.coffee_out || '',
-          coffee_in: entryData.coffee_in || '',
-          lunch_out: entryData.lunch_out || '',
-          lunch_in: entryData.lunch_in || '',
-          note: `Importado vía extensión Chrome - ${sourceFormat} format`
-        }).toString()
+      // Agregar entrada con fecha formateada
+      entries.push({
+        date: formatDate(date),
+        start: entryData.start,
+        end: entryData.end || null,
+        coffee_out: entryData.coffee_out || null,
+        coffee_in: entryData.coffee_in || null,
+        lunch_out: entryData.lunch_out || null,
+        lunch_in: entryData.lunch_in || null,
+        note: `Importado vía extensión Chrome - ${sourceFormat} format`
       });
-      
-      if (!response.ok) {
-        errors.push(`${date}: Error HTTP ${response.status}`);
-      } else {
-        imported++;
-      }
     } catch (error) {
-      errors.push(`${date}: ${error.message}`);
+      console.error(`[Background] Error procesando ${date}:`, error);
     }
   }
   
-  if (errors.length > 0) {
-    console.warn('Errores durante importación:', errors);
+  if (entries.length === 0) {
+    return { count: 0, errors: ['No se encontraron entradas válidas para importar'] };
   }
   
-  return { count: imported, errors };
+  try {
+    // Enviar al nuevo endpoint /api.php
+    const response = await fetch(`${finalUrl}/api.php`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ entries: entries })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.ok) {
+      console.log(`[Background] ✅ Importación exitosa: ${result.imported}/${result.total}`);
+      return { count: result.imported, errors: result.errors || [] };
+    } else {
+      throw new Error(result.message || 'Error del servidor');
+    }
+  } catch (error) {
+    console.error('[Background] Error de importación:', error);
+    return { count: 0, errors: [error.message] };
+  }
 }
 
 // Formatear fecha a YYYY-MM-DD

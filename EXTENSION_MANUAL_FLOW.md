@@ -191,11 +191,96 @@ cd GestionHorasTrabajo/chrome-extension
 
 ## Seguridad
 
-1. **Sin auto-ejecución**: Content script no hace nada hasta que se solicita captura
-2. **Extracción local**: Datos se extraen en el navegador del usuario, no en servidor
-3. **HTTPS cuando es posible**: Envío seguro de datos a servidor
-4. **Sin permisos innecesarios**: Solo accede a datos cuando se solicita
-5. **Validación servidor**: index.php valida todos los datos antes de guardar
+### Autenticación
+La extensión **requiere que el usuario esté autenticado** en GestionHorasTrabajo. Esto se verifica mediante:
+1. **Cookies de sesión** - El navegador envía automáticamente las cookies de sesión
+2. **Header X-Requested-With** - Identifica como petición AJAX/XHR
+3. **Validación en el servidor** - `/api.php` verifica que la sesión sea válida
+
+### Endpoint seguro `/api.php`
+Se creó un endpoint REST dedicado para la extensión:
+
+```
+POST /api.php
+{
+  "entries": [
+    {
+      "date": "2024-01-15",
+      "start": "08:00",
+      "end": "17:00",
+      "coffee_out": "10:00",
+      "coffee_in": "10:15",
+      "lunch_out": "13:00",
+      "lunch_in": "14:00",
+      "note": "Importado vía extensión"
+    }
+  ]
+}
+```
+
+**Respuesta exitosa:**
+```json
+{
+  "ok": true,
+  "imported": 5,
+  "total": 5,
+  "errors": [],
+  "message": "5 de 5 fichajes importados"
+}
+```
+
+**Respuesta con errores parciales:**
+```json
+{
+  "ok": true,
+  "imported": 4,
+  "total": 5,
+  "errors": [
+    "Entrada 3: hora de salida anterior a entrada",
+    "Entrada 4: fecha inválida"
+  ],
+  "message": "4 de 5 fichajes importados"
+}
+```
+
+### Características de seguridad
+1. ✅ **Requiere sesión autenticada** - Verifica `require_login()`
+2. ✅ **Solo AJAX** - Rechaza peticiones que no sean XMLHttpRequest
+3. ✅ **Validación de datos** - Valida cada entrada antes de guardar
+4. ✅ **UPSERT seguro** - Verifica user_id al actualizar/insertar
+5. ✅ **Respuestas JSON** - Estructura clara de errores y éxito
+6. ✅ **Logs claros** - Indica qué se importó y qué falló
+
+### Flujo de validación del servidor
+```
+1. Verificar autenticación (require_login)
+2. Verificar header X-Requested-With
+3. Para cada entrada:
+   a) Validar formato de fecha (YYYY-MM-DD)
+   b) Validar consistencia de tiempos (entrada < salida, etc)
+   c) Verificar que pertenece al usuario actual (user_id)
+   d) UPSERT a base de datos
+4. Retornar resultado (éxito/errores)
+```
+
+### Datos que NO se guardan
+- IP del navegador
+- User-Agent de la extensión
+- Tokens de autenticación
+- Información personal más allá del usuario_id
+
+### Nota de permisos
+La extensión tiene permisos en `manifest.json`:
+- `activeTab` - Acceso a página actual
+- `scripting` - Inyectar content script
+- `storage` - Guardar URL configurada
+- `tabs` - Información de pestañas
+
+**NO tiene permisos para:**
+- ❌ Acceder a historial
+- ❌ Descargar archivos
+- ❌ Acceder a cookies del navegador
+- ❌ Ejecutar en sitios restringidos (chrome://*, etc)
 
 ---
 

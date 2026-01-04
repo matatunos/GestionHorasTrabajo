@@ -105,17 +105,33 @@ function importData() {
       importBtn.textContent = '✅ Importar fichajes';
       
       if (response && response.success) {
+        let message = `✅ ${response.count} fichajes importados correctamente`;
+        
+        // Mostrar errores si los hay
+        if (response.errors && response.errors.length > 0) {
+          message += `\n\n⚠️ ${response.errors.length} advertencia(s):\n`;
+          response.errors.slice(0, 3).forEach(err => {
+            message += `• ${err}\n`;
+          });
+          if (response.errors.length > 3) {
+            message += `... y ${response.errors.length - 3} más`;
+          }
+        }
+        
         document.getElementById('preview').innerHTML = 
-          `<strong style="color: green;">✅ ${response.count} fichajes importados!</strong>`;
+          `<strong style="color: green;">${message.replace(/\n/g, '<br>')}</strong>`;
+        
         setTimeout(() => {
           document.getElementById('dataSection').style.display = 'none';
           document.getElementById('preview').innerHTML = '';
           window.capturedData = null;
           document.getElementById('importBtn').disabled = true;
           document.getElementById('importBtn').textContent = '✅ Importar fichajes';
-        }, 2000);
+        }, 3000);
       } else {
-        alert('❌ Error: ' + (response?.error || 'Error al importar'));
+        const errorMsg = response?.error || 'Error desconocido';
+        alert('❌ Error al importar: ' + errorMsg + '\n\n💡 Verifica la consola (F12) para más detalles');
+        console.error('[Popup] Error de importación:', response);
       }
     });
   });
