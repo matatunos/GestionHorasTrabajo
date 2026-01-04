@@ -42,6 +42,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
       } else {
         console.log('[GestionHoras] ✅ Captura exitosa:', Object.keys(data).length + ' registros');
+        console.log('[GestionHoras] 📦 Datos capturados:', JSON.stringify(data, null, 2).substring(0, 500) + '...');
         sendResponse({ 
           success: true, 
           data: data,

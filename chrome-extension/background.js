@@ -133,9 +133,13 @@ async function importFichajes(data, sourceFormat, appUrl) {
     
     const body = { entries: entries };
     
+    // DEBUG: Log what we're sending
+    console.log('[Background] 📤 Enviando entradas:', JSON.stringify(body, null, 2));
+    
     // Si está disponible, incluir token en el payload
     if (typeof EXTENSION_TOKEN !== 'undefined' && EXTENSION_TOKEN) {
       body.token = EXTENSION_TOKEN;
+      console.log('[Background] 🔐 Token incluido');
     }
     
     const response = await fetch(`${finalUrl}/api.php`, {
@@ -145,11 +149,15 @@ async function importFichajes(data, sourceFormat, appUrl) {
       body: JSON.stringify(body)
     });
     
+    console.log('[Background] 📥 Respuesta HTTP:', response.status, response.statusText);
+    
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status}`);
     }
     
     const result = await response.json();
+    
+    console.log('[Background] 📋 Resultado:', JSON.stringify(result, null, 2));
     
     if (result.ok) {
       console.log(`[Background] ✅ Importación exitosa: ${result.imported}/${result.total}`);

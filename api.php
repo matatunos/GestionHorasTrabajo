@@ -122,6 +122,13 @@ function handleImportFichajes() {
   
   $input = json_decode(file_get_contents('php://input'), true);
   
+  // DEBUG: Loguear qué se recibe
+  $debug_log = fopen('/tmp/gestion_import_debug.log', 'a');
+  fwrite($debug_log, "\n=== " . date('Y-m-d H:i:s') . " ===\n");
+  fwrite($debug_log, "User: " . ($user['email'] ?? 'UNKNOWN') . "\n");
+  fwrite($debug_log, "Input received:\n" . json_encode($input, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n");
+  fclose($debug_log);
+  
   if (!isset($input['entries']) || !is_array($input['entries'])) {
     http_response_code(400);
     echo json_encode(['ok' => false, 'error' => 'invalid_input', 'message' => 'Se requiere "entries" array']);
