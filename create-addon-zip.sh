@@ -10,7 +10,10 @@ if [ ! -d "$CHROME_EXT_DIR" ]; then
 fi
 
 echo "Creando ZIP de la extensión..."
-zip -r "$OUTPUT_FILE" "$CHROME_EXT_DIR" -x "$CHROME_EXT_DIR/.DS_Store"
+# Cambiar a la carpeta chrome-extension y crear ZIP con los archivos en raíz
+cd "$CHROME_EXT_DIR"
+zip -r "../$OUTPUT_FILE" . -x ".DS_Store" "*.git*"
+cd ..
 
 if [ -f "$OUTPUT_FILE" ]; then
     echo "✅ ZIP creado exitosamente: $OUTPUT_FILE"

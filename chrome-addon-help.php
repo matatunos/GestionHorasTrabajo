@@ -58,6 +58,21 @@ cd GestionHorasTrabajo/chrome-extension</div>
 
       <div class="step">
         <span class="step-number">2</span>
+        <strong>Descomprime el archivo</strong>
+        <p>Descomprime el ZIP que descargaste. Debería crear una carpeta con el siguiente contenido:</p>
+        <div class="code-block">manifest.json
+popup.html
+popup.js
+content.js
+background.js
+images/
+  icon-16.png
+  icon-48.png
+  icon-128.png</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">3</span>
         <strong>Abre la página de extensiones de Chrome</strong>
         <p>En tu navegador Chrome, ve a:</p>
         <div class="code-block">chrome://extensions/</div>
@@ -68,19 +83,19 @@ cd GestionHorasTrabajo/chrome-extension</div>
       </div>
 
       <div class="step">
-        <span class="step-number">3</span>
+        <span class="step-number">4</span>
         <strong>Activa el "Modo de desarrollador"</strong>
         <p>En la esquina superior derecha de la página de extensiones, encontrarás el botón "Modo de desarrollador". Haz clic para activarlo.</p>
       </div>
 
       <div class="step">
-        <span class="step-number">4</span>
+        <span class="step-number">5</span>
         <strong>Carga la extensión</strong>
-        <p>Después de activar el modo de desarrollador, aparecerá un botón "Cargar extensión sin empaquetar". Haz clic y selecciona la carpeta <code>chrome-extension</code> que descargaste.</p>
+        <p>Después de activar el modo de desarrollador, aparecerá un botón "Cargar extensión sin empaquetar". Haz clic y <strong>selecciona la carpeta que descargaste</strong> (la que contiene <code>manifest.json</code>).</p>
       </div>
 
       <div class="step">
-        <span class="step-number">5</span>
+        <span class="step-number">6</span>
         <strong>¡Listo! Extensión instalada</strong>
         <p>La extensión aparecerá en tu lista de extensiones. Verás un icono (⏱) en la barra de herramientas de Chrome.</p>
       </div>

@@ -41,9 +41,9 @@ function addFilesToZip($zip, $dir, $zipPath = '') {
     }
 }
 
-// Agregar la carpeta chrome-extension al ZIP
+// Agregar la carpeta chrome-extension al ZIP (archivos directamente en raíz)
 if (is_dir($sourceDir)) {
-    addFilesToZip($zip, $sourceDir, 'chrome-extension');
+    addFilesToZip($zip, $sourceDir); // Sin especificar zipPath para poner en raíz
 } else {
     http_response_code(404);
     die('Carpeta de extensión no encontrada');
