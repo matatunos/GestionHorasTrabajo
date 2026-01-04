@@ -92,15 +92,8 @@ function extractTragsaData() {
     // 3. Si no, usar el año actual
     let year = new Date().getFullYear();
     
-    // Intenta encontrar el año en la página (busca textos como "2025", "2026", etc)
-    const bodyText = document.body.innerText;
-    const yearMatch = bodyText.match(/20\d{2}/);
-    if (yearMatch && yearMatch[0]) {
-      year = parseInt(yearMatch[0]);
-      console.log('[GestionHoras] TRAGSA: Año detectado del HTML:', year);
-    }
-    
-    // Si estamos en enero-marzo y hay meses de nov-dic en los datos, podría ser año pasado
+    // Primero: chequear si estamos en enero-marzo y hay meses de nov-dic
+    // Si es así, el año debería ser el anterior
     const today = new Date();
     if (today.getMonth() <= 2) { // enero=0, febrero=1, marzo=2
       // Chequear si hay fechas con mes dic o nov
@@ -109,12 +102,30 @@ function extractTragsaData() {
         return ['dic', 'diciembre', 'dec', 'december', 'nov', 'noviembre', 'november'].includes(monthText);
       });
       
-      if (hasDecOrNov && year === today.getFullYear()) {
-        // Si hay diciembre/noviembre y estamos en enero-marzo, el año debería ser anterior
+      if (hasDecOrNov) {
+        // Si hay diciembre/noviembre en enero-marzo, el año es anterior
         year = year - 1;
-        console.log('[GestionHoras] TRAGSA: Año corregido a año anterior:', year);
+        console.log('[GestionHoras] TRAGSA: Detectado mes de año anterior, usando año:', year);
       }
     }
+    
+    // Intenta encontrar el año en la página si no se ha ajustado arriba
+    // Busca en el contexto de "tabla" o "fichajes"
+    const tableText = table.innerText || '';
+    const yearMatches = tableText.match(/20\d{2}/g);
+    if (yearMatches && yearMatches.length > 0) {
+      // Usa el año más frecuente en la tabla
+      const potentialYear = parseInt(yearMatches[0]);
+      if (potentialYear > 2000 && potentialYear < 2100) {
+        console.log('[GestionHoras] TRAGSA: Año detectado de tabla:', potentialYear);
+        // Si la tabla tiene un año explícito y es diferente al nuestro, úsalo
+        if (potentialYear !== year && !hasDecOrNov) {
+          year = potentialYear;
+        }
+      }
+    }
+    
+    console.log('[GestionHoras] TRAGSA: Año final a usar:', year);
     
     // Extraer tiempos de la fila de horas
     const hoursRow = table.querySelector('tr.horas');
