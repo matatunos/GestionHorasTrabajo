@@ -682,6 +682,7 @@ $holidayMap = [];
 <script>
 // AJAX helpers: submit entry via fetch and update table fragment; apply filters without full reload
   (function(){
+  const tableContainerSelector = '.table-responsive';
   const filtersForm = document.getElementById('filters-form');
   const entryForm = document.getElementById('entry-form');
   const entryModalOverlay = document.getElementById('entryModalOverlay');
