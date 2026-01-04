@@ -14,11 +14,34 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/lib.php';
 
 // ⚠️ CORS Headers para permitir solicitudes desde la extensión Chrome
-// Las extensiones pueden hacer solicitudes cross-origin si el servidor lo permite
-header('Access-Control-Allow-Origin: *');
+// Cuando usamos credentials: 'include' en fetch, no podemos usar Access-Control-Allow-Origin: *
+// Necesitamos permitir el origin específico del cliente (en este caso la extensión de Chrome)
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+// Permitir extensión Chrome y localhost
+$allowed_origins = [
+  'chrome-extension://',  // Cualquier extensión (es básicamente inseguro, pero necesario para extensiones)
+  'http://localhost',
+  'http://127.0.0.1',
+  'https://calendar.favala.es',
+  'https://localhost'
+];
+
+$should_allow = false;
+foreach ($allowed_origins as $allowed) {
+  if (strpos($origin, $allowed) === 0) {
+    $should_allow = true;
+    break;
+  }
+}
+
+if ($should_allow || strpos($origin, 'chrome-extension://') === 0) {
+  header('Access-Control-Allow-Origin: ' . $origin);
+  header('Access-Control-Allow-Credentials: true');
+}
+
 header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-Requested-With, X-CSRF-Token');
-header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Max-Age: 86400');
 
 // Manejar preflight requests (OPTIONS)
