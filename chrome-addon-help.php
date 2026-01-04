@@ -42,11 +42,18 @@ require_once __DIR__ . '/header.php';
     <div class="help-section">
       <h3>📥 Descarga e Instalación</h3>
       
+      <div class="info-box">
+        <strong>⭐ Forma más rápida:</strong> Descarga el archivo ZIP comprimido con todo lo necesario:
+        <br><a href="download-addon.php" class="download-btn" style="margin-top: 10px;">📦 Descargar extensión (ZIP)</a>
+      </div>
+      
       <div class="step">
         <span class="step-number">1</span>
         <strong>Descargar la extensión</strong>
-        <p>Descarga los archivos de la extensión desde GitHub:</p>
-        <a href="https://github.com/matatunos/GestionHorasTrabajo/tree/feature/multiuser-dashboard/chrome-extension" target="_blank" class="download-btn">📦 Descargar archivos</a>
+        <p>Opción A: Descarga el ZIP comprimido arriba (recomendado) y descomprime en tu computadora.</p>
+        <p>Opción B: Clona el repositorio desde GitHub:</p>
+        <div class="code-block">git clone -b feature/multiuser-dashboard https://github.com/matatunos/GestionHorasTrabajo.git
+cd GestionHorasTrabajo/chrome-extension</div>
       </div>
 
       <div class="step">
