@@ -101,12 +101,38 @@ function extractTragsaData() {
     // Extraer tiempos de la fila de horas
     const hoursRow = table.querySelector('tr.horas');
     if (hoursRow) {
+      // Función para convertir nombre de mes a número
+      const monthMap = {
+        'ene': '01', 'enero': '01', 'jan': '01', 'january': '01',
+        'feb': '02', 'febrero': '02',
+        'mar': '03', 'marzo': '03',
+        'apr': '04', 'abr': '04', 'abril': '04',
+        'may': '05', 'mayo': '05',
+        'jun': '06', 'junio': '06', 'june': '06',
+        'jul': '07', 'julio': '07', 'july': '07',
+        'ago': '08', 'agosto': '08', 'aug': '08', 'august': '08',
+        'sep': '09', 'septiembre': '09', 'sept': '09',
+        'oct': '10', 'octubre': '10',
+        'nov': '11', 'noviembre': '11',
+        'dic': '12', 'diciembre': '12', 'dec': '12', 'december': '12'
+      };
+      
       const cells = hoursRow.querySelectorAll('td');
       cells.forEach((cell, idx) => {
         if (idx > 0 && idx <= dates.length) {
           const dateText = dates[idx - 1];
-          const [day, month] = dateText.split('-');
-          const fullDate = `${year}-${month}-${day}`;
+          const [day, monthText] = dateText.split('-');
+          
+          // Convertir nombre del mes a número
+          const monthKey = monthText.toLowerCase().trim();
+          const monthNum = monthMap[monthKey];
+          
+          if (!monthNum) {
+            console.warn(`[GestionHoras] Mes desconocido: "${monthText}"`);
+            return;
+          }
+          
+          const fullDate = `${year}-${monthNum}-${day.padStart(2, '0')}`;
           
           const times = [];
           cell.querySelectorAll('span').forEach(span => {

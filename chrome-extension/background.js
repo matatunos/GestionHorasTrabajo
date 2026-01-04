@@ -187,18 +187,49 @@ function formatDate(dateStr) {
     return dateStr;
   }
   
-  // Si es DD-mes
-  if (/^\d{2}-[a-z]{3}$/i.test(dateStr)) {
-    const [day, monthText] = dateStr.split('-');
-    const months = {
-      'ene': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
-      'jul': '07', 'ago': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12',
-      'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
-      'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
-    };
-    const month = months[monthText.toLowerCase()];
-    const year = new Date().getFullYear();
-    return `${year}-${month}-${day}`;
+  // Mapa de meses (para convertir "dic" → "12")
+  const months = {
+    'ene': '01', 'enero': '01', 'jan': '01', 'january': '01',
+    'feb': '02', 'febrero': '02',
+    'mar': '03', 'marzo': '03',
+    'apr': '04', 'abr': '04', 'abril': '04',
+    'may': '05', 'mayo': '05',
+    'jun': '06', 'junio': '06', 'june': '06',
+    'jul': '07', 'julio': '07', 'july': '07',
+    'ago': '08', 'agosto': '08', 'aug': '08', 'august': '08',
+    'sep': '09', 'septiembre': '09', 'sept': '09',
+    'oct': '10', 'octubre': '10',
+    'nov': '11', 'noviembre': '11',
+    'dic': '12', 'diciembre': '12', 'dec': '12', 'december': '12'
+  };
+  
+  // Si es YYYY-mes-DD (ej: 2025-dic-01)
+  if (/^\d{4}-[a-z]+(-\d{1,2})?$/i.test(dateStr)) {
+    const parts = dateStr.split('-');
+    const year = parts[0];
+    const monthText = parts[1].toLowerCase();
+    const day = parts[2] ? parts[2].padStart(2, '0') : '01';
+    
+    const month = months[monthText];
+    if (month) {
+      return `${year}-${month}-${day}`;
+    }
+  }
+  
+  // Si es DD-mes o DD-mes-YYYY
+  if (/^\d{1,2}-[a-z]+(-\d{2,4})?$/i.test(dateStr)) {
+    const parts = dateStr.split('-');
+    const day = parts[0].padStart(2, '0');
+    const monthText = parts[1].toLowerCase();
+    let year = parts[2] ? parseInt(parts[2]) : new Date().getFullYear();
+    
+    // Si el año es de 2 dígitos, convertir a 4
+    if (year < 100) year += 2000;
+    
+    const month = months[monthText];
+    if (month) {
+      return `${year}-${month}-${day}`;
+    }
   }
   
   // Si es DD/MM o DD/MM/YY
@@ -211,5 +242,6 @@ function formatDate(dateStr) {
     return `${year}-${month}-${day}`;
   }
   
+  console.warn('[Background] ⚠️ No se pudo convertir fecha:', dateStr);
   return dateStr;
 }
