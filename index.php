@@ -396,6 +396,9 @@ $holidayMap = [];
       $currentMonth = null;
       $monthStats = null;
       $monthNameForStats = null;
+      $currentWeek = null;
+      $weekStats = null;
+      $weekStart = null;
       // iterate every day of the year so weekends are shown even when no entry exists
       $hideWeekends = !empty($_GET['hide_weekends']);
       $dt = new DateTimeImmutable("$year-01-01");
@@ -404,6 +407,45 @@ $holidayMap = [];
         $d = $cur->format('Y-m-d');
         $month = strftime('%B', $cur->getTimestamp());
         $monthKey = $cur->format('Y-m');
+        $week = (int)$cur->format('W');
+        $dow = (int)$cur->format('N');
+        
+        // Check if week changed - if so, show week summary
+        if ($currentWeek !== null && $week !== $currentWeek) {
+          // Show week summary before moving to next week
+          if (is_array($weekStats)) {
+            $wExp = intval($weekStats['expected_minutes'] ?? 0);
+            $wWork = intval($weekStats['worked_minutes'] ?? 0);
+            $wBal = $wWork - $wExp;
+            $wBalClass = ($wBal > 0) ? 'balance--good' : (($wBal < 0) ? 'balance--bad' : 'balance--ok');
+            
+            $weekEndDate = $cur->modify('-1 day');
+            $weekDisplay = $weekStart->format('d/m') . ' - ' . $weekEndDate->format('d/m');
+            
+            echo '<tr class="week-summary">';
+            echo '<td colspan="13">';
+            echo '<div class="week-summary-row">';
+            echo '<span class="week-summary-title">Semana ' . htmlspecialchars($weekDisplay) . '</span>';
+            echo '<span class="pill '.$wBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBal>0)?'↑':(($wBal<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span></span>';
+            echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Esperadas '.htmlspecialchars(minutes_to_hours_formatted($wExp)).'</span></span>';
+            echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Hechas '.htmlspecialchars(minutes_to_hours_formatted($wWork)).'</span></span>';
+            echo '</div>';
+            echo '</td>';
+            echo '</tr>';
+          }
+          $weekStats = null;
+        }
+        
+        // Initialize week stats if needed
+        if ($currentWeek !== $week) {
+          $currentWeek = $week;
+          $weekStart = $cur;
+          $weekStats = [
+            'expected_minutes' => 0,
+            'worked_minutes' => 0,
+          ];
+        }
+        
         if ($currentMonth !== $month) {
           if ($currentMonth !== null) {
             // month summary row
@@ -524,6 +566,17 @@ $holidayMap = [];
                 if ($cb !== null && intval($cb) > 0) {
                   $monthStats['coffee_excess_total'] += intval($cb);
                   $monthStats['coffee_excess_days'] += 1;
+                }
+              }
+              
+              // Aggregate per week (for weekly summary row)
+              if (is_array($weekStats)) {
+                $exp = intval($calc['expected_minutes'] ?? 0);
+                if ($exp > 0) {
+                  $weekStats['expected_minutes'] += $exp;
+                }
+                if ($calc['worked_minutes'] !== null) {
+                  $weekStats['worked_minutes'] += intval($calc['worked_minutes']);
                 }
               }
     ?>
@@ -668,6 +721,29 @@ $holidayMap = [];
           echo '</td>';
           echo '</tr>';
         }
+        
+        // Show the last week summary
+        if (is_array($weekStats)) {
+          $wExp = intval($weekStats['expected_minutes'] ?? 0);
+          $wWork = intval($weekStats['worked_minutes'] ?? 0);
+          $wBal = $wWork - $wExp;
+          $wBalClass = ($wBal > 0) ? 'balance--good' : (($wBal < 0) ? 'balance--bad' : 'balance--ok');
+          
+          $weekEndDate = $end;
+          $weekDisplay = $weekStart->format('d/m') . ' - ' . $weekEndDate->format('d/m');
+          
+          echo '<tr class="week-summary">';
+          echo '<td colspan="13">';
+          echo '<div class="week-summary-row">';
+          echo '<span class="week-summary-title">Semana ' . htmlspecialchars($weekDisplay) . '</span>';
+          echo '<span class="pill '.$wBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBal>0)?'↑':(($wBal<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span></span>';
+          echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Esperadas '.htmlspecialchars(minutes_to_hours_formatted($wExp)).'</span></span>';
+          echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Hechas '.htmlspecialchars(minutes_to_hours_formatted($wWork)).'</span></span>';
+          echo '</div>';
+          echo '</td>';
+          echo '</tr>';
+        }
+        
         echo "</tbody>";
       }
     ?>

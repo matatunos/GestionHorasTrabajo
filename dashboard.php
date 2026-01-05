@@ -554,18 +554,19 @@ function svg_sparkline(array $values, $w=120, $h=28){
     <h3 class="dashboard-section-title">Resumen mensual</h3>
     <div class="table-responsive">
       <table class="sheet compact">
-        <thead><tr><th>Mes</th><th>Trabajadas</th><th>Esperadas</th><th>Saldo</th><th>Exceso</th><th>Tendencia</th></tr></thead>
+        <thead><tr><th>Mes</th><th>Trabajadas</th><th>Esperadas</th><th>Saldo</th><th>Exceso</th><th>Defecto</th><th>Tendencia</th></tr></thead>
         <tbody>
         <?php for ($mm=1;$mm<=12;$mm++):
             if ($year == $currentYear && $mm > $currentMonth) break;
-            $w = $months[$mm]['worked']; $eexp = $months[$mm]['expected']; $bal = $w - $eexp; $ex = $bal>0 ? $bal : 0;
+            $w = $months[$mm]['worked']; $eexp = $months[$mm]['expected']; $bal = $w - $eexp; $ex = $bal>0 ? $bal : 0; $def = $bal<0 ? -$bal : 0;
         ?>
           <tr>
             <td><?php echo strftime('%B', mktime(0,0,0,$mm,1,$year)); ?></td>
             <td><?php echo fmt($w); ?></td>
             <td><?php echo fmt($eexp); ?></td>
             <td><?php echo fmt($bal); ?></td>
-            <td><?php echo fmt($ex); ?></td>
+            <td><span class="badge-value" style="background: rgba(76, 175, 80, 0.15); color: #2e7d32;"><?php echo fmt($ex); ?></span></td>
+            <td><span class="badge-value" style="background: rgba(244, 67, 54, 0.15); color: #c62828;"><?php echo fmt($def); ?></span></td>
             <td><div class="sparkline"><?php echo svg_sparkline(array_slice($month_values, max(1,$mm-5), min(6, $mm)),160,32); ?></div></td>
           </tr>
         <?php endfor; ?>

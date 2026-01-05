@@ -1036,6 +1036,15 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     .month-summary-meta { width: 100%; margin-left: 0; }
 }
 
+/* Week summary row */
+.sheet tr.week-summary td { background: rgba(229, 231, 235, 0.5); border-top: 2px solid var(--border-color); border-bottom: 2px solid var(--border-color); }
+.week-summary-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 2px 0; }
+.week-summary-title { font-weight: 700; color: var(--text-secondary); margin-right: 8px; font-size: 13px; }
+@media (max-width: 900px){
+    .week-summary-row { flex-direction: column; align-items: flex-start; }
+    .week-summary-title { width: 100%; }
+}
+
 /* Make month rows stand out */
 .sheet tr.month td { background: var(--bg-secondary); font-weight: 700; text-transform: uppercase; }
 
