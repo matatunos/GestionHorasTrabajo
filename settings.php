@@ -242,13 +242,79 @@ if ($hol_pdo) {
   try { $hol_pdo->exec("ALTER TABLE holidays DROP INDEX year_date"); } catch(Throwable $e){}
   try { $hol_pdo->exec("ALTER TABLE holidays ADD COLUMN IF NOT EXISTS user_id INT DEFAULT NULL"); } catch(Throwable $e){ try{ $hol_pdo->exec("ALTER TABLE holidays ADD COLUMN user_id INT DEFAULT NULL"); }catch(Throwable $e2){} }
 
+  // Create holiday_types table
+  $hol_pdo->exec("CREATE TABLE IF NOT EXISTS holiday_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    label VARCHAR(100) NOT NULL,
+    color VARCHAR(7) DEFAULT '#0f172a',
+    sort_order INT DEFAULT 0,
+    is_system TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+  // Seed default holiday types if table is empty
+  $typeCheck = $hol_pdo->query("SELECT COUNT(*) as cnt FROM holiday_types")->fetch();
+  if ($typeCheck['cnt'] == 0) {
+    $defaults = [
+      ['holiday', 'Festivo', '#dc2626', 0, 1],
+      ['vacation', 'Vacaciones', '#059669', 1, 1],
+      ['personal', 'Asuntos propios', '#f97316', 2, 1],
+      ['enfermedad', 'Enfermedad', '#3b82f6', 3, 1],
+      ['permiso', 'Permiso', '#8b5cf6', 4, 1],
+    ];
+    $insertStmt = $hol_pdo->prepare('INSERT INTO holiday_types (code, label, color, sort_order, is_system) VALUES (?, ?, ?, ?, ?)');
+    foreach ($defaults as $def) {
+      $insertStmt->execute($def);
+    }
+  }
+
+  // handle holiday_type POSTs
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['holiday_type_action'])) {
+    if ($_POST['holiday_type_action'] === 'add' && !empty($_POST['type_label']) && !empty($_POST['type_code'])) {
+      $code = preg_replace('/[^a-z0-9_]/', '', strtolower($_POST['type_code']));
+      $label = trim($_POST['type_label']);
+      $color = preg_match('/^#[0-9a-f]{6}$/i', $_POST['type_color'] ?? '') ? $_POST['type_color'] : '#0f172a';
+      
+      try {
+        $stmt = $hol_pdo->prepare('INSERT INTO holiday_types (code, label, color, sort_order) VALUES (?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM (SELECT * FROM holiday_types) t))');
+        $stmt->execute([$code, $label, $color]);
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest'){
+          header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
+        }
+      } catch (Throwable $e) {
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest'){
+          header('Content-Type: application/json'); echo json_encode(['ok'=>false, 'error'=>'Código duplicado']); exit;
+        }
+      }
+    }
+    if ($_POST['holiday_type_action'] === 'delete' && !empty($_POST['type_id'])) {
+      $id = intval($_POST['type_id']);
+      $typeRow = $hol_pdo->query("SELECT is_system FROM holiday_types WHERE id = $id")->fetch();
+      if ($typeRow && !$typeRow['is_system']) {
+        $stmt = $hol_pdo->prepare('DELETE FROM holiday_types WHERE id = ?');
+        $stmt->execute([$id]);
+      }
+      if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest'){
+        header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
+      }
+    }
+  }
+
   // handle holiday POSTs
   if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['holiday_action'])) {
+    // Get valid types from database
+    $validTypes = [];
+    $typesResult = $hol_pdo->query("SELECT code FROM holiday_types ORDER BY sort_order");
+    foreach ($typesResult->fetchAll() as $row) {
+      $validTypes[] = $row['code'];
+    }
+    
     if ($_POST['holiday_action'] === 'add' && !empty($_POST['date'])) {
       $d = $_POST['date'];
       $y = intval(date('Y', strtotime($d)));
       $label = trim($_POST['label'] ?? '');
-      $type = in_array($_POST['type'] ?? '', ['holiday','vacation','personal','enfermedad','permiso']) ? $_POST['type'] : 'holiday';
+      $type = in_array($_POST['type'] ?? '', $validTypes) ? $_POST['type'] : 'holiday';
       $annual = !empty($_POST['annual']) ? 1 : 0;
       $is_global = (!empty($hol_user) && !empty($hol_user['is_admin']) && !empty($_POST['global']));
       $uid = $is_global ? null : ($hol_user['id'] ?? null);
@@ -263,7 +329,7 @@ if ($hol_pdo) {
       $id = intval($_POST['id']);
       $d = $_POST['date'] ?? null;
       $label = trim($_POST['label'] ?? '');
-      $type = in_array($_POST['type'] ?? '', ['holiday','vacation','personal','enfermedad','permiso']) ? $_POST['type'] : 'holiday';
+      $type = in_array($_POST['type'] ?? '', $validTypes) ? $_POST['type'] : 'holiday';
       $annual = !empty($_POST['annual']) ? 1 : 0;
       // determine uid: allow admin to make global
       $is_global = (!empty($hol_user) && !empty($hol_user['is_admin']) && !empty($_POST['global']));
@@ -320,6 +386,91 @@ if ($hol_pdo) {
         <div class="form-actions mt-2"><button class="btn btn-primary" type="submit">Guardar nombre del sitio</button><button class="btn btn-secondary" type="button" onclick="location.reload();">Cancelar</button></div>
       </div>
     </form>
+
+    <!-- Holiday Types Management Section -->
+    <div style="margin-top:24px;">
+      <div class="card">
+        <h3>Tipos de festivos/ausencias</h3>
+        <p style="font-size: 13px; color: #666; margin-bottom: 12px;">Gestiona los tipos de días no trabajados disponibles.</p>
+        
+        <div style="margin-bottom: 12px;">
+          <button id="openAddTypeBtn" class="btn btn-primary" type="button">Añadir tipo</button>
+        </div>
+
+        <!-- Holiday Types Modal -->
+        <div id="typeModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
+          <div id="typeModal" class="modal-dialog" role="dialog" aria-modal="true">
+            <div class="modal-header">
+              <h3 class="modal-title">Añadir tipo de festivo</h3>
+            </div>
+            <div class="modal-body">
+              <form method="post" id="typeAddForm" class="form-wrapper">
+                <input type="hidden" name="holiday_type_action" value="add">
+                
+                <div class="form-group">
+                  <label class="form-label">Código</label>
+                  <input class="form-control" type="text" name="type_code" placeholder="ej: medical_leave" required pattern="[a-z0-9_]+">
+                  <div class="form-help">Solo letras minúsculas, números y guiones bajos.</div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Nombre</label>
+                  <input class="form-control" type="text" name="type_label" placeholder="ej: Baja médica" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Color</label>
+                  <input class="form-control" type="color" name="type_color" value="#0f172a">
+                </div>
+
+                <div class="form-actions modal-actions mt-2">
+                  <button class="btn btn-secondary" type="button" id="closeTypeModal">Cancelar</button>
+                  <button class="btn btn-primary" type="submit">Crear</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Holiday Types Table -->
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Color</th>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th style="text-align: center;">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php
+              $types = $hol_pdo->query("SELECT * FROM holiday_types ORDER BY sort_order")->fetchAll();
+              foreach ($types as $type):
+              ?>
+              <tr>
+                <td><div style="width: 24px; height: 24px; background: <?php echo htmlspecialchars($type['color']); ?>; border-radius: 3px; border: 1px solid #ccc;"></div></td>
+                <td><code><?php echo htmlspecialchars($type['code']); ?></code></td>
+                <td><?php echo htmlspecialchars($type['label']); ?></td>
+                <td style="text-align: center;">
+                  <?php if (!$type['is_system']): ?>
+                    <form method="post" style="display: inline;">
+                      <input type="hidden" name="holiday_type_action" value="delete">
+                      <input type="hidden" name="type_id" value="<?php echo $type['id']; ?>">
+                      <button class="btn btn-sm btn-danger" type="submit" onclick="return confirm('¿Eliminar este tipo?');">Eliminar</button>
+                    </form>
+                  <?php else: ?>
+                    <span style="color: #999; font-size: 12px;">Sistema</span>
+                  <?php endif; ?>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div style="margin-top:12px;">
       <div style="margin-bottom:8px;"></div>
       <div class="card">
@@ -389,11 +540,12 @@ if ($hol_pdo) {
                 <div class="form-group"><label class="form-label">Descripción</label><input class="form-control" type="text" name="label" placeholder="Ej: Vacaciones verano"></div>
                 <div class="form-group"><label class="form-label">Tipo</label>
                   <select class="form-control" name="type">
-                    <option value="holiday">Festivo</option>
-                    <option value="vacation">Vacaciones</option>
-                    <option value="personal">Asuntos propios</option>
-                    <option value="enfermedad">Enfermedad</option>
-                    <option value="permiso">Permiso</option>
+                    <?php
+                    $types = $hol_pdo->query("SELECT code, label FROM holiday_types ORDER BY sort_order")->fetchAll();
+                    foreach ($types as $type):
+                    ?>
+                    <option value="<?php echo htmlspecialchars($type['code']); ?>"><?php echo htmlspecialchars($type['label']); ?></option>
+                    <?php endforeach; ?>
                   </select>
                 </div>
                 <div class="form-group"><?php echo render_checkbox('annual', 0, 'Repite anualmente'); ?></div>
@@ -687,6 +839,7 @@ if ($hol_pdo) {
 
 <script src="js/settings-modals.js"></script>
 <script src="js/settings-user-management.js"></script>
+<script src="js/settings-holiday-types.js"></script>
 <script src="js/holiday-calendar.js"></script>
 <script src="js/settings-holiday-form.js"></script>
 <script src="js/settings-edit-years.js"></script>
