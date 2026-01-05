@@ -1,70 +1,9 @@
 /**
  * settings-holiday-form.js
- * Holiday date picker and form submission handling
+ * Holiday form submission handling (compatible with calendar-based picker)
  */
 
 (function(){
-  const monthSel = document.getElementById('hd_month');
-  const daySel = document.getElementById('hd_day');
-  const hidden = document.getElementById('hd_date');
-  const selYear = parseInt(document.querySelector('select[name="holiday_year"]')?.value || new Date().getFullYear(), 10);
-  
-  if (monthSel && daySel && hidden) {
-    // Populate month selector
-    for (let m = 1; m <= 12; m++) {
-      const v = String(m).padStart(2, '0');
-      const o = document.createElement('option');
-      o.value = v;
-      o.textContent = v;
-      monthSel.appendChild(o);
-    }
-    
-    // Function to set available days
-    function setDays(n) {
-      daySel.innerHTML = '';
-      for (let d = 1; d <= n; d++) {
-        const v = String(d).padStart(2, '0');
-        const o = document.createElement('option');
-        o.value = v;
-        o.textContent = v;
-        daySel.appendChild(o);
-      }
-    }
-    
-    setDays(31);
-    
-    // Update hidden date field
-    function updateHidden() {
-      hidden.value = selYear + '-' + monthSel.value + '-' + daySel.value;
-    }
-    
-    // Handle month change
-    monthSel.addEventListener('change', function() {
-      const m = parseInt(this.value, 10);
-      const nd = new Date(2000, m, 0).getDate();
-      setDays(nd);
-      if (daySel.options.length < 1) setDays(31);
-      if (+daySel.value > nd) daySel.value = String(nd).padStart(2, '0');
-      updateHidden();
-    });
-    
-    // Handle day change
-    daySel.addEventListener('change', updateHidden);
-    
-    // Set current date
-    const now = new Date();
-    monthSel.value = String(now.getMonth() + 1).padStart(2, '0');
-    daySel.value = String(now.getDate()).padStart(2, '0');
-    updateHidden();
-    
-    // Update on form submit
-    document.addEventListener('submit', function(e) {
-      const f = e.target;
-      if (!(f instanceof HTMLFormElement)) return;
-      if (f.querySelector('#hd_date')) updateHidden();
-    }, true);
-  }
-
   // Refresh holidays list
   async function refreshList() {
     try {
@@ -145,3 +84,4 @@
     });
   }, false);
 })();
+

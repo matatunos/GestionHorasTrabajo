@@ -1624,5 +1624,76 @@ tbody.month-group.collapsed tr.weekend td:not(.month) { opacity: 0.95; }
     font-weight: 600;
 }
 
+/* ===== Holiday Calendar Styling ===== */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    background: #e2e8f0;
+    padding: 2px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+.calendar-day-header {
+    background: #0f172a;
+    color: #fff;
+    padding: 8px 4px;
+    font-weight: 600;
+    text-align: center;
+    font-size: 11px;
+    border-radius: 3px;
+}
+
+.calendar-empty {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.calendar-day {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    padding: 8px 4px;
+    text-align: center;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    user-select: none;
+    transition: all 0.15s ease;
+}
+
+.calendar-day:hover {
+    background: #f0f9ff;
+    border-color: var(--brand-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.calendar-day.today {
+    border: 2px solid var(--brand-primary);
+    background: #eff6ff;
+    font-weight: 700;
+}
+
+.calendar-day.selected {
+    background: var(--brand-primary);
+    color: white;
+    border-color: #1e3a8a;
+    font-weight: 700;
+}
+
+.calendar-day.selected:hover {
+    background: #1e3a8a;
+    border-color: #172554;
+}
+
+.calendar-day.selected.today {
+    border: 2px solid #fff;
+    box-shadow: inset 0 0 0 2px var(--brand-primary);
+}
+
 
 

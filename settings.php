@@ -342,20 +342,51 @@ if ($hol_pdo) {
         <div id="holidayModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
           <div id="holidayModal" class="modal-dialog" role="dialog" aria-modal="true">
             <div class="modal-header">
-              <h3 class="modal-title">Añadir festivo</h3>
+              <h3 class="modal-title">Añadir festivo/vacaciones</h3>
             </div>
             <div class="modal-body">
             <form method="post" id="holidayAddForm" class="form-wrapper">
               <input type="hidden" name="holiday_action" value="add">
-              <div class="form-grid">
-                <div class="form-group"><label class="form-label">Fecha</label>
-                  <div style="display:flex;gap:8px;align-items:center;">
-                    <select id="hd_month" class="form-control" aria-label="Mes"></select>
-                    <select id="hd_day" class="form-control" aria-label="Día"></select>
-                    <input type="hidden" id="hd_date" name="date" required>
-                  </div>
+              
+              <!-- Calendar selection -->
+              <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label">Selecciona los días (Ctrl+click o Shift+click para periodos)</label>
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center;">
+                  <select id="hd_calendar_month" class="form-control" style="flex: 1;">
+                    <option value="1">Enero</option>
+                    <option value="2">Febrero</option>
+                    <option value="3">Marzo</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Mayo</option>
+                    <option value="6">Junio</option>
+                    <option value="7">Julio</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Septiembre</option>
+                    <option value="10">Octubre</option>
+                    <option value="11">Noviembre</option>
+                    <option value="12">Diciembre</option>
+                  </select>
+                  <select id="hd_calendar_year" class="form-control" style="flex: 1;">
+                    <?php for($y = date('Y')-2; $y <= date('Y')+2; $y++): ?>
+                      <option value="<?php echo $y;?>" <?php if($y==date('Y')) echo 'selected';?>><?php echo $y;?></option>
+                    <?php endfor; ?>
+                  </select>
                 </div>
-                <div class="form-group"><label class="form-label">Descripción</label><input class="form-control" type="text" name="label" placeholder="Ej: Año Nuevo"></div>
+                <div id="holidayCalendar" class="holiday-calendar"></div>
+              </div>
+              
+              <!-- Selected dates display -->
+              <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label">Días seleccionados</label>
+                <div id="selectedDatesDisplay" style="padding: 8px; background: #f0f0f0; border-radius: 4px; min-height: 40px; font-size: 13px; word-wrap: break-word;">
+                  <span style="color: #999;">Ninguno seleccionado</span>
+                </div>
+                <input type="hidden" id="hd_dates_json" name="dates_json" value="">
+              </div>
+              
+              <!-- Common options -->
+              <div class="form-grid">
+                <div class="form-group"><label class="form-label">Descripción</label><input class="form-control" type="text" name="label" placeholder="Ej: Vacaciones verano"></div>
                 <div class="form-group"><label class="form-label">Tipo</label>
                   <select class="form-control" name="type">
                     <option value="holiday">Festivo</option>
@@ -368,6 +399,7 @@ if ($hol_pdo) {
                 <div class="form-group"><?php echo render_checkbox('annual', 0, 'Repite anualmente'); ?></div>
                 <div class="form-group"><?php echo render_checkbox('global', 0, 'Visible a todos (global)'); ?></div>
               </div>
+              
               <div class="form-actions modal-actions mt-2">
                 <button class="btn btn-secondary" type="button" id="closeHolidayModal">Cancelar</button>
                 <button class="btn btn-primary" type="submit">Añadir</button>
@@ -655,6 +687,7 @@ if ($hol_pdo) {
 
 <script src="js/settings-modals.js"></script>
 <script src="js/settings-user-management.js"></script>
+<script src="js/holiday-calendar.js"></script>
 <script src="js/settings-holiday-form.js"></script>
 <script src="js/settings-edit-years.js"></script>
 <script src="js/settings-edit-holidays.js"></script>
