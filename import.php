@@ -2,6 +2,9 @@
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/ocr_processor.php';
+require_once __DIR__ . '/vendor/autoload.php';
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 // Constants
 define('IMPORT_NOTE_TEXT', 'Importado');
@@ -21,38 +24,38 @@ function mapTimesToSlots($times) {
     return $horas_slots;
   }
   
+  // REGLA UNIVERSAL: 
+  // - Primera hora siempre es ENTRADA (slot 0)
+  // - Última hora siempre es SALIDA (slot 5)
+  // - Las demás se llenan en orden: coffee_out, coffee_in, lunch_out, lunch_in
+  
+  $horas_slots[0] = $times[0];  // First is always entry
+  
   if ($timeCount === 1) {
-    // Single time: could be entry or exit, use as entry
-    $horas_slots[0] = $times[0];
-  } elseif ($timeCount === 2) {
-    // Two times: entry and exit
-    $horas_slots[0] = $times[0];  // start
-    $horas_slots[5] = $times[1];  // end
-  } elseif ($timeCount === 3) {
-    // Three times: entry, break start, break end (or entry, exit coffee, exit)
-    // Assume: entry, coffee_out, rest (could be coffee_in or end)
-    $horas_slots[0] = $times[0];  // start
-    $horas_slots[1] = $times[1];  // coffee_out
-    $horas_slots[5] = $times[2];  // end (last time is always end)
-  } elseif ($timeCount === 4) {
-    // Four times: entry, coffee_out, coffee_in, exit (no lunch break)
-    $horas_slots[0] = $times[0];  // start
-    $horas_slots[1] = $times[1];  // coffee_out
-    $horas_slots[2] = $times[2];  // coffee_in
-    $horas_slots[5] = $times[3];  // end
-  } elseif ($timeCount === 5) {
-    // Five times: entry, coffee_out, coffee_in, lunch_out, lunch_in (or + end)
-    // More likely: entry, coffee_out, coffee_in, lunch_out, exit (missing lunch_in)
-    $horas_slots[0] = $times[0];  // start
-    $horas_slots[1] = $times[1];  // coffee_out
-    $horas_slots[2] = $times[2];  // coffee_in
-    $horas_slots[3] = $times[3];  // lunch_out
-    $horas_slots[5] = $times[4];  // end (last is always end)
-  } else {
-    // Six or more times: standard full day
-    for ($i = 0; $i < 6 && $i < $timeCount; $i++) {
-      $horas_slots[$i] = $times[$i];
+    // Solo entrada
+    return $horas_slots;
+  }
+  
+  if ($timeCount === 2) {
+    // Entrada y salida
+    $horas_slots[5] = $times[1];
+    return $horas_slots;
+  }
+  
+  // Para 3+ horas, llenar los slots intermedios
+  if ($timeCount >= 3) {
+    $intermediateIndex = 1;  // Empieza en coffee_out (slot 1)
+    
+    // Llenar los slots intermedios (1-4) con horas medias, dejando el último para la salida
+    for ($i = 1; $i < $timeCount - 1; $i++) {
+      if ($intermediateIndex <= 4) {
+        $horas_slots[$intermediateIndex] = $times[$i];
+        $intermediateIndex++;
+      }
     }
+    
+    // Última hora es siempre la salida (slot 5)
+    $horas_slots[5] = $times[$timeCount - 1];
   }
   
   return $horas_slots;
@@ -65,6 +68,217 @@ $pdo = get_pdo();
 $message = '';
 $messageType = '';
 $ocrData = null;
+
+// Handle XLSX upload
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['xlsx_file'])) {
+  $file = $_FILES['xlsx_file'];
+  
+  if ($file['error'] === UPLOAD_ERR_OK) {
+    if ($file['size'] > MAX_UPLOAD_SIZE) {
+      $message = 'El archivo es demasiado grande (máximo 10MB)';
+      $messageType = 'error';
+    } else {
+      try {
+        $spreadsheet = IOFactory::load($file['tmp_name']);
+        $excelData = [];
+        
+        // Procesar hojas que coincidan con años (2024, 2025, 2026, etc.)
+        $allSheetNames = $spreadsheet->getSheetNames();
+        $sheetsToProcess = [];
+        
+        // Buscar hojas que sean años (números o contengan años)
+        foreach ($allSheetNames as $name) {
+          // Saltar hojas especiales
+          if (preg_match('/guardia|personal|^\\+|nota|totales/i', $name)) {
+            continue;
+          }
+          // Incluir si es un número de 4 dígitos (año)
+          if (preg_match('/\b(20\d{2})\b/', $name)) {
+            $sheetsToProcess[] = $name;
+          }
+        }
+        
+        // Si no encontramos hojas de años, procesar todas excepto especiales
+        if (empty($sheetsToProcess)) {
+          foreach ($allSheetNames as $name) {
+            if (!preg_match('/guardia|personal|^\\+|nota|totales/i', $name)) {
+              $sheetsToProcess[] = $name;
+            }
+          }
+        }
+        
+        foreach ($sheetsToProcess as $sheetName) {
+          try {
+            $sheet = $spreadsheet->getSheetByName($sheetName);
+            if (!$sheet) continue;
+            
+            $rows = $sheet->toArray(null, true, true, true);
+            
+            // Extraer año del nombre de la hoja PRIMERO
+            $sheetYear = null;
+            if (preg_match('/\b(20\d{2})\b/', $sheetName, $m)) {
+              $sheetYear = intval($m[1]);
+            }
+            
+            // Si no encontramos año en el nombre, usar año actual como fallback
+            if (!$sheetYear) {
+              $sheetYear = intval(date('Y'));
+            }
+            
+            // Buscar fila de encabezados (contiene "HORA ENTRA" o similar)
+            $dataStartRow = 13; // Default
+            foreach ($rows as $rowIndex => $row) {
+              $rowStr = implode('|', array_map('strtolower', $row));
+              if (strpos($rowStr, 'hora entra') !== false || strpos($rowStr, 'entra') !== false) {
+                $dataStartRow = $rowIndex + 1;
+                break;
+              }
+            }
+            
+            // Leer datos desde dataStartRow
+            foreach ($rows as $rowIndex => $row) {
+              if ($rowIndex < $dataStartRow) continue;
+              if ($rowIndex > 500) break; // Límite de seguridad
+              
+              $day = trim($row['B'] ?? '');
+              if (!$day || strlen($day) < 2) continue; // Saltar vacíos
+              
+              // Convertir fecha (puede estar en formato "1-Jan", como número Excel, etc.)
+              $fechaISO = null;
+              $parsedYear = $sheetYear;
+              
+              // Intentar como número de Excel
+              if (is_numeric($day) && $day > 0) {
+                try {
+                  $excelDate = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($day);
+                  $fechaISO = $excelDate->format('Y-m-d');
+                  $parsedYear = intval($excelDate->format('Y'));
+                } catch (Exception $e) {
+                  // No es fecha de Excel, intentar como texto
+                }
+              }
+              
+              // Intentar como texto de fecha
+              if (!$fechaISO) {
+                // Formatos: "1-Jan", "01-01-2024", "01/01/2024", etc.
+                $dateFormats = [
+                  'd-M-Y',    // 01-Jan-2024 (intenta año primero)
+                  'd/m/Y',    // 01/01/2024
+                  'Y-m-d',    // 2024-01-01
+                  'd-m-Y',    // 01-01-2024
+                  'm/d/Y',    // 01/01/2024
+                  'j/n/Y',    // 1/1/2024
+                  'j-M',      // 1-Jan (SIN año, usará $sheetYear)
+                  'd-m',      // 01-01 (sin año)
+                  'd/m',      // 01/01 (sin año)
+                ];
+                
+                foreach ($dateFormats as $format) {
+                  $dateTime = \DateTime::createFromFormat($format, $day);
+                  if ($dateTime) {
+                    // Si el formato no incluye año, usar el año de la hoja
+                    if (strpos($format, 'Y') === false) {
+                      $dateTime->setDate($sheetYear, $dateTime->format('m'), $dateTime->format('d'));
+                    }
+                    $fechaISO = $dateTime->format('Y-m-d');
+                    $parsedYear = intval($dateTime->format('Y'));
+                    break;
+                  }
+                }
+              }
+              
+              if (!$fechaISO) continue; // No pudo convertir fecha
+              
+              // VALIDACIÓN CRÍTICA: si el año es 2005, convertir a 2025
+              if ($parsedYear === 2005) {
+                $parsedYear = 2025;
+                $parts = explode('-', $fechaISO);
+                if (count($parts) === 3) {
+                  $fechaISO = '2025' . '-' . str_pad($parts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($parts[2], 2, '0', STR_PAD_LEFT);
+                }
+              }
+              // Si el año es inválido (anterior a 2000 o más de 1 año futuro), usar año de hoja
+              else if ($parsedYear < 2000 || $parsedYear > (intval(date('Y')) + 1)) {
+                // Reconstruir la fecha usando SOLO el año de la hoja
+                $parts = explode('-', $fechaISO);
+                if (count($parts) === 3) {
+                  $fechaISO = $sheetYear . '-' . str_pad($parts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($parts[2], 2, '0', STR_PAD_LEFT);
+                  $parsedYear = $sheetYear;
+                }
+              }
+              
+              // Extraer horas de las columnas conocidas (D=entrada, E=café_out, F=café_in, I=comida_out, J=comida_in, L=salida)
+              $horas = [];
+              $timeColumns = ['D', 'E', 'F', 'I', 'J', 'L'];
+              foreach ($timeColumns as $col) {
+                $time = trim($row[$col] ?? '');
+                // Filtrar: debe parecer una hora (contiene : o .)
+                if ($time && preg_match('/\d{1,2}[:\.]\d{2}/', $time)) {
+                  $horas[] = $time;
+                }
+              }
+              
+              // Si no encontramos horas, saltar
+              if (empty($horas)) continue;
+              
+              // Validación final: 2005 → 2025
+              if ($parsedYear === 2005) {
+                $parsedYear = 2025;
+                $parts = explode('-', $fechaISO);
+                if (count($parts) === 3) {
+                  $fechaISO = '2025' . '-' . $parts[1] . '-' . $parts[2];
+                }
+              }
+              else if ($parsedYear < 2000 || $parsedYear > (intval(date('Y')) + 1)) {
+                $parsedYear = $sheetYear;
+                // Reconstruir la fecha con el año correcto
+                $parts = explode('-', $fechaISO);
+                if (count($parts) === 3) {
+                  $fechaISO = $parsedYear . '-' . $parts[1] . '-' . $parts[2];
+                }
+              }
+              
+              $excelData[] = [
+                'fechaISO' => $fechaISO,
+                'horas' => $horas,
+                'dia' => $day,
+                'fecha' => $fechaISO
+              ];
+            }
+          } catch (Exception $e) {
+            error_log('Excel sheet error: ' . $e->getMessage());
+          }
+        }
+        
+        if (empty($excelData)) {
+          $message = 'No se encontraron datos en las hojas del archivo Excel. Asegúrate de que:' . PHP_EOL .
+                     '• La columna B contenga fechas (en cualquier formato)' . PHP_EOL .
+                     '• Las hojas contengan horarios en formato HH:MM (ej: 08:00, 10:30)' . PHP_EOL .
+                     '• El archivo no esté corrupto';
+          $messageType = 'error';
+        } else {
+          // Mapear horas a slots y mostrar previsualización
+          foreach ($excelData as &$record) {
+            $record['horas_slots'] = mapTimesToSlots($record['horas']);
+          }
+          unset($record);
+          
+          $message = "✓ Se encontraron " . count($excelData) . " registros en el archivo Excel.";
+          $messageType = 'success';
+          
+          // Guardar en variable temporal para mostrar previsualización
+          $excelImportData = $excelData;
+        }
+      } catch (Exception $e) {
+        $message = 'Error cargando archivo Excel: ' . $e->getMessage();
+        $messageType = 'error';
+      }
+    }
+  } elseif ($file['error'] !== UPLOAD_ERR_NO_FILE) {
+    $message = 'Error cargando archivo: ' . $file['error'];
+    $messageType = 'error';
+  }
+}
 
 // Handle image upload with OCR
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image_file'])) {
@@ -262,13 +476,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
       display: flex;
       gap: 10px;
     }
+    
+    /* Loading overlay styles */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(2px);
+    }
+    
+    .loading-overlay.active {
+      display: flex;
+    }
+    
+    .loading-content {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    .spinner {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 20px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2196F3;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      font-size: 18px;
+      color: #333;
+      font-weight: 500;
+      margin: 0;
+    }
+    
+    .loading-subtext {
+      font-size: 14px;
+      color: #666;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-content">
+    <div class="spinner"></div>
+    <p class="loading-text">Importando fichajes...</p>
+    <p class="loading-subtext">Por favor, espera mientras procesamos tu archivo</p>
+  </div>
+</div>
+
 <?php include __DIR__ . '/header.php'; ?>
 <div class="container">
   <div class="card">
-    <h1>Importar Fichajes desde HTML</h1>
+    <h1>Importar Fichajes</h1>
     
     <?php if ($message): ?>
       <?php
@@ -282,8 +560,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
       </div>
     <?php endif; ?>
     
+    <!-- XLSX Import Section -->
+    <div style="margin-bottom: 30px;">
+      <h2>Importar desde archivo Excel (.xlsx)</h2>
+      <p class="muted">Carga un archivo Excel con formato HORARIO_2024.xlsx. El sistema procesará automáticamente las hojas de 2024, 2025 y 2026.</p>
+      
+      <form method="post" enctype="multipart/form-data" class="import-form form-wrapper">
+        <div class="form-group">
+          <label for="xlsx_file">Archivo Excel (.xlsx):</label>
+          <input type="file" id="xlsx_file" name="xlsx_file" accept=".xlsx" class="form-control">
+          <div class="muted">Máximo 10MB. Formato: HORARIO_2024.xlsx con hojas 2024, 2025, 2026.</div>
+        </div>
+        <button type="submit" class="btn btn-primary">Procesar archivo Excel</button>
+      </form>
+      
+      <?php if (!empty($excelImportData)): ?>
+        <div style="margin-top: 20px; padding: 15px; background: rgba(33, 150, 243, 0.1); border: 1px solid rgba(33, 150, 243, 0.3); border-radius: 8px;">
+          <h3>Previsualización de datos Excel</h3>
+          <p>Se encontraron <strong><?php echo count($excelImportData); ?></strong> registros para importar.</p>
+          
+          <div class="table-responsive">
+            <table class="sheet compact">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Entrada</th>
+                  <th>Salida café</th>
+                  <th>Entrada café</th>
+                  <th>Salida comida</th>
+                  <th>Entrada comida</th>
+                  <th>Salida</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($excelImportData as $rec): ?>
+                  <tr>
+                    <td><?php echo htmlspecialchars($rec['fechaISO']); ?></td>
+                    <?php for ($i = 0; $i < 6; $i++): ?>
+                      <td><?php echo htmlspecialchars($rec['horas_slots'][$i] ?? ''); ?></td>
+                    <?php endfor; ?>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+          
+          <form method="post" class="mt-2">
+            <input type="hidden" name="import_data" value="<?php echo htmlspecialchars(json_encode($excelImportData)); ?>">
+            <input type="hidden" name="year" value="0">
+            <button type="submit" class="btn btn-primary">Confirmar importación</button>
+          </form>
+        </div>
+      <?php endif; ?>
+    </div>
+    
+    <hr style="margin: 30px 0; border: 1px solid rgba(255,255,255,0.1);">
+    
     <div class="instructions">
-      <h3>Instrucciones</h3>
+      <h3>O importar desde HTML</h3>
       <ol>
         <li>Descarga el informe HTML desde el portal externo ("Guardar como" del navegador).</li>
         <li>Selecciona el archivo y confirma el año.</li>
@@ -895,6 +1229,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
     }
   });
 })();
+</script>
+
+<script>
+// Show loading overlay on form submission
+document.addEventListener('DOMContentLoaded', function() {
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  
+  // Handle all form submissions
+  const forms = document.querySelectorAll('form');
+  forms.forEach(form => {
+    form.addEventListener('submit', function(e) {
+      // Show loading overlay
+      loadingOverlay.classList.add('active');
+    });
+  });
+  
+  // Optional: Hide overlay if user goes back (back button during loading)
+  window.addEventListener('pageshow', function(e) {
+    if (e.persisted) {
+      loadingOverlay.classList.remove('active');
+    }
+  });
+});
 </script>
 
 <?php include __DIR__ . '/footer.php'; ?>

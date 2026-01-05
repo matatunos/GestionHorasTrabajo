@@ -47,6 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <a href="chrome-addon-help.php" class="btn btn-secondary">📖 Ver instrucciones</a>
         <a href="extension-tokens.php" class="btn btn-secondary">🔐 Gestionar tokens</a>
       </div>
+    </div>
+    
+    <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
+      <h4 style="margin-top: 0;">📊 Calidad de Datos</h4>
+      <p style="margin-bottom: 10px;">Analiza y corrige problemas en tus registros de fichajes: salidas raras, días sin fichajes, horas atípicas.</p>
+      <div style="display: flex; gap: 10px;">
+        <a href="data_quality.php" class="btn btn-primary">📊 Ir al análisis de calidad</a>
+      </div>
       <style>
         .btn-secondary {
           background: #6c757d;

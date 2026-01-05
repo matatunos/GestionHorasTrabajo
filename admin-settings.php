@@ -300,8 +300,6 @@ if ($hol_pdo) {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Configuración — GestionHoras</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="css/settings.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 <?php include __DIR__ . '/header.php'; ?>
@@ -379,7 +377,7 @@ if ($hol_pdo) {
 
         <h4>Listado de festivos</h4>
         <div class="table-responsive">
-          <table class="table compact">
+          <table class="sheet compact no-hide-actions">
             <thead><tr><th>Fecha</th><th>Repite</th><th>Tipo</th><th>Descripción</th><th>Global</th><th>Acciones</th></tr></thead>
             <tbody>
             <?php foreach($holiday_rows as $r):
@@ -390,22 +388,22 @@ if ($hol_pdo) {
             ?>
               <tr class="<?php echo $r['type'] === 'vacation' ? 'vacation' : ($r['type'] === 'personal' ? 'personal' : 'holiday'); ?>" data-hid="<?php echo intval($r['id']); ?>" data-date="<?php echo htmlspecialchars($r['date']); ?>" data-annual="<?php echo intval($r['annual']); ?>" data-type="<?php echo htmlspecialchars($r['type']); ?>" data-label="<?php echo htmlspecialchars($r['label']); ?>" data-userid="<?php echo htmlspecialchars($r['user_id'] ?? ''); ?>" data-global="<?php echo empty($r['user_id']) ? '1' : '0'; ?>">
                 <td class="holiday-date"><?php echo htmlspecialchars($displayDate)?></td>
-                <td class="holiday-annual"><?php echo !empty($r['annual']) ? 'Anual' : ''?></td>
+                <td class="holiday-annual"><?php echo !empty($r['annual']) ? '<span class="badge badge-primary">Anual</span>' : ''?></td>
                 <td class="holiday-type"><?php echo ($r['type']==='vacation') ? 'Vacaciones' : (($r['type']==='personal') ? 'Asuntos propios' : (($r['type']==='enfermedad') ? 'Enfermedad' : (($r['type']==='permiso') ? 'Permiso' : 'Festivo'))); ?></td>
                 <td class="holiday-label"><?php echo htmlspecialchars($r['label'])?></td>
                 <td class="holiday-global">
                   <?php if (empty($r['user_id'])): ?>
-                    Sí
+                    <span class="badge badge-primary">Sí</span>
                   <?php else: ?>
-                    No
+                    <span class="small">No</span>
                   <?php endif; ?>
                 </td>
                 <td class="holiday-actions">
-                  <button class="btn edit-holiday-btn highlight-edit-btn icon-btn btn-edit" type="button" title="Editar festivo"><i class="fas fa-pencil"></i></button>
+                  <button class="btn edit-holiday-btn highlight-edit-btn icon-btn btn-edit" type="button" title="Editar festivo"> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L20.71 7.04a1 1 0 0 0 0-1.41L18.36 3.28a1 1 0 0 0-1.41 0L3 17.25z" fill="currentColor"/></svg> </button>
                   <form method="post" onsubmit="return confirm('Eliminar este festivo?');">
                     <input type="hidden" name="holiday_action" value="delete">
                     <input type="hidden" name="id" value="<?php echo $r['id']?>">
-                    <button class="btn btn-danger icon-btn btn-delete" type="submit" title="Eliminar festivo"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-danger icon-btn btn-delete" type="submit" title="Eliminar festivo"> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/></svg> </button>
                   </form>
                 </td>
               </tr>
@@ -436,10 +434,10 @@ if ($hol_pdo) {
             <td class="yc-coffee_minutes"><?php echo htmlspecialchars($yc['coffee_minutes']); ?></td>
             <td class="yc-lunch_minutes"><?php echo htmlspecialchars($yc['lunch_minutes']); ?></td>
             <td class="yc-actions">
-              <button class="btn edit-year-btn highlight-edit-btn icon-btn btn-edit" type="button" title="Editar configuración"><i class="fas fa-pencil"></i></button>
+              <button class="btn edit-year-btn highlight-edit-btn icon-btn btn-edit" type="button" title="Editar configuración"> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L20.71 7.04a1 1 0 0 0 0-1.41L18.36 3.28a1 1 0 0 0-1.41 0L3 17.25z" fill="currentColor"/></svg> </button>
               <form method="post" onsubmit="return confirm('Eliminar configuración del año <?php echo intval($yc['year']); ?>?');">
                 <input type="hidden" name="delete_year_config" value="<?php echo intval($yc['year']); ?>">
-                <button class="btn btn-danger icon-btn btn-delete" type="submit" title="Eliminar configuración"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-danger icon-btn btn-delete" type="submit" title="Eliminar configuración"> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/></svg> </button>
               </form>
             </td>
           </tr>
@@ -518,8 +516,8 @@ if ($hol_pdo) {
             <td><?php echo $r['is_admin'] ? 'Sí' : '' ?></td>
             <td><?php echo $r['created_at']?></td>
             <td>
-              <button class="btn btn-sm icon-btn btn-secondary" type="button" onclick="openResetModal(<?php echo $r['id']; ?>, '<?php echo htmlspecialchars($r['username']); ?>')" title="Resetear contraseña"><i class="fas fa-key"></i></button>
-              <button class="btn btn-sm icon-btn btn-danger" type="button" onclick="openDeleteModal(<?php echo $r['id']; ?>, '<?php echo htmlspecialchars($r['username']); ?>')" title="Eliminar usuario"><i class="fas fa-trash"></i></button>
+              <button class="btn btn-sm" type="button" onclick="openResetModal(<?php echo $r['id']; ?>, '<?php echo htmlspecialchars($r['username']); ?>')">Reset clave</button>
+              <button class="btn btn-sm btn-danger" type="button" onclick="openDeleteModal(<?php echo $r['id']; ?>, '<?php echo htmlspecialchars($r['username']); ?>')">Eliminar</button>
             </td>
           </tr>
         <?php endforeach; ?>
@@ -527,7 +525,7 @@ if ($hol_pdo) {
       </table>
     </div>
 
-    <button class="btn btn-primary" id="open-add-user-btn" type="button" style="margin-top: 1rem;"><i class="fas fa-user-plus"></i> Añadir usuario</button>
+    <button class="btn btn-primary" id="open-add-user-btn" type="button" style="margin-top: 1rem;">+ Añadir usuario</button>
   </div>
 
   <!-- Modal for adding a user -->
@@ -605,6 +603,160 @@ if ($hol_pdo) {
 
 </div>
 
+<script>
+// User management modals
+(function(){
+  const openBtn = document.getElementById('open-add-user-btn');
+  const userOverlay = document.getElementById('userModalOverlay');
+  const closeBtn = document.getElementById('closeUserModal');
+  const resetOverlay = document.getElementById('resetModalOverlay');
+  const closeResetBtn = document.getElementById('closeResetModal');
+  const deleteOverlay = document.getElementById('deleteModalOverlay');
+  const closeDeleteBtn = document.getElementById('closeDeleteModal');
+
+  if (openBtn && userOverlay) {
+    openBtn.addEventListener('click', () => {
+      userOverlay.style.display = 'flex';
+      userOverlay.setAttribute('aria-hidden','false');
+      try{ document.getElementById('add-user-form').querySelector('input[name="username"]').focus(); }catch(e){}
+    });
+  }
+
+  if (closeBtn && userOverlay) {
+    closeBtn.addEventListener('click', () => {
+      userOverlay.style.display = 'none';
+      userOverlay.setAttribute('aria-hidden','true');
+    });
+  }
+
+  if (userOverlay) {
+    userOverlay.addEventListener('click', (e)=>{ if (e.target===userOverlay) { userOverlay.style.display='none'; userOverlay.setAttribute('aria-hidden','true'); } });
+  }
+
+  window.openResetModal = function(userId, username) {
+    document.getElementById('reset_user_id').value = userId;
+    document.getElementById('reset_username').textContent = username;
+    resetOverlay.style.display = 'flex';
+    resetOverlay.setAttribute('aria-hidden','false');
+  };
+
+  if (closeResetBtn && resetOverlay) {
+    closeResetBtn.addEventListener('click', () => {
+      resetOverlay.style.display = 'none';
+      resetOverlay.setAttribute('aria-hidden','true');
+    });
+  }
+
+  if (resetOverlay) {
+    resetOverlay.addEventListener('click', (e)=>{ if (e.target===resetOverlay) { resetOverlay.style.display='none'; resetOverlay.setAttribute('aria-hidden','true'); } });
+  }
+
+  window.openDeleteModal = function(userId, username) {
+    document.getElementById('delete_user_id').value = userId;
+    document.getElementById('delete_username').textContent = username;
+    deleteOverlay.style.display = 'flex';
+    deleteOverlay.setAttribute('aria-hidden','false');
+  };
+
+  if (closeDeleteBtn && deleteOverlay) {
+    closeDeleteBtn.addEventListener('click', () => {
+      deleteOverlay.style.display = 'none';
+      deleteOverlay.setAttribute('aria-hidden','true');
+    });
+  }
+
+  if (deleteOverlay) {
+    deleteOverlay.addEventListener('click', (e)=>{ if (e.target===deleteOverlay) { deleteOverlay.style.display='none'; deleteOverlay.setAttribute('aria-hidden','true'); } });
+  }
+})();
+
+// Holidays date picker and AJAX glue (migrated from holidays.php)
+(function(){
+  const monthSel = document.getElementById('hd_month');
+  const daySel = document.getElementById('hd_day');
+  const hidden = document.getElementById('hd_date');
+    const selYear = <?php echo intval($selHolidayYear); ?>;
+  // whether current user can mark holidays as global
+  const holIsAdmin = <?php echo (!empty($hol_user) && !empty($hol_user['is_admin'])) ? 'true' : 'false'; ?>;
+  if (monthSel && daySel && hidden) {
+    for (let m=1;m<=12;m++){ const v = String(m).padStart(2,'0'); const o=document.createElement('option'); o.value=v; o.textContent=v; monthSel.appendChild(o);} 
+    function setDays(n){ daySel.innerHTML=''; for(let d=1;d<=n;d++){ const v=String(d).padStart(2,'0'); const o=document.createElement('option'); o.value=v; o.textContent=v; daySel.appendChild(o);} }
+    setDays(31);
+    function updateHidden(){ hidden.value = selYear + '-' + monthSel.value + '-' + daySel.value; }
+    monthSel.addEventListener('change', function(){ const m=parseInt(this.value,10); const nd = new Date(2000,m,0).getDate(); setDays(nd); if (daySel.options.length<1) setDays(31); if (+daySel.value>nd) daySel.value=String(nd).padStart(2,'0'); updateHidden(); });
+    daySel.addEventListener('change', updateHidden);
+    monthSel.value = String((new Date()).getMonth()+1).padStart(2,'0');
+    daySel.value = String((new Date()).getDate()).padStart(2,'0');
+    updateHidden();
+    document.addEventListener('submit', function(e){ const f = e.target; if (!(f instanceof HTMLFormElement)) return; if (f.querySelector('#hd_date')) updateHidden(); }, true);
+  }
+
+  async function refreshList(){
+    try {
+      const res = await fetch(location.pathname + location.search, { headers: {'X-Requested-With':'XMLHttpRequest'} });
+      const text = await res.text();
+      const tmp = document.createElement('div'); tmp.innerHTML = text;
+      const newTable = tmp.querySelector('.table-responsive');
+      const cur = document.querySelector('.table-responsive');
+      if (newTable && cur) cur.innerHTML = newTable.innerHTML;
+    } catch(e){ console.error('refreshList error', e); }
+  }
+
+  document.addEventListener('submit', function(e){
+    const form = e.target; if (!(form instanceof HTMLFormElement)) return; const fd = new FormData(form); const action = fd.get('holiday_action'); if (action !== 'add' && action !== 'delete') return; e.preventDefault();
+    const submitBtn = form.querySelector('[type="submit"]'); let origText; if (submitBtn) { origText = submitBtn.innerText; submitBtn.disabled = true; submitBtn.innerText = 'Enviando...'; }
+    fetch(location.pathname + location.search, { method: 'POST', body: fd, headers: {'X-Requested-With':'XMLHttpRequest'} })
+      .then(async r => { const ct = r.headers.get('Content-Type') || ''; let data; if (ct.indexOf('application/json') !== -1) { data = await r.json(); } else { const text = await r.text(); try { data = JSON.parse(text); } catch(err) { data = { ok: false, text }; } }
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = origText; }
+        if (data && data.ok) { if (action === 'add') form.reset(); refreshList(); } else { alert('Error al procesar la solicitud'); }
+      }).catch(err => { console.error(err); if (submitBtn){ submitBtn.disabled = false; submitBtn.innerText = origText; } alert('Error de red'); });
+  }, false);
+})();
+
+// Modal open/close for holiday add (mirrors year modal behavior)
+(function(){
+  const openBtn = document.getElementById('openAddHolidayBtn');
+  const overlay = document.getElementById('holidayModalOverlay');
+  const closeBtn = document.getElementById('closeHolidayModal');
+  const addForm = document.getElementById('holidayAddForm');
+  if (!openBtn || !overlay) return;
+  openBtn.addEventListener('click', () => { overlay.style.display = 'flex'; overlay.setAttribute('aria-hidden','false'); try{ addForm.reset(); addForm.querySelector('[name="label"]').focus(); }catch(e){} });
+  closeBtn && closeBtn.addEventListener('click', () => { overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); });
+  overlay.addEventListener('click', (e)=>{ if (e.target===overlay) { overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); } });
+})();
+<style>
+/* Settings page: force listing panels to have white background for readability */
+.table-responsive { background: #ffffff !important; padding: 12px !important; border-radius: 8px; }
+.table-responsive .sheet { background: #ffffff !important; }
+
+/* Override holiday/vacation row highlights inside settings listing to keep a neutral background */
+.table-responsive .sheet tbody tr.holiday td,
+.table-responsive .sheet tbody tr.vacation td,
+.table-responsive .sheet tbody tr.personal td,
+.table-responsive .sheet tbody tr.illness td,
+.table-responsive .sheet tbody tr.permiso td {
+  background: transparent !important;
+}
+/* Stronger, more specific overrides to hide icons and ensure transparency */
+.container .card .table-responsive .sheet tbody tr.holiday td,
+.container .card .table-responsive .sheet tbody tr.vacation td,
+.container .card .table-responsive .sheet tbody tr.personal td,
+.container .card .table-responsive .sheet tbody tr.illness td,
+.container .card .table-responsive .sheet tbody tr.permiso td {
+  background-color: transparent !important;
+  background: none !important;
+}
+.container .card .table-responsive .sheet tbody tr.holiday td:first-child::before,
+.container .card .table-responsive .sheet tbody tr.vacation td:first-child::before,
+.container .card .table-responsive .sheet tbody tr.personal td:first-child::before,
+.container .card .table-responsive .sheet tbody tr.illness td:first-child::before,
+.container .card .table-responsive .sheet tbody tr.permiso td:first-child::before {
+  display: none !important;
+}
+
+/* (Modal styles are shared in styles.css via .modal-*) */
+</style>
+
 <!-- Modal for adding a new year -->
 <div id="yearModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
   <div id="yearModal" class="modal-dialog" role="dialog" aria-modal="true">
@@ -653,13 +805,243 @@ if ($hol_pdo) {
   </div>
 </div>
 
-<script src="js/settings-modals.js"></script>
-<script src="js/settings-user-management.js"></script>
-<script src="js/settings-holiday-form.js"></script>
-<script src="js/settings-edit-years.js"></script>
-<script src="js/settings-edit-holidays.js"></script>
+<script>
+// Modal open/close and simple reset
+(function(){
+  const openBtn = document.getElementById('openAddYearBtn');
+  const overlay = document.getElementById('yearModalOverlay');
+  const closeBtn = document.getElementById('closeYearModal');
+  const addForm = document.getElementById('yearAddForm');
+  if (!openBtn || !overlay) return;
+  openBtn.addEventListener('click', () => { overlay.style.display = 'flex'; overlay.setAttribute('aria-hidden','false'); addForm.reset(); addForm.querySelector('[name="yearcfg_year"]').focus(); });
+  closeBtn && closeBtn.addEventListener('click', () => { overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); });
+  overlay.addEventListener('click', (e)=>{ if (e.target===overlay) { overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); } });
+})();
+</script>
 
+<script>
+// Inline edit for year rows: convert cells to inputs, save via AJAX, cancel restores
+(function(){
+  function el(sel, ctx){ return (ctx||document).querySelector(sel); }
+  function els(sel, ctx){ return Array.from((ctx||document).querySelectorAll(sel)); }
+
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('.edit-year-btn'); if (!btn) return;
+    const tr = btn.closest('tr'); if (!tr) return;
+    if (tr.dataset.editing === '1') return;
+    tr.dataset.editing = '1';
+    // store original html
+    tr._orig = {};
+    ['year','mon_thu','friday','summer_mon_thu','summer_friday','coffee_minutes','lunch_minutes'].forEach(function(k){
+      const td = tr.querySelector('.yc-' + k.replace(/_/g,'_')) || tr.querySelector('.yc-' + k);
+      if (td) tr._orig[k] = td.innerHTML;
+    });
+    // replace cells with inputs
+    function setInput(cls, name, val){
+      const td = tr.querySelector('.yc-' + cls);
+      if (!td) return;
+      td.innerHTML = '<input class="form-control" name="' + name + '" value="' + (val !== null && val !== undefined ? String(val) : '') + '">';
+    }
+    setInput('year', 'yearcfg_year', tr.dataset.year);
+    setInput('mon_thu', 'yearcfg_mon_thu', tr.dataset.mon_thu);
+    setInput('friday', 'yearcfg_friday', tr.dataset.friday);
+    setInput('summer_mon_thu', 'yearcfg_summer_mon_thu', tr.dataset.summer_mon_thu);
+    setInput('summer_friday', 'yearcfg_summer_friday', tr.dataset.summer_friday);
+    setInput('coffee_minutes', 'yearcfg_coffee_minutes', tr.dataset.coffee_minutes);
+    setInput('lunch_minutes', 'yearcfg_lunch_minutes', tr.dataset.lunch_minutes);
+
+    // replace actions with Save / Cancel (SVG icons)
+    const actionsTd = btn.parentElement;
+    actionsTd._orig = actionsTd.innerHTML;
+    actionsTd.innerHTML = '';
+    const saveBtn = document.createElement('button'); saveBtn.className = 'btn-primary save-year-btn icon-btn'; saveBtn.type='button'; saveBtn.title = 'Guardar'; saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM12 19a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="currentColor"/></svg>';
+    const cancelBtn = document.createElement('button'); cancelBtn.className='btn-secondary cancel-year-btn icon-btn'; cancelBtn.type='button'; cancelBtn.title='Cancelar'; cancelBtn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.41 4.29 19.71 2.88 18.3 9.17 12 2.88 5.71 4.29 4.29 10.59 10.59 16.88 4.29z" fill="currentColor"/></svg>';
+    actionsTd.appendChild(saveBtn); actionsTd.appendChild(cancelBtn);
+
+    cancelBtn.addEventListener('click', function(){
+      // restore
+      ['year','mon_thu','friday','summer_mon_thu','summer_friday','coffee_minutes','lunch_minutes'].forEach(function(k){
+        const td = tr.querySelector('.yc-' + k);
+        if (td) td.innerHTML = tr._orig[k] ?? '';
+      });
+      actionsTd.innerHTML = actionsTd._orig;
+      delete tr.dataset.editing; delete tr._orig; delete actionsTd._orig;
+    });
+
+    saveBtn.addEventListener('click', function(){
+      const fd = new FormData(); fd.append('save_year_config', '1');
+      const inputs = tr.querySelectorAll('input[name]');
+      inputs.forEach(function(inp){ fd.append(inp.name, inp.value); });
+      // send
+      saveBtn.disabled = true; saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="20" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/></svg>';
+      fetch(location.pathname + location.search, { method:'POST', body:fd, headers: {'X-Requested-With':'XMLHttpRequest'} })
+        .then(r=>r.json().catch(()=>({ok:false})))
+        .then(function(data){
+          if (data && data.ok) {
+            // reload to show persisted values
+            location.reload();
+          } else {
+            alert('Error al guardar la configuración del año');
+            saveBtn.disabled = false; saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM12 19a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="currentColor"/></svg>';
+          }
+        }).catch(function(err){ console.error(err); alert('Error de red'); saveBtn.disabled=false; saveBtn.innerHTML='💾'; });
+    });
+  });
+})();
+</script>
+  </div>
+</div>
+<script>
+// Inline edit for holiday rows
+(function(){
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('.edit-holiday-btn'); if (!btn) return;
+    const tr = btn.closest('tr'); if (!tr || tr.dataset.editing==='1') return;
+    tr.dataset.editing='1';
+    const hid = tr.dataset.hid;
+    tr._orig = {};
+    ['date','annual','type','label','global'].forEach(k=>{ const td = (k==='global') ? tr.querySelector('.holiday-global') : tr.querySelector('.holiday-' + k); if (td) tr._orig[k]=td.innerHTML; });
+    const dateRaw = tr.dataset.date || '';
+    const annualRaw = tr.dataset.annual === '1';
+    const typeRaw = tr.dataset.type || 'holiday';
+    const labelRaw = tr.dataset.label || '';
+    const dateTd = tr.querySelector('.holiday-date'); if (dateTd) dateTd.innerHTML = '<input class="form-control" type="date" name="date" value="'+ (dateRaw||'') + '">';
+    const annualTd = tr.querySelector('.holiday-annual'); if (annualTd) annualTd.innerHTML = '<input type="checkbox" name="annual" ' + (annualRaw? 'checked':'' ) + '>';
+    const typeTd = tr.querySelector('.holiday-type'); if (typeTd) typeTd.innerHTML = '<select name="type" class="form-control"><option value="holiday">Festivo</option><option value="vacation">Vacaciones</option><option value="personal">Asuntos propios</option><option value="enfermedad">Enfermedad</option><option value="permiso">Permiso</option></select>'; if (typeTd) typeTd.querySelector('select').value = typeRaw;
+    const labelTd = tr.querySelector('.holiday-label'); if (labelTd) labelTd.innerHTML = '<input class="form-control" name="label" value="'+ (labelRaw.replace(/"/g,'&quot;')) + '">';
+    const actionsTd = tr.querySelector('.holiday-actions'); actionsTd._orig = actionsTd.innerHTML; actionsTd.innerHTML = '';
+    const globalTd = tr.querySelector('.holiday-global');
+    if (globalTd) {
+      globalTd._orig = globalTd.innerHTML;
+      // Always show editable checkbox for 'global' in inline edit; server enforces admin rights
+      const checked = (tr.dataset.global === '1') ? 'checked' : '';
+      globalTd.innerHTML = '<label class="form-check"><input type="checkbox" name="global" ' + checked + '><span>Global</span></label>';
+    }
+    const saveBtn = document.createElement('button'); saveBtn.type='button'; saveBtn.className='btn-primary save-holiday-btn icon-btn'; saveBtn.title='Guardar'; saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM12 19a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="currentColor"/></svg>';
+    const cancelBtn = document.createElement('button'); cancelBtn.type='button'; cancelBtn.className='btn-secondary cancel-holiday-btn icon-btn'; cancelBtn.title='Cancelar'; cancelBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.41 4.29 19.71 2.88 18.3 9.17 12 2.88 5.71 4.29 4.29 10.59 10.59 16.88 4.29z" fill="currentColor"/></svg>';
+    actionsTd.appendChild(saveBtn); actionsTd.appendChild(cancelBtn);
+    cancelBtn.addEventListener('click', function(){ ['date','annual','type','label','global'].forEach(k=>{ const td = (k==='global') ? tr.querySelector('.holiday-global') : tr.querySelector('.holiday-'+k); if (td) td.innerHTML = tr._orig[k] ?? ''; }); actionsTd.innerHTML = actionsTd._orig; delete tr._orig; delete tr.dataset.editing; });
+    saveBtn.addEventListener('click', function(){
+      const fd = new FormData(); fd.append('holiday_action','update'); fd.append('id', hid);
+      const dateVal = tr.querySelector('.holiday-date [name="date"]')?.value || '';
+      const annualVal = tr.querySelector('.holiday-annual [name="annual"]')?.checked ? '1' : '';
+      const typeVal = tr.querySelector('.holiday-type [name="type"]')?.value || 'holiday';
+      const labelVal = tr.querySelector('.holiday-label [name="label"]')?.value || '';
+      const globalEl = tr.querySelector('.holiday-global [name="global"]');
+      const globalVal = globalEl ? (globalEl.checked ? '1' : '0') : '0';
+      fd.append('date', dateVal); fd.append('annual', annualVal); fd.append('type', typeVal); fd.append('label', labelVal);
+      fd.append('global', globalVal);
+      saveBtn.disabled = true; saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="20" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/></svg>';
+      fetch(location.pathname + location.search, { method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'} })
+        .then(r=>r.json().catch(()=>({ok:false})))
+        .then(function(data){ if (data && data.ok) { location.reload(); } else { alert('Error al guardar festivo'); saveBtn.disabled=false; saveBtn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM12 19a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="currentColor"/></svg>'; } })
+        .catch(function(){ alert('Error de red'); saveBtn.disabled=false; saveBtn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM12 19a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="currentColor"/></svg>'; });
+    });
+  });
+})();
+</script>
 <?php include __DIR__ . '/footer.php'; ?>
+<style>
+/* Dev: force visibility of inline edit buttons when hidden by other styles */
+.edit-holiday-btn, .edit-year-btn {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+.holiday-actions .btn, .yc-actions .btn { display: inline-block !important; }
+/* Highlight variant for edit buttons */
+.highlight-edit-btn { background: linear-gradient(90deg,#ffd54d,#ffb74d); color:#1b1b1b; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+</style>
+
+<style>
+/* Ensure edit and delete buttons look identical in both holiday and year lists */
+.holiday-actions .highlight-edit-btn,
+.yc-actions .highlight-edit-btn {
+  padding: 6px 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  display:inline-flex !important;
+  align-items:center; justify-content:center;
+}
+.holiday-actions .btn-danger,
+.yc-actions .btn-danger {
+  background-color: var(--danger-color) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  padding: 6px 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  display:inline-flex !important;
+  align-items:center; justify-content:center;
+}
+.holiday-actions .icon-btn, .yc-actions .icon-btn { padding: 6px 8px !important; }
+
+/* Common delete button helper */
+.btn-delete {
+  background-color: var(--danger-color) !important;
+  color: #ffffff !important;
+  border: none !important;
+  padding: 6px 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+}
+</style>
+
+<style>
+/* Force exact same visuals for edit buttons in both lists */
+.holiday-actions .edit-holiday-btn,
+.yc-actions .edit-year-btn {
+  background: linear-gradient(90deg,#ffd54d,#ffb74d) !important;
+  background-image: linear-gradient(90deg,#ffd54d,#ffb74d) !important;
+  color: #1b1b1b !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  padding: 6px 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-repeat: no-repeat !important;
+}
+</style>
+
+<style>
+/* Prevent responsive hiding of the actions column for tables marked no-hide-actions */
+@media (max-width: 1100px) {
+  .sheet.compact.no-hide-actions th:nth-child(5), .sheet.compact.no-hide-actions td:nth-child(5) { display: table-cell !important; }
+}
+@media (max-width: 900px) {
+  .sheet.compact.no-hide-actions th:nth-child(5), .sheet.compact.no-hide-actions td:nth-child(5) { display: table-cell !important; }
+}
+@media (max-width: 700px) {
+  .sheet.compact.no-hide-actions th:nth-child(5), .sheet.compact.no-hide-actions td:nth-child(5) { display: table-cell !important; }
+}
+</style>
+
+<script>
+// Diagnostic: check if edit buttons are present and visible; if not, show a small banner and force visibility
+document.addEventListener('DOMContentLoaded', function(){
+  function isVisible(el){ if(!el) return false; const cs = window.getComputedStyle(el); return cs && cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity || '1') > 0.05; }
+  const yearBtns = Array.from(document.querySelectorAll('.edit-year-btn'));
+  const holBtns = Array.from(document.querySelectorAll('.edit-holiday-btn'));
+  const anyVisible = yearBtns.concat(holBtns).some(isVisible);
+  if (!anyVisible) {
+    console.warn('No visible edit buttons detected; forcing visibility');
+    // force styles
+    yearBtns.concat(holBtns).forEach(function(b){ if(b){ b.style.display='inline-block'; b.style.visibility='visible'; b.style.opacity='1'; b.style.pointerEvents='auto'; b.classList.add('highlight-edit-btn'); } });
+    // show banner
+    const ban = document.createElement('div'); ban.id='editButtonsBanner'; ban.style.position='fixed'; ban.style.left='12px'; ban.style.right='12px'; ban.style.top='12px'; ban.style.zIndex='99999'; ban.style.background='#fff3cd'; ban.style.color='#856404'; ban.style.border='1px solid #ffeeba'; ban.style.padding='10px 14px'; ban.style.borderRadius='6px'; ban.style.boxShadow='0 6px 18px rgba(0,0,0,0.08)'; ban.textContent = 'Atención: botones de edición estaban ocultos; los he forzado visibles para diagnóstico. Por favor recarga la página (Ctrl+F5) y comprueba si persisten.';
+    const close = document.createElement('button'); close.textContent='Cerrar'; close.style.marginLeft='12px'; close.className='btn-secondary'; close.addEventListener('click', function(){ ban.remove(); }); ban.appendChild(close);
+    document.body.appendChild(ban);
+  }
+});
+</script>
+</style>
 </body>
 </html>
-

@@ -1087,6 +1087,10 @@ label.form-label { display: flex; flex-direction: column; gap: 6px; margin: 0; f
 .actions .btn { min-width: 120px; }
 .actions { display: flex; gap: 10px; align-items: center; }
 
+/* Login page button styling */
+.login-card .actions { display: flex; justify-content: center; margin-top: 2rem; }
+.login-card .actions .btn { width: 100%; max-width: 100%; }
+
 /* Badges slightly larger for calendar view */
 .badge { font-size: 0.78rem; padding: 0.3rem 0.6rem; }
 
@@ -1096,8 +1100,158 @@ label.form-label { display: flex; flex-direction: column; gap: 6px; margin: 0; f
 /* Small responsive tweak for narrow screens */
 @media (max-width: 720px) {
     .row-form { flex-direction: column; }
-    .sidebar { transform: translateX(-100%); }
-    .main-content { margin-left: 0; }
+}
+
+/* Mobile menu toggle button */
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-primary);
+  padding: 0.5rem 0.75rem;
+  align-items: center;
+  justify-content: center;
+  z-index: 210;
+  transition: all 0.2s;
+}
+
+.mobile-menu-toggle:hover {
+  opacity: 0.7;
+}
+
+#mobileMenuOpen {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+}
+
+#mobileMenuClose {
+  background: transparent;
+  padding: 0.5rem 0.75rem;
+}
+
+/* Mobile responsive: show/hide hamburger menu */
+@media (max-width: 768px) {
+  .mobile-menu-toggle { display: flex; }
+  
+  /* Desktop topbar layout turns into vertical sidebar on mobile */
+  .app-container { flex-direction: column; }
+  .header {
+    position: relative;
+  }
+  
+  .sidebar { 
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 75%;
+    max-width: 300px;
+    height: 100vh;
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+  }
+  
+  .sidebar::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.3);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+  }
+  
+  .sidebar.open::after {
+    opacity: 1;
+    pointer-events: all;
+  }
+  
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .sidebar-header .sidebar-brand-visual {
+    flex: 1;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .sidebar-header .logo h1 {
+    font-size: 1.1rem;
+    margin: 0;
+  }
+  
+  .sidebar-menu {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    overflow-y: auto;
+    flex: 1;
+  }
+  
+  .menu-section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 0;
+    gap: 0;
+    margin: 0;
+  }
+  
+  .menu-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+  }
+  
+  .menu-user {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+  }
+  
+  .menu-user-dropdown {
+    position: static;
+    display: none;
+    background: var(--bg-color);
+    border: none;
+    box-shadow: none;
+    top: auto;
+    right: auto;
+    min-width: auto;
+  }
+  
+  .menu-user.open .menu-user-dropdown {
+    display: block;
+  }
+  
+  .dropdown-item {
+    padding: 0.5rem 1rem 0.5rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .main-content {
+    position: relative;
+  }
 }
 
 /* ===== Modal (reusable) ===== */

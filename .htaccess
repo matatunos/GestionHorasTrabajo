@@ -1,0 +1,22 @@
+AddType application/x-httpd-php .php
+
+<FilesMatch "\.php$">
+    SetHandler application/x-httpd-php
+</FilesMatch>
+
+# Force PHP processing even if headers are wrong
+<IfModule mod_php.c>
+    php_flag engine on
+    php_flag short_open_tags On
+</IfModule>
+
+# For PHP-FPM if it's being used
+<IfModule mod_fastcgi.c>
+    AddHandler fastcgi-script .php
+    FastCgiServer /usr/sbin/php-fpm -socket /var/run/php-fpm.sock
+</IfModule>
+
+# Prevent serving source files
+<FilesMatch "\.(js|css|txt)$">
+    SetHandler default-handler
+</FilesMatch>

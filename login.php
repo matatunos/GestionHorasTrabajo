@@ -26,11 +26,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'){
       <div class="login-header"><div class="logo"><h1>GestionHoras</h1></div></div>
       <h2>Acceso</h2>
       <?php if($error): ?><div class="alert"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
-      <form method="post">
+      <form method="post" id="loginForm">
         <div class="form-group"><label class="form-label">Usuario <input class="form-control" name="username" required></label></div>
-        <div class="form-group"><label class="form-label">Contraseña <input class="form-control" type="password" name="password" required></label></div>
+        <div class="form-group"><label class="form-label">Contraseña <input class="form-control" type="password" name="password" required id="passwordInput"></label></div>
         <div class="actions"><button class="btn btn-primary" type="submit">Entrar</button></div>
       </form>
+      <script>
+        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            document.getElementById('loginForm').submit();
+          }
+        });
+      </script>
     </div>
   </div>
 </body>

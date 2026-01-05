@@ -1,0 +1,285 @@
+/* settings.css - Estilos específicos para la página de configuración */
+
+/* Settings page: force listing panels to have white background for readability */
+.table-responsive { background: #ffffff !important; padding: 12px !important; border-radius: 8px; }
+.table-responsive .sheet { background: #ffffff !important; }
+
+/* Override holiday/vacation row highlights inside settings listing to keep a neutral background */
+.table-responsive .sheet tbody tr.holiday td,
+.table-responsive .sheet tbody tr.vacation td,
+.table-responsive .sheet tbody tr.personal td,
+.table-responsive .sheet tbody tr.illness td,
+.table-responsive .sheet tbody tr.permiso td {
+  background: transparent !important;
+}
+
+/* Stronger, more specific overrides to hide icons and ensure transparency */
+.container .card .table-responsive .sheet tbody tr.holiday td,
+.container .card .table-responsive .sheet tbody tr.vacation td,
+.container .card .table-responsive .sheet tbody tr.personal td,
+.container .card .table-responsive .sheet tbody tr.illness td,
+.container .card .table-responsive .sheet tbody tr.permiso td {
+  background-color: transparent !important;
+  background: none !important;
+}
+
+.container .card .table-responsive .sheet tbody tr.holiday td:first-child::before,
+.container .card .table-responsive .sheet tbody tr.vacation td:first-child::before,
+.container .card .table-responsive .sheet tbody tr.personal td:first-child::before,
+.container .card .table-responsive .sheet tbody tr.illness td:first-child::before,
+.container .card .table-responsive .sheet tbody tr.permiso td:first-child::before {
+  display: none !important;
+}
+
+/* Edit button styling */
+.edit-holiday-btn, 
+.edit-year-btn {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.holiday-actions .btn, 
+.yc-actions .btn { 
+  display: inline-block !important;
+}
+
+/* Highlight variant for edit buttons */
+.highlight-edit-btn {
+  background: linear-gradient(90deg, #ffd54d, #ffb74d);
+  color: #1b1b1b;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+/* Ensure consistent button sizing in tables */
+.holiday-actions .highlight-edit-btn,
+.yc-actions .highlight-edit-btn {
+  padding: 6px 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.holiday-actions .btn-danger,
+.yc-actions .btn-danger {
+  background-color: var(--danger-color) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  padding: 6px 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.holiday-actions .icon-btn, 
+.yc-actions .icon-btn {
+  padding: 6px 8px !important;
+}
+
+/* Common delete button helper */
+.btn-delete {
+  background-color: var(--danger-color) !important;
+  color: #ffffff !important;
+  border: none !important;
+  padding: 6px 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+}
+
+/* Force exact same visuals for edit buttons in both lists */
+.holiday-actions .edit-holiday-btn,
+.yc-actions .edit-year-btn {
+  background: linear-gradient(90deg, #ffd54d, #ffb74d) !important;
+  background-image: linear-gradient(90deg, #ffd54d, #ffb74d) !important;
+  color: #1b1b1b !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08) !important;
+  padding: 6px 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Prevent responsive hiding of the actions column for tables marked no-hide-actions */
+@media (max-width: 1100px) {
+  .sheet.compact.no-hide-actions th:nth-child(5), 
+  .sheet.compact.no-hide-actions td:nth-child(5) {
+    display: table-cell !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .sheet.compact.no-hide-actions th:nth-child(5), 
+  .sheet.compact.no-hide-actions td:nth-child(5) {
+    display: table-cell !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .sheet.compact.no-hide-actions th:nth-child(5), 
+  .sheet.compact.no-hide-actions td:nth-child(5) {
+    display: table-cell !important;
+  }
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-dialog {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 90%;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Form styling for settings */
+.config-card {
+  background: #f9f9f9;
+  padding: 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.form-help {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.form-check input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.small {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Table responsive adjustments */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.sheet.compact {
+  font-size: 14px;
+}
+
+.sheet thead {
+  background: #f5f5f5;
+}
+
+.sheet th {
+  padding: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.sheet td {
+  padding: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.sheet tbody tr:hover {
+  background: #fafafa;
+}
+
+/* Row type styling for holidays */
+.sheet tbody tr.holiday {
+  border-left: 4px solid #4CAF50;
+}
+
+.sheet tbody tr.vacation {
+  border-left: 4px solid #2196F3;
+}
+
+.sheet tbody tr.personal {
+  border-left: 4px solid #FF9800;
+}
