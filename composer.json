@@ -1,0 +1,12 @@
+{
+    "name": "matatunos/gestion-horas",
+    "type": "project",
+    "description": "Sistema de Gestión de Horas de Trabajo",
+    "require": {
+        "php": ">=8.0",
+        "phpoffice/phpspreadsheet": "^2.0"
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}
