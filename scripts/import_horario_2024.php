@@ -6,7 +6,7 @@
  * ubicado en la carpeta uploads/ o en la raíz del proyecto.
  * 
  * Procesa las hojas: 2024, 2025, 2026
- * Lee datos desde la fila 11 de cada hoja:
+ * Lee datos desde la fila 13 de cada hoja (filas 11-12 son encabezados):
  *   - Columna B: Día (se convierte a formato yyyy-mm-dd)
  *   - Columna D: Hora entrada
  *   - Columna E: Café salida
@@ -39,7 +39,8 @@ const MAX_ROWS = 500; // Máximo de filas a procesar por hoja
 $options = getopt('', ['user-id:', 'file:', 'dry-run', 'help']);
 
 if (isset($options['help'])) {
-    echo file_get_contents(__FILE__, false, null, 0, strpos(file_get_contents(__FILE__), '*/') + 2);
+    $fileContent = file_get_contents(__FILE__);
+    echo substr($fileContent, 0, strpos($fileContent, '*/') + 2);
     exit(0);
 }
 
