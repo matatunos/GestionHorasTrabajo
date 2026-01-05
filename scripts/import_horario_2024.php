@@ -39,8 +39,31 @@ const MAX_ROWS = 500; // Máximo de filas a procesar por hoja
 $options = getopt('', ['user-id:', 'file:', 'dry-run', 'help']);
 
 if (isset($options['help'])) {
-    $fileContent = file_get_contents(__FILE__);
-    echo substr($fileContent, 0, strpos($fileContent, '*/') + 2);
+    echo <<<'HELP'
+Importador de HORARIO_2024.xlsx
+
+Este script importa datos de asistencia desde el archivo HORARIO_2024.xlsx
+ubicado en la carpeta uploads/ o en la raíz del proyecto.
+
+Procesa las hojas: 2024, 2025, 2026
+Lee datos desde la fila 13 de cada hoja (filas 11-12 son encabezados):
+  - Columna B: Día (se convierte a formato yyyy-mm-dd)
+  - Columna D: Hora entrada
+  - Columna E: Café salida
+  - Columna F: Café entrada
+  - Columna I: Comida salida
+  - Columna J: Comida entrada
+  - Columna L: Hora salida
+
+Uso:
+  php scripts/import_horario_2024.php [--user-id=N] [--file=ruta] [--dry-run]
+
+Opciones:
+  --user-id=N    ID del usuario para el que se importan los datos (requerido)
+  --file=ruta    Ruta al archivo Excel (por defecto: uploads/HORARIO_2024.xlsx o HORARIO_2024.xlsx)
+  --dry-run      Modo de prueba, no guarda datos en la base de datos
+
+HELP;
     exit(0);
 }
 
@@ -156,27 +179,9 @@ foreach (SHEETS_TO_PROCESS as $sheetName) {
         $rowsProcessed++;
         
         // Convertir el valor de la columna B a fecha
-        $date = null;
-        try {
-            if (Date::isDateTime($cellB)) {
-                // Es una fecha de Excel
-                $dateObj = Date::excelToDateTimeObject($colBValue);
-                // Usar el año de la hoja para asegurar consistencia
-                $dateObj->setDate($year, $dateObj->format('m'), $dateObj->format('d'));
-                $date = $dateObj->format('Y-m-d');
-            } else {
-                // Intentar parsear como texto
-                $formattedValue = $cellB->getFormattedValue();
-                $dateObj = DateTime::createFromFormat('d-M', $formattedValue);
-                if ($dateObj) {
-                    $dateObj->setDate($year, $dateObj->format('m'), $dateObj->format('d'));
-                    $date = $dateObj->format('Y-m-d');
-                } else {
-                    throw new Exception("No se pudo parsear la fecha: $formattedValue");
-                }
-            }
-        } catch (Exception $e) {
-            echo "  Advertencia fila $row: " . $e->getMessage() . "\n";
+        $date = convertCellToDate($cellB, $colBValue, $year);
+        if (!$date) {
+            echo "  Advertencia fila $row: No se pudo convertir la fecha\n";
             $stats['errors']++;
             continue;
         }
@@ -210,8 +215,7 @@ foreach (SHEETS_TO_PROCESS as $sheetName) {
         );
         
         if ($dryRun) {
-            echo " [DRY RUN]\n";
-            $stats['inserted']++;
+            echo " [DRY RUN - NO GUARDADO]\n";
             continue;
         }
         
@@ -283,6 +287,37 @@ if ($dryRun) {
 }
 
 exit($stats['errors'] > 0 ? 1 : 0);
+
+/**
+ * Convierte el valor de una celda de Excel a formato de fecha yyyy-mm-dd
+ * 
+ * @param \PhpOffice\PhpSpreadsheet\Cell\Cell $cell Celda de Excel
+ * @param mixed $cellValue Valor crudo de la celda
+ * @param int $year Año a usar para la fecha
+ * @return string|null Fecha en formato yyyy-mm-dd o null si no se pudo convertir
+ */
+function convertCellToDate($cell, $cellValue, int $year): ?string {
+    try {
+        if (Date::isDateTime($cell)) {
+            // Es una fecha de Excel
+            $dateObj = Date::excelToDateTimeObject($cellValue);
+            // Usar el año de la hoja para asegurar consistencia
+            $dateObj->setDate($year, (int)$dateObj->format('m'), (int)$dateObj->format('d'));
+            return $dateObj->format('Y-m-d');
+        } else {
+            // Intentar parsear como texto
+            $formattedValue = $cell->getFormattedValue();
+            $dateObj = DateTime::createFromFormat('d-M', $formattedValue);
+            if ($dateObj) {
+                $dateObj->setDate($year, (int)$dateObj->format('m'), (int)$dateObj->format('d'));
+                return $dateObj->format('Y-m-d');
+            }
+        }
+    } catch (Exception $e) {
+        // Error al convertir fecha
+    }
+    return null;
+}
 
 /**
  * Formatea un valor de tiempo de una celda de Excel
