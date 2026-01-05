@@ -8,52 +8,29 @@ $pdo = get_pdo();
 
 $year = intval($_GET['year'] ?? date('Y'));
 $today = date('Y-m-d');
-$currentYear = date('Y');
+$currentYear = intval(date('Y'));
 $currentMonth = intval(date('n'));
+// Years selector (dynamic): ONLY years where this user has entries
+$years = [];
+try {
+  $ystmt = $pdo->prepare('SELECT DISTINCT YEAR(date) AS y FROM entries WHERE user_id = ? AND date IS NOT NULL ORDER BY y DESC');
+  $ystmt->execute([$user['id']]);
+  foreach ($ystmt->fetchAll() as $r) { if (!empty($r['y'])) $years[] = intval($r['y']); }
+} catch (Throwable $e) { /* ignore */ }
+$years = array_values(array_unique(array_filter($years)));
+rsort($years);
+
+// If requested year has no data, fall back to most recent year with data
+if (!empty($years) && !in_array($year, $years, true)) {
+  $year = $years[0];
+}
+
+// If user has no data at all, allow viewing current year (empty)
+if (empty($years)) {
+  $years = [intval(date('Y'))];
+}
+
 $config = get_year_config($year, $user['id']);
-
-// Date range filter for custom charts
-$start_date = $_GET['start_date'] ?? '';
-$end_date = $_GET['end_date'] ?? '';
-if (!$start_date || !$end_date) {
-  // default last 30 days
-  $end_date = $today;
-  $start_date = date('Y-m-d', strtotime($end_date . ' -29 days'));
-}
-
-// allow user to force recompute their cached summary for this year
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'force_recalc') {
-  // compute monthly totals for this user and store in app_settings
-  $months_calc = [];
-  for ($m=1;$m<=12;$m++) $months_calc[$m] = ['worked'=>0,'expected'=>0];
-  $startTs = strtotime("$year-01-01"); $endTs = strtotime("$year-12-31");
-  $cfg = get_year_config($year, $user['id']);
-  for ($ts = $startTs; $ts <= $endTs; $ts += 86400) {
-    $d = date('Y-m-d', $ts); $mm = intval(date('n', $ts));
-    // stop at today for current month
-    if ($year == $currentYear && $d > $today) break;
-    $est = $pdo->prepare('SELECT * FROM entries WHERE user_id = ? AND date = ? LIMIT 1');
-    $est->execute([$user['id'],$d]);
-    $e = $est->fetch() ?: ['date'=>$d];
-    $hstmt = $pdo->prepare('SELECT date,label,type,annual,user_id FROM holidays WHERE (YEAR(date)=? OR annual=1) AND (user_id IS NULL OR user_id = ?)');
-    $hstmt->execute([$year,$user['id']]);
-    $hols = [];
-    foreach ($hstmt->fetchAll() as $hh) { $kd = $hh['date']; if (!empty($hh['annual'])) $kd = sprintf('%04d-%s', $year, substr($hh['date'],5)); $hols[$kd] = $hh; }
-    if (isset($hols[$d])) { $e['is_holiday']=true; $e['special_type']=$hols[$d]['type']; }
-    $calc = compute_day($e, $cfg);
-    $months_calc[$mm]['worked'] += $calc['worked_minutes'] ?? 0;
-    $months_calc[$mm]['expected'] += $calc['expected_minutes'] ?? 0;
-  }
-  $key = 'summary_' . $user['id'] . '_' . $year;
-  $pdo->exec("CREATE TABLE IF NOT EXISTS app_settings (
-    name VARCHAR(191) PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-  $stmt = $pdo->prepare('REPLACE INTO app_settings (name,value) VALUES (?,?)');
-  $stmt->execute([$key, json_encode($months_calc)]);
-  header('Location: dashboard.php?year=' . urlencode($year) . '&msg=' . urlencode('Recalculo completado')); exit;
-}
 
 // load entries for user for the year
 $stmt = $pdo->prepare('SELECT * FROM entries WHERE user_id = ? AND date BETWEEN ? AND ? ORDER BY date ASC');
@@ -74,44 +51,75 @@ try {
   }
 } catch (Throwable $e) { }
 
+function load_year_maps(PDO $pdo, int $userId, int $year): array {
+  // entries
+  $entries = [];
+  $stmt = $pdo->prepare('SELECT * FROM entries WHERE user_id = ? AND date BETWEEN ? AND ? ORDER BY date ASC');
+  $stmt->execute([$userId, sprintf('%04d-01-01', $year), sprintf('%04d-12-31', $year)]);
+  foreach ($stmt->fetchAll() as $r) { $entries[$r['date']] = $r; }
+
+  // holidays (map annual)
+  $holidayMap = [];
+  try {
+    $hstmt = $pdo->prepare('SELECT date,label,type,annual,user_id FROM holidays WHERE (YEAR(date) = ? OR annual = 1) AND (user_id IS NULL OR user_id = ?)');
+    $hstmt->execute([$year, $userId]);
+    foreach ($hstmt->fetchAll() as $h) {
+      $keyDate = $h['date'];
+      if (!empty($h['annual'])) $keyDate = sprintf('%04d-%s', $year, substr($h['date'],5));
+      $holidayMap[$keyDate] = ['label'=>$h['label'], 'type'=>$h['type']];
+    }
+  } catch (Throwable $e) { /* ignore */ }
+
+  $cfg = get_year_config($year, $userId);
+  return [$entries, $holidayMap, $cfg];
+}
+
+function count_afternoons_worked_in_month(int $year, int $month, array $entries, array $holidayMap, array $cfg, bool $limitToToday = false): int {
+  // "Tardes trabajadas" = días con saldo comida >= 1 hora (>= 60 min)
+  // saldo comida = lunch_balance (actual - configurado) en compute_day()
+  $count = 0;
+  $start = new DateTimeImmutable(sprintf('%04d-%02d-01', $year, $month));
+  $end = $start->modify('last day of this month');
+  if ($limitToToday) {
+    $today = new DateTimeImmutable('today');
+    if ($today < $end) $end = $today;
+  }
+  for ($cur = $start; $cur <= $end; $cur = $cur->modify('+1 day')) {
+    $d = $cur->format('Y-m-d');
+    $e = $entries[$d] ?? ['date' => $d];
+    if (isset($holidayMap[$d])) {
+      $e['is_holiday'] = true;
+      $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
+    }
+    $calc = compute_day($e, $cfg);
+    $lb = $calc['lunch_balance'];
+    if ($lb !== null && intval($lb) >= 60) $count++;
+  }
+  return $count;
+}
+
 // Prepare per-month aggregates
 $months = [];
 for ($m=1;$m<=12;$m++) {
   $months[$m] = ['worked' => 0, 'expected' => 0, 'days_counted' => 0];
 }
 
-// Try to use cached summary from app_settings if available
-try {
-  $cacheKey = 'summary_' . $user['id'] . '_' . $year;
-  $cstmt = $pdo->prepare('SELECT value FROM app_settings WHERE name = ? LIMIT 1');
-  $cstmt->execute([$cacheKey]);
-  $crow = $cstmt->fetch();
-  if ($crow && !empty($crow['value'])) {
-    $cached = json_decode($crow['value'], true);
-    if (is_array($cached)) {
-      // normalize into months (minutes)
-      for ($m=1;$m<=12;$m++) {
-        if (isset($cached[$m])) {
-          $months[$m]['worked'] = $cached[$m]['worked'] ?? 0;
-          $months[$m]['expected'] = $cached[$m]['expected'] ?? 0;
-          $months[$m]['days_counted'] = 0;
-        }
-      }
-      // mark that we used cache
-      $used_cache = true;
-    }
-  }
-} catch (Throwable $e) { /* ignore cache errors */ }
+// Nota: todos los cálculos se hacen sobre la marcha al cargar la página (sin caché)
 
 // iterate days and sum (compute dynamically on each page load)
-$startTs = strtotime("$year-01-01");
-$endTs = strtotime("$year-12-31");
+$startTs = strtotime(sprintf('%04d-01-01', $year));
+// Only count up to today for current year; for future years, count nothing.
+if ($year < $currentYear) {
+  $endTs = strtotime(sprintf('%04d-12-31', $year));
+} elseif ($year === $currentYear) {
+  $endTs = strtotime($today);
+} else {
+  $endTs = $startTs - 86400;
+}
 $month_values = array_fill(1,12,0);
 for ($ts = $startTs; $ts <= $endTs; $ts += 86400) {
   $d = date('Y-m-d', $ts);
   $m = intval(date('n', $ts));
-  // if month is current and year is current, stop at today
-  if ($year == $currentYear && $m == $currentMonth && $d > $today) break;
   $e = $entries[$d] ?? ['date' => $d];
   if (isset($holidayMap[$d])) {
     $e['is_holiday'] = true;
@@ -137,15 +145,178 @@ for ($ts = $startTs; $ts <= $endTs; $ts += 86400) {
 $ytd_worked = 0; $ytd_expected = 0;
 for ($m=1;$m<=12;$m++) {
   // if current year, only include months up to currentMonth
-  if ($year == $currentYear && $m > $currentMonth) break;
+  if ($year === $currentYear && $m > $currentMonth) break;
   $ytd_worked += $months[$m]['worked'];
   $ytd_expected += $months[$m]['expected'];
 }
 
+// Extra dashboard KPIs (computed on the fly)
+if ($year < $currentYear) {
+  $limitEnd = sprintf('%04d-12-31', $year);
+} elseif ($year === $currentYear) {
+  $limitEnd = $today;
+} else {
+  // Future year: don't count any days yet.
+  $limitEnd = sprintf('%04d-01-01', $year);
+}
+$todayInYear = (substr($today, 0, 4) === sprintf('%04d', $year));
+
+function has_any_time_fields(array $entry): bool {
+  foreach (['start','coffee_out','coffee_in','lunch_out','lunch_in','end'] as $k) {
+    if (!empty($entry[$k])) return true;
+  }
+  return false;
+}
+
+function fmt_clock(?int $minutesOfDay): string {
+  if ($minutesOfDay === null) return '—';
+  $m = max(0, min(23*60+59, $minutesOfDay));
+  $hh = intdiv($m, 60);
+  $mm = $m % 60;
+  return sprintf('%02d:%02d', $hh, $mm);
+}
+
+// Today card (only when viewing current year)
+$todayCalc = null;
+if ($todayInYear) {
+  $eToday = $entries[$today] ?? ['date' => $today];
+  if (isset($holidayMap[$today])) {
+    $eToday['is_holiday'] = true;
+    $eToday['special_type'] = $holidayMap[$today]['type'] ?? 'holiday';
+  }
+  $todayCalc = compute_day($eToday, $config);
+}
+
+// Data quality (workdays only): missing entries and incomplete days
+$missingDays = 0;
+$incompleteDays = 0;
+$incompleteStreak = 0;
+
+$dtStart = new DateTimeImmutable(sprintf('%04d-01-01', $year));
+$dtEnd = new DateTimeImmutable($limitEnd);
+// If we're viewing a future year, force an empty range.
+if ($year > $currentYear) {
+  $dtEnd = $dtStart->modify('-1 day');
+}
+for ($cur = $dtStart; $cur <= $dtEnd; $cur = $cur->modify('+1 day')) {
+  $d = $cur->format('Y-m-d');
+  $e = $entries[$d] ?? ['date' => $d];
+  if (isset($holidayMap[$d])) {
+    $e['is_holiday'] = true;
+    $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
+  }
+  $calc = compute_day($e, $config);
+  $expected = intval($calc['expected_minutes'] ?? 0);
+  if ($expected <= 0) continue;
+
+  $hasAny = has_any_time_fields($e);
+  $start = !empty($e['start']);
+  $end = !empty($e['end']);
+  if (!$hasAny) {
+    $missingDays++;
+  } else if (!$start || !$end) {
+    $incompleteDays++;
+  }
+}
+
+// Incomplete streak: count consecutive workdays (from end backwards) that are incomplete
+for ($cur = $dtEnd; $cur >= $dtStart; $cur = $cur->modify('-1 day')) {
+  $d = $cur->format('Y-m-d');
+  $e = $entries[$d] ?? ['date' => $d];
+  if (isset($holidayMap[$d])) {
+    $e['is_holiday'] = true;
+    $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
+  }
+  $calc = compute_day($e, $config);
+  $expected = intval($calc['expected_minutes'] ?? 0);
+  if ($expected <= 0) continue;
+
+  $hasAny = has_any_time_fields($e);
+  $start = !empty($e['start']);
+  $end = !empty($e['end']);
+  $isIncomplete = ($hasAny && (!$start || !$end));
+  if ($isIncomplete) {
+    $incompleteStreak++;
+  } else {
+    break;
+  }
+}
+
+// Trends: last N workdays with a computable day_balance
+function last_workday_balances(int $year, string $endDate, array $entries, array $holidayMap, array $cfg, int $n = 30): array {
+  $vals = [];
+  $dtEnd = new DateTimeImmutable($endDate);
+  $dtStart = new DateTimeImmutable(sprintf('%04d-01-01', $year));
+  for ($cur = $dtEnd; $cur >= $dtStart; $cur = $cur->modify('-1 day')) {
+    $d = $cur->format('Y-m-d');
+    $e = $entries[$d] ?? ['date' => $d];
+    if (isset($holidayMap[$d])) {
+      $e['is_holiday'] = true;
+      $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
+    }
+    $calc = compute_day($e, $cfg);
+    $expected = intval($calc['expected_minutes'] ?? 0);
+    if ($expected <= 0) continue;
+    if ($calc['day_balance'] === null) continue;
+    $vals[] = intval($calc['day_balance']);
+    if (count($vals) >= $n) break;
+  }
+  return array_reverse($vals);
+}
+
+$dailyBalances = last_workday_balances($year, $limitEnd, $entries, $holidayMap, $config, 30);
+$cumulativeBalances = [];
+$run = 0;
+foreach ($dailyBalances as $v) { $run += $v; $cumulativeBalances[] = $run; }
+
+// Distribution: avg end time and % split (lunch taken) over last 20 workdays
+$endMinutes = [];
+$splitCount = 0;
+$distCount = 0;
+for ($cur = $dtEnd; $cur >= $dtStart; $cur = $cur->modify('-1 day')) {
+  $d = $cur->format('Y-m-d');
+  $e = $entries[$d] ?? ['date' => $d];
+  if (isset($holidayMap[$d])) {
+    $e['is_holiday'] = true;
+    $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
+  }
+  $calc = compute_day($e, $config);
+  $expected = intval($calc['expected_minutes'] ?? 0);
+  if ($expected <= 0) continue;
+  $distCount++;
+  $endMin = time_to_minutes($e['end'] ?? null);
+  if ($endMin !== null) $endMinutes[] = $endMin;
+  if (!empty($calc['lunch_taken'])) $splitCount++;
+  if ($distCount >= 20) break;
+}
+$avgEnd = null;
+if (!empty($endMinutes)) {
+  $avgEnd = intval(round(array_sum($endMinutes) / count($endMinutes)));
+}
+$splitPct = ($distCount > 0) ? intval(round(($splitCount / $distCount) * 100)) : 0;
+
+$yearBalance = $ytd_worked - $ytd_expected;
+$alertLowBalance = ($yearBalance <= -600);
+$alertStreak = ($incompleteStreak >= 3);
+
 function fmt($min){ return minutes_to_hours_formatted(intval($min)); }
+
+function fmt_week_range(DateTimeImmutable $start): string {
+  $end = $start->modify('+6 days');
+  // Keep it compact and unambiguous.
+  if ($start->format('Y') !== $end->format('Y')) {
+    return $start->format('d/m/Y') . '–' . $end->format('d/m/Y');
+  }
+  return $start->format('d/m') . '–' . $end->format('d/m');
+}
 
 function svg_sparkline(array $values, $w=120, $h=28){
   $vals = array_values($values);
+  if (empty($vals)) {
+    $w = max(1, intval($w));
+    $h = max(1, intval($h));
+    return '<svg class="sparkline-svg" width="100%" height="100%" viewBox="0 0 ' . $w . ' ' . $h . '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"></svg>';
+  }
   $max = max($vals) ?: 1;
   $min = min($vals);
   $count = count($vals);
@@ -156,130 +327,210 @@ function svg_sparkline(array $values, $w=120, $h=28){
     $points[] = round($x,2) . ',' . round($y,2);
   }
   $poly = implode(' ', $points);
-  $svg = '<svg width="' . $w . '" height="' . $h . '" viewBox="0 0 ' . $w . ' ' . $h . '" xmlns="http://www.w3.org/2000/svg">';
-  $svg .= '<polyline fill="none" stroke="#0ea5e9" stroke-width="2" points="' . $poly . '" />';
-  $svg .= '</svg>';
-  return $svg;
-}
-
-function svg_compare_chart(array $dates, array $worked, array $expected, $w=700, $h=220){
-  // dates: array of Y-m-d labels; worked & expected: minutes per day
-  $valsW = array_values($worked);
-  $valsE = array_values($expected);
-  $max = max(max($valsW) ?: 1, max($valsE) ?: 1);
-  $min = 0;
-  $count = count($dates) ?: 1;
-  $pad = 40; // leave space for Y labels
-  $plotW = $w - $pad*2;
-  $plotH = $h - $pad*2;
-  $polyW = [];
-  $polyE = [];
-  for ($i=0;$i<$count;$i++){
-    $x = $pad + ($i / max(1, $count-1)) * $plotW;
-    $yW = $pad + ($plotH - (($valsW[$i]-$min)/max(1,$max-$min))*$plotH);
-    $yE = $pad + ($plotH - (($valsE[$i]-$min)/max(1,$max-$min))*$plotH);
-    $polyW[] = round($x,2) . ',' . round($yW,2);
-    $polyE[] = round($x,2) . ',' . round($yE,2);
-  }
-  $polyW = implode(' ', $polyW);
-  $polyE = implode(' ', $polyE);
-  $svg = '<svg width="' . $w . '" height="' . $h . '" viewBox="0 0 ' . $w . ' ' . $h . '" xmlns="http://www.w3.org/2000/svg">';
-  // background / plot area
-  $svg .= '<rect x="' . $pad . '" y="' . $pad . '" width="' . $plotW . '" height="' . $plotH . '" fill="#fff" stroke="#eee" stroke-width="1"/>';
-  // y-axis ticks and labels (4 ticks)
-  $ticks = 4;
-  for ($t=0;$t<=$ticks;$t++){
-    $val = intval(round($min + ($t/$ticks) * ($max-$min)));
-    $py = $pad + ($plotH - ($t/$ticks)*$plotH);
-    $svg .= '<line x1="' . $pad . '" y1="' . $py . '" x2="' . ($pad+$plotW) . '" y2="' . $py . '" stroke="#f3f4f6" stroke-width="1" />';
-    $svg .= '<text x="' . ($pad-8) . '" y="' . ($py+4) . '" font-size="11" text-anchor="end" fill="#374151">' . htmlspecialchars(fmt($val)) . '</text>';
-  }
-  // expected line (dashed)
-  $svg .= '<polyline fill="none" stroke="#e11d48" stroke-width="2" stroke-dasharray="6 4" points="' . $polyE . '" />';
-  // worked line
-  $svg .= '<polyline fill="none" stroke="#06b6d4" stroke-width="2" points="' . $polyW . '" />';
-  // x-axis labels (sparse)
-  $maxLabels = 8;
-  $step = max(1, intval(floor($count / $maxLabels)));
-  for ($i=0;$i<$count;$i += $step){
-    $x = $pad + ($i / max(1, $count-1)) * $plotW;
-    $label = date('d/m', strtotime($dates[$i]));
-    $svg .= '<text x="' . $x . '" y="' . ($pad + $plotH + 16) . '" font-size="11" text-anchor="middle" fill="#475569">' . htmlspecialchars($label) . '</text>';
-  }
-  // legend
-  $svg .= '<g transform="translate(' . ($w-180) . ',10)"><rect width="160" height="36" rx="6" fill="#ffffff" stroke="#eee"/></g>';
-  $svg .= '<text x="' . ($w-170) . '" y="28" font-size="12" fill="#e11d48">— Esperadas</text>';
-  $svg .= '<text x="' . ($w-170) . '" y="44" font-size="12" fill="#06b6d4">— Realizadas</text>';
+  $svg = '<svg class="sparkline-svg" width="100%" height="100%" viewBox="0 0 ' . $w . ' ' . $h . '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">';
+  $svg .= '<polyline fill="none" stroke="currentColor" stroke-width="2" points="' . $poly . '" />';
   $svg .= '</svg>';
   return $svg;
 }
 
 ?>
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard</title><link rel="stylesheet" href="styles.css">
-<!-- Chart.js CDN -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head><body>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard</title><link rel="stylesheet" href="styles.css"></head><body>
 <?php include __DIR__ . '/header.php'; ?>
 <div class="container">
   <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-      <h1>Dashboard — <?php echo $year; ?></h1>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <form method="get" style="display:flex;gap:8px;align-items:center;margin:0;"> 
-          <input type="hidden" name="year" value="<?php echo htmlspecialchars($year); ?>">
-          <label class="small">Desde</label>
-          <input class="form-control" type="date" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>">
-          <label class="small">Hasta</label>
-          <input class="form-control" type="date" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>">
-          <button class="btn" type="submit">Filtrar</button>
-        </form>
-        <form method="post" style="margin:0;">
-          <input type="hidden" name="action" value="force_recalc">
-          <button class="btn" type="submit">Recalcular ahora</button>
-        </form>
-      </div>
+    <div class="dashboard-header">
+      <h1>Dashboard</h1>
+      <form method="get" action="dashboard.php" class="row-form">
+        <label class="form-label small">Año
+          <select class="form-control" name="year" onchange="this.form.submit()">
+            <?php foreach($years as $y): ?>
+              <option value="<?php echo $y; ?>" <?php if ($y === intval($year)) echo 'selected'; ?>><?php echo $y; ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+      </form>
     </div>
-    <div class="dashboard-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px;">
+
+    <div class="dashboard-actions mt-2">
+      <?php if ($todayInYear): ?>
+        <a class="btn btn-secondary" href="index.php?year=<?php echo urlencode($year); ?>&date=<?php echo urlencode($today); ?>">Ir a hoy</a>
+        <a class="btn btn-primary" href="index.php?year=<?php echo urlencode($year); ?>&date=<?php echo urlencode($today); ?>&open_add=1">Añadir hoy</a>
+      <?php else: ?>
+        <a class="btn btn-secondary" href="index.php?year=<?php echo urlencode($year); ?>">Ver registro</a>
+      <?php endif; ?>
+      <a class="btn btn-secondary" href="import.php">Importar fichajes</a>
+    </div>
+
+    <!-- Alertas -->
+    <?php
+      $alerts = [];
+      
+      // Check if today's entry is missing (but only on working days)
+      if ($todayInYear && empty($entries[$today])) {
+        $eToday = $entries[$today] ?? ['date' => $today];
+        if (isset($holidayMap[$today])) {
+          $eToday['is_holiday'] = true;
+        }
+        $dayOfWeek = date('N', strtotime($today)); // 1=Mon, 6=Sat, 7=Sun
+        $isWorkingDay = $dayOfWeek < 6 && empty($eToday['is_holiday']);
+        
+        if ($isWorkingDay) {
+          $alerts[] = ['type' => 'warning', 'msg' => '⏰ No has fichado hoy'];
+        }
+      }
+      
+      // Check if entry is incomplete (missing end time)
+      if ($todayInYear && !empty($entries[$today]) && empty($entries[$today]['end'])) {
+        $alerts[] = ['type' => 'warning', 'msg' => '⏰ Entrada de hoy incompleta (falta hora de salida)'];
+      }
+      
+      // Show alerts
+      if (!empty($alerts)):
+    ?>
+      <div style="margin-top: 1rem;">
+        <?php foreach ($alerts as $alert): ?>
+          <div style="padding: 0.75rem 1rem; background: <?php echo $alert['type'] === 'warning' ? 'rgba(217, 119, 6, 0.12)' : 'rgba(220, 38, 38, 0.12)'; ?>; border-left: 4px solid <?php echo $alert['type'] === 'warning' ? '#d97706' : '#dc2626'; ?>; border-radius: 6px; margin-bottom: 0.5rem; border: 1px solid <?php echo $alert['type'] === 'warning' ? 'rgba(217, 119, 6, 0.25)' : 'rgba(220, 38, 38, 0.25)'; ?>;">
+            <?php echo $alert['msg']; ?>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
+    <div class="dashboard-cards">
       <?php
-        // This month summary
-        $m = ($year == $currentYear) ? $currentMonth : min($currentMonth,12);
-        $monthWorked = $months[$m]['worked'];
-        $monthExpected = $months[$m]['expected'];
-        $monthBalance = $monthWorked - $monthExpected;
+        // Calcular saldo semanal SIEMPRE relativo a hoy (semana actual y la anterior),
+        // independientemente del año seleccionado. Esto puede cruzar de año; cargamos mapas por año.
+        $refEnd = new DateTimeImmutable('today');
+        $curWeekStart = $refEnd->modify('Monday this week');
+        $prevWeekStart = $curWeekStart->modify('-7 days');
+
+        $yearMapsCache = [];
+        $getMapsForDate = function(string $isoDate) use (&$yearMapsCache, $pdo, $user) {
+          $y = intval(substr($isoDate, 0, 4));
+          if (!isset($yearMapsCache[$y])) {
+            $yearMapsCache[$y] = load_year_maps($pdo, intval($user['id']), $y);
+          }
+          return $yearMapsCache[$y];
+        };
+
+        $sum_week_balance = function(DateTimeImmutable $start) use ($getMapsForDate){
+          $sum = 0;
+          for ($i = 0; $i < 7; $i++){
+            $d = $start->modify("+$i days")->format('Y-m-d');
+            [$entriesY, $holidayMapY, $cfgY] = $getMapsForDate($d);
+            $e = $entriesY[$d] ?? ['date' => $d];
+            if (isset($holidayMapY[$d])) { $e['is_holiday'] = true; $e['special_type'] = $holidayMapY[$d]['type'] ?? 'holiday'; }
+            $calc = compute_day($e, $cfgY);
+            $sum += intval($calc['day_balance'] ?? 0);
+          }
+          return $sum;
+        };
+
+        $prevWeekMinutes = $sum_week_balance($prevWeekStart);
+        $curWeekMinutes = $sum_week_balance($curWeekStart);
+      ?>
+      <div class="card card--wide">
+        <h4>Exceso/Defecto de horas</h4>
+        <div class="week-cards">
+          <?php $prevClass = $prevWeekMinutes >= 0 ? 'week-card positive' : 'week-card negative'; ?>
+          <?php $curClass = $curWeekMinutes >= 0 ? 'week-card positive' : 'week-card negative'; ?>
+          <div class="card dashboard-mini-card <?php echo $prevClass; ?>">Semana anterior<br><span class="muted"><?php echo htmlspecialchars(fmt_week_range($prevWeekStart)); ?></span><br><strong><?php echo minutes_to_hours_formatted($prevWeekMinutes); ?></strong></div>
+          <div class="card dashboard-mini-card <?php echo $curClass; ?>">Semana actual<br><span class="muted"><?php echo htmlspecialchars(fmt_week_range($curWeekStart)); ?></span><br><strong><?php echo minutes_to_hours_formatted($curWeekMinutes); ?></strong></div>
+        </div>
+      </div>
+
+      <?php if ($todayInYear && $todayCalc): ?>
+      <div class="card">
+        <h4>Hoy</h4>
+        <div class="dashboard-value dashboard-value--sm"><?php echo htmlspecialchars($today); ?></div>
+        <div class="muted">Trabajadas: <strong><?php echo $todayCalc['worked_hours_formatted'] !== '' ? htmlspecialchars($todayCalc['worked_hours_formatted']) : '—'; ?></strong></div>
+        <div class="muted">Saldo: <strong><?php echo $todayCalc['day_balance_formatted'] !== '' ? htmlspecialchars($todayCalc['day_balance_formatted']) : '—'; ?></strong></div>
+        <div class="muted">Café: <?php echo !empty($todayCalc['coffee_taken']) ? 'ok' : 'missing'; ?> · Comida: <?php echo !empty($todayCalc['lunch_taken']) ? 'ok' : 'missing'; ?></div>
+      </div>
+      <?php endif; ?>
+
+      <div class="card">
+        <h4>Calidad de datos</h4>
+        <div class="muted">Laborables sin fichaje: <strong><?php echo intval($missingDays); ?></strong></div>
+        <div class="muted">Días incompletos: <strong><?php echo intval($incompleteDays); ?></strong></div>
+        <div class="muted">Racha incompletos: <strong><?php echo intval($incompleteStreak); ?></strong></div>
+        <div class="mt-2"><a class="btn btn-secondary" href="index.php?year=<?php echo urlencode($year); ?>">Revisar</a></div>
+      </div>
+
+      <div class="card">
+        <h4>Tendencia (30 laborables)</h4>
+        <div class="muted">Saldo diario</div>
+        <div class="sparkline"><?php echo svg_sparkline($dailyBalances, 220, 34); ?></div>
+        <div class="muted dashboard-note">Saldo acumulado</div>
+        <div class="sparkline"><?php echo svg_sparkline($cumulativeBalances, 220, 34); ?></div>
+      </div>
+
+      <div class="card">
+        <h4>Distribución</h4>
+        <div class="muted">Hora media salida (20 laborables): <strong><?php echo htmlspecialchars(fmt_clock($avgEnd)); ?></strong></div>
+        <div class="muted">% jornada partida (20 laborables): <strong><?php echo intval($splitPct); ?>%</strong></div>
+      </div>
+
+      <div class="card">
+        <h4>Alertas</h4>
+        <?php if ($alertLowBalance): ?>
+          <div class="muted">Saldo anual bajo: <strong><?php echo fmt($yearBalance); ?></strong></div>
+        <?php endif; ?>
+        <?php if ($alertStreak): ?>
+          <div class="muted">Racha de días incompletos: <strong><?php echo intval($incompleteStreak); ?></strong></div>
+        <?php endif; ?>
+        <?php if (!$alertLowBalance && !$alertStreak): ?>
+          <div class="muted">Sin alertas</div>
+        <?php endif; ?>
+      </div>
+
+      <?php
+        // Tardes trabajadas: para el año actual, mes actual/anterior; para años pasados, diciembre/noviembre.
+        $mCur = ($year === $currentYear) ? intval(date('n')) : 12;
+        $yCur = intval($year);
+        $mPrev = $mCur - 1;
+        $yPrev = $yCur;
+        if ($mPrev < 1) { $mPrev = 12; $yPrev = $yCur - 1; }
+
+        // limit current month to today only when viewing current year
+        $limitCur = (intval($year) === intval(date('Y')));
+
+        $curAfternoons = count_afternoons_worked_in_month($yCur, $mCur, $entries, $holidayMap, $config, $limitCur);
+
+        if ($yPrev === $yCur) {
+          $prevEntries = $entries;
+          $prevHolidayMap = $holidayMap;
+          $prevCfg = $config;
+        } else {
+          [$prevEntries, $prevHolidayMap, $prevCfg] = load_year_maps($pdo, intval($user['id']), $yPrev);
+        }
+        $prevAfternoons = count_afternoons_worked_in_month($yPrev, $mPrev, $prevEntries, $prevHolidayMap, $prevCfg, false);
       ?>
       <div class="card">
-        <a class="card-link" href="index.php?year=<?php echo $year;?>#<?php echo sprintf('%04d-%02d',$year,$m); ?>">
-          <h4>Horas trabajadas (mes <?php echo $m;?>)</h4>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <div class="value"><?php echo fmt($monthWorked); ?></div>
-            <div class="sparkline"><?php echo svg_sparkline(array_slice($month_values, max(1,$m-5), min(6, $m))); ?></div>
+        <h4>Tardes trabajadas</h4>
+        <div class="dashboard-split-cards">
+          <div class="card dashboard-mini-card dashboard-mini-card--half">
+            Mes actual<br><strong><?php echo intval($curAfternoons); ?></strong>
           </div>
-          <div class="muted">Esperadas: <?php echo fmt($monthExpected); ?></div>
-        </a>
+          <div class="card dashboard-mini-card dashboard-mini-card--half">
+            Mes anterior<br><strong><?php echo intval($prevAfternoons); ?></strong>
+          </div>
+        </div>
+        <div class="muted dashboard-note">Saldo comida ≥ 1:00</div>
       </div>
 
-      <div class="card">
-        <h4>Saldo mes</h4>
-        <div style="font-size:1.4rem;font-weight:700"><?php echo fmt($monthBalance); ?></div>
-        <div class="muted">Exceso/Deficit del mes</div>
-      </div>
-
-      <div class="card">
-        <h4>Exceso horas (mes)</h4>
-        <div style="font-size:1.4rem;font-weight:700"><?php echo $monthBalance>0 ? fmt($monthBalance) : '0:00'; ?></div>
-        <div class="muted">Solo exceso positivo</div>
-      </div>
+      
 
       <div class="card">
         <h4>Acumulado año</h4>
-        <div style="font-size:1.4rem;font-weight:700"><?php echo fmt($ytd_worked); ?></div>
+        <div class="dashboard-value"><?php echo fmt($ytd_worked); ?></div>
         <div class="muted">Esperadas (YTD): <?php echo fmt($ytd_expected); ?></div>
       </div>
 
       <div class="card">
         <h4>Saldo acumulado año</h4>
-        <div style="font-size:1.4rem;font-weight:700"><?php echo fmt($ytd_worked - $ytd_expected); ?></div>
+        <div class="dashboard-value"><?php echo fmt($ytd_worked - $ytd_expected); ?></div>
         <div class="muted">Incluye meses hasta la fecha</div>
       </div>
 
@@ -295,12 +546,12 @@ function svg_compare_chart(array $dates, array $worked, array $expected, $w=700,
           }
           $avg = $days>0 ? intval(round($totalWork / $days)) : 0;
         ?>
-        <div style="font-size:1.2rem;font-weight:700"><?php echo fmt($avg); ?></div>
+        <div class="dashboard-value dashboard-value--sm"><?php echo fmt($avg); ?></div>
         <div class="muted">Basado en días procesados (incluye fines de semana filtrados)</div>
       </div>
     </div>
 
-    <h3 style="margin-top:18px;">Resumen mensual</h3>
+    <h3 class="dashboard-section-title">Resumen mensual</h3>
     <div class="table-responsive">
       <table class="sheet compact">
         <thead><tr><th>Mes</th><th>Trabajadas</th><th>Esperadas</th><th>Saldo</th><th>Exceso</th><th>Tendencia</th></tr></thead>
@@ -322,99 +573,6 @@ function svg_compare_chart(array $dates, array $worked, array $expected, $w=700,
       </table>
     </div>
   </div>
-    
-    <h3 style="margin-top:18px;">Comparativa diaria (Esperadas vs Realizadas)</h3>
-    <?php
-      // Build daily series for the selected range
-      $ds = strtotime($start_date); $de = strtotime($end_date);
-      $dayLabels = [];
-      $dailyWorked = [];
-      $dailyExpected = [];
-      for ($t = $ds; $t <= $de; $t += 86400) {
-        $d = date('Y-m-d', $t);
-        $dayLabels[] = $d;
-        $e = $entries[$d] ?? ['date'=>$d];
-        if (isset($holidayMap[$d])) { $e['is_holiday'] = true; $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday'; }
-        $calc = compute_day($e, get_year_config(intval(date('Y', $t)), $user['id']));
-        $dailyWorked[] = intval($calc['worked_minutes'] ?? 0);
-        $dailyExpected[] = intval($calc['expected_minutes'] ?? 0);
-      }
-      // weekly aggregates
-      $weeks = [];
-      foreach ($dayLabels as $idx => $d) {
-        $ts = strtotime($d);
-        $weekKey = date('oW', $ts); // ISO week-year + week
-        if (!isset($weeks[$weekKey])) $weeks[$weekKey] = ['worked'=>0,'expected'=>0,'days'=>0,'label'=> date('o', $ts) . ' W' . date('W', $ts)];
-        $weeks[$weekKey]['worked'] += $dailyWorked[$idx];
-        $weeks[$weekKey]['expected'] += $dailyExpected[$idx];
-        $weeks[$weekKey]['days']++;
-      }
-    ?>
-    <div class="card" style="margin-top:8px;">
-      <div style="padding:12px;">
-        <div class="muted">Rango: <?php echo htmlspecialchars($start_date); ?> — <?php echo htmlspecialchars($end_date); ?></div>
-        <div style="margin-top:12px;">
-          <canvas id="compareChart" width="900" height="260"></canvas>
-          <script>
-            (function(){
-              const labels = <?php echo json_encode($dayLabels); ?>;
-              const dataWorked = <?php echo json_encode($dailyWorked); ?>; // minutes
-              const dataExpected = <?php echo json_encode($dailyExpected); ?>; // minutes
-              function fmtMinToHMS(mins){ const h = Math.floor(mins/60); const m = Math.abs(mins % 60); return h + ':' + String(m).padStart(2,'0'); }
-              const ctx = document.getElementById('compareChart').getContext('2d');
-              const chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                  labels: labels.map(d => { const dt = new Date(d); return (dt.getDate()<10? '0'+dt.getDate():dt.getDate()) + '/' + (dt.getMonth()+1<10? '0'+(dt.getMonth()+1):dt.getMonth()+1); }),
-                  datasets: [
-                    { label: 'Esperadas', data: dataExpected, borderColor: '#e11d48', backgroundColor: 'rgba(225,29,72,0.05)', borderDash: [6,4], tension: 0.2 },
-                    { label: 'Realizadas', data: dataWorked, borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,0.06)', tension: 0.2 }
-                  ]
-                },
-                options: {
-                  maintainAspectRatio: false,
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      ticks: {
-                        callback: function(value){ return fmtMinToHMS(value); }
-                      }
-                    },
-                    x: {
-                      ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }
-                    }
-                  },
-                  plugins: {
-                    tooltip: {
-                      callbacks: {
-                        label: function(ctx){ return ctx.dataset.label + ': ' + fmtMinToHMS(ctx.parsed.y); }
-                      }
-                    },
-                    legend: { position: 'top' }
-                  }
-                }
-              });
-            })();
-          </script>
-        </div>
-        <h4 style="margin-top:12px;">Exceso por semana</h4>
-        <div class="table-responsive">
-          <table class="sheet compact">
-            <thead><tr><th>Semana</th><th>Trabajadas</th><th>Esperadas</th><th>Saldo</th></tr></thead>
-            <tbody>
-            <?php foreach ($weeks as $wk => $vals): $bal = $vals['worked'] - $vals['expected']; ?>
-              <tr>
-                <td><?php echo htmlspecialchars($vals['label']); ?></td>
-                <td><?php echo fmt($vals['worked']); ?></td>
-                <td><?php echo fmt($vals['expected']); ?></td>
-                <td><?php echo fmt($bal); ?></td>
-              </tr>
-            <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
 </div>
 <?php include __DIR__ . '/footer.php'; ?>
 </body></html>

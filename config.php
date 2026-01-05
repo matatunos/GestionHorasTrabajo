@@ -83,17 +83,35 @@ function get_year_config(int $year, int $user_id = null){
                 UNIQUE KEY user_year (user_id, year)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-            // prefer user-specific override when user_id provided
-            if ($user_id !== null) {
-                $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? AND user_id = ? LIMIT 1');
-                $stmt->execute([$year, $user_id]);
-                $row = $stmt->fetch();
-            } else {
-                $row = false;
+            // Support both schemas:
+            // - New: year_configs has user_id (per-user overrides + global user_id NULL)
+            // - Old: year_configs has no user_id (single global row per year)
+            $hasUserId = false;
+            try {
+                $cst = $pdo->query("SHOW COLUMNS FROM year_configs LIKE 'user_id'");
+                $hasUserId = (bool)($cst && $cst->fetch());
+            } catch (Throwable $e) {
+                $hasUserId = false;
             }
-            // fallback to global config (user_id IS NULL)
-            if (!$row) {
-                $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? AND user_id IS NULL LIMIT 1');
+
+            if ($hasUserId) {
+                // prefer user-specific override when user_id provided
+                if ($user_id !== null) {
+                    $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? AND user_id = ? LIMIT 1');
+                    $stmt->execute([$year, $user_id]);
+                    $row = $stmt->fetch();
+                } else {
+                    $row = false;
+                }
+                // fallback to global config (user_id IS NULL)
+                if (!$row) {
+                    $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? AND user_id IS NULL LIMIT 1');
+                    $stmt->execute([$year]);
+                    $row = $stmt->fetch();
+                }
+            } else {
+                // old schema: one row per year
+                $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? LIMIT 1');
                 $stmt->execute([$year]);
                 $row = $stmt->fetch();
             }

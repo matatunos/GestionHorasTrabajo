@@ -38,6 +38,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   <div class="card">
     <h3>Perfil de usuario</h3>
     <p>Usuario: <strong><?php echo htmlspecialchars($user['username']); ?></strong></p>
+    
+    <div style="background: #e7f3ff; border: 1px solid #007bff; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
+      <h4 style="margin-top: 0;">🧩 Extensión Chrome</h4>
+      <p style="margin-bottom: 10px;">Descarga nuestra extensión de Chrome para importar datos de fichajes con un solo click.</p>
+      <div style="display: flex; gap: 10px;">
+        <a href="download-addon.php" class="btn btn-primary" download>📥 Descargar extensión</a>
+        <a href="chrome-addon-help.php" class="btn btn-secondary">📖 Ver instrucciones</a>
+        <a href="extension-tokens.php" class="btn btn-secondary">🔐 Gestionar tokens</a>
+      </div>
+      <style>
+        .btn-secondary {
+          background: #6c757d;
+          color: white;
+          padding: 8px 16px;
+          border: none;
+          border-radius: 4px;
+          text-decoration: none;
+          cursor: pointer;
+          display: inline-block;
+        }
+        .btn-secondary:hover {
+          background: #5a6268;
+          text-decoration: none;
+        }
+      </style>
+    </div>
+
     <?php if ($msg): ?><div class="alert alert-success"><?php echo htmlspecialchars($msg); ?></div><?php endif; ?>
     <?php if ($err): ?><div class="alert alert-danger"><?php echo htmlspecialchars($err); ?></div><?php endif; ?>
 
@@ -48,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <div class="form-group"><label class="form-label">Nueva contraseña</label><input class="form-control" type="password" name="new_password" required></div>
         <div class="form-group"><label class="form-label">Confirmar nueva contraseña</label><input class="form-control" type="password" name="confirm_password" required></div>
       </div>
-      <div class="form-actions" style="margin-top:12px;"><button class="btn-primary" type="submit">Cambiar contraseña</button></div>
+      <div class="form-actions mt-2"><button class="btn btn-primary" type="submit">Cambiar contraseña</button></div>
     </form>
   </div>
 </div>

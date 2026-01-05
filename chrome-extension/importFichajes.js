@@ -135,30 +135,19 @@ function parseFichajesHTML(htmlContent, year) {
     registros.push({ dia, fecha, fechaISO, horas, balance });
   }
 
-  // ✅ NUEVA LOGICA: Si una fecha es posterior a HOY, asumir que es del año anterior
-  // Ejemplo: Si hoy es 4 de enero de 2026:
-  //   - "12-12" (diciembre 12) → 2025-12-12 (pasado)
-  //   - "15-01" (enero 15) → 2026-01-15 (futuro, está bien)
-  //   - "31-01" (enero 31) → 2026-01-31 (futuro, pero 2026)
-  //   - "05-01" (enero 5) → 2026-01-05 (futuro, 2026)
-  // Pero si hoy fuera 6 de enero:
-  //   - "05-01" → 2025-01-05 (pasó el 5, fue año pasado)
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  
-  registros.forEach(r => {
-    if (!r.fechaISO) return;
-    
-    const iso = String(r.fechaISO);
-    // Si la fecha está en el año especificado
-    if (iso.startsWith(String(year) + '-')) {
-      const parsedDate = new Date(iso);
-      // Si la fecha parseada es posterior a hoy, mover al año anterior
-      if (parsedDate > today) {
+  // Year-boundary helper: if the same file contains Jan and Dec dates and the dates were generated
+  // using the provided year (no explicit year in the text), assume Dec belongs to previous year.
+  const hasJan = registros.some(r => r.fechaISO && String(r.fechaISO).slice(5, 7) === '01');
+  const hasDec = registros.some(r => r.fechaISO && String(r.fechaISO).slice(5, 7) === '12');
+  if (hasJan && hasDec) {
+    registros.forEach(r => {
+      if (!r.fechaISO) return;
+      const iso = String(r.fechaISO);
+      if (iso.startsWith(String(year) + '-') && iso.slice(5, 7) === '12') {
         r.fechaISO = String(year - 1) + iso.slice(4);
       }
-    }
-  });
+    });
+  }
 
   return registros;
 }

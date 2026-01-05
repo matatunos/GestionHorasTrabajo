@@ -1,23 +1,3 @@
-</style>
-
-<style>
-/* Final unified edit button style to force exact match */
-.btn-edit {
-  background: linear-gradient(90deg,#ffd54d,#ffb74d) !important;
-  color: #1b1b1b !important;
-  border: 1px solid rgba(0,0,0,0.06) !important;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
-  padding: 6px 8px !important;
-  width: 36px !important;
-  height: 36px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  border-radius: 6px !important;
-  font-size: 14px !important;
-}
-.btn-edit svg { width: 16px !important; height: 16px !important; }
-</style>
 <?php
 require_once __DIR__ . '/auth.php';
 require_admin();
@@ -335,14 +315,14 @@ if ($hol_pdo) {
             <div class="form-help">Nombre que aparece en la cabecera.</div>
           </div>
 
-        <div class="form-actions" style="margin-top:12px;"><button class="btn-primary" type="submit">Guardar nombre del sitio</button><button class="btn-secondary" type="button" onclick="location.reload();">Cancelar</button></div>
+        <div class="form-actions mt-2"><button class="btn btn-primary" type="submit">Guardar nombre del sitio</button><button class="btn btn-secondary" type="button" onclick="location.reload();">Cancelar</button></div>
       </div>
     </form>
     <div style="margin-top:12px;">
       <div style="margin-bottom:8px;"></div>
       <div class="card">
         <h3>Festivos — Año <?php echo $selHolidayYear; ?></h3>
-        <form method="get" style="margin-bottom:12px" class="form-wrapper">
+        <form method="get" class="form-wrapper mb-2">
           <div class="form-grid"><div class="form-group"><label class="form-label">Año</label>
             <select class="form-control" name="holiday_year" onchange="this.form.submit()">
               <?php for($y = date('Y')-2; $y <= date('Y')+2; $y++): ?>
@@ -353,13 +333,16 @@ if ($hol_pdo) {
         </form>
 
         <div style="margin-bottom:12px;">
-          <button id="openAddHolidayBtn" class="btn-primary" type="button">Añadir festivo</button>
+          <button id="openAddHolidayBtn" class="btn btn-primary" type="button">Añadir festivo</button>
         </div>
 
         <!-- Modal for adding a holiday -->
-        <div id="holidayModalOverlay" aria-hidden="true" style="display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;z-index:9999">
-          <div id="holidayModal" role="dialog" aria-modal="true" style="background:#fff;padding:18px;border-radius:6px;max-width:720px;width:100%;box-shadow:0 6px 24px rgba(0,0,0,0.2)">
-            <h3>Añadir festivo</h3>
+        <div id="holidayModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
+          <div id="holidayModal" class="modal-dialog" role="dialog" aria-modal="true">
+            <div class="modal-header">
+              <h3 class="modal-title">Añadir festivo</h3>
+            </div>
+            <div class="modal-body">
             <form method="post" id="holidayAddForm" class="form-wrapper">
               <input type="hidden" name="holiday_action" value="add">
               <div class="form-grid">
@@ -383,11 +366,12 @@ if ($hol_pdo) {
                 <div class="form-group"><?php echo render_checkbox('annual', 0, 'Repite anualmente'); ?></div>
                 <div class="form-group"><?php echo render_checkbox('global', 0, 'Visible a todos (global)'); ?></div>
               </div>
-              <div class="form-actions" style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
-                <button class="btn-secondary" type="button" id="closeHolidayModal">Cancelar</button>
-                <button class="btn-primary" type="submit">Añadir</button>
+              <div class="form-actions modal-actions mt-2">
+                <button class="btn btn-secondary" type="button" id="closeHolidayModal">Cancelar</button>
+                <button class="btn btn-primary" type="submit">Añadir</button>
               </div>
             </form>
+            </div>
           </div>
         </div>
 
@@ -430,7 +414,7 @@ if ($hol_pdo) {
       </div>
       <h3>Configuración por año</h3>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-        <button class="btn-primary" type="button" id="openAddYearBtn">Añadir año</button>
+        <button class="btn btn-primary" type="button" id="openAddYearBtn">Añadir año</button>
         <div class="small">Editar un año: pulsa <strong>Editar</strong> en la fila; los datos aparecerán arriba para modificar.</div>
       </div>
       
@@ -466,9 +450,226 @@ if ($hol_pdo) {
     </div>
     <div class="footer small">Config stored in <strong>DB (app_settings.site_config)</strong></div>
   </div>
+
+  <!-- Users section -->
+  <div class="card">
+    <h3>Gestión de Usuarios</h3>
+    <?php
+      require_once __DIR__ . '/db.php';
+      $pdo = get_pdo();
+      
+      // Handle add user
+      if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['add_user_action'])){
+        $u = $_POST['username'] ?? '';
+        $p = $_POST['password'] ?? '';
+        if ($u && $p) {
+          $hash = password_hash($p, PASSWORD_DEFAULT);
+          $is_admin = !empty($_POST['is_admin']) ? 1 : 0;
+          try {
+            $stmt = $pdo->prepare('INSERT INTO users (username,password,is_admin) VALUES (?,?,?)');
+            $stmt->execute([$u,$hash,$is_admin]);
+            echo '<div class="ok">Usuario añadido correctamente.</div>';
+          } catch (Throwable $e) {
+            echo '<div class="error">Error al añadir usuario: ' . htmlspecialchars($e->getMessage()) . '</div>';
+          }
+        }
+      }
+      
+      // Handle reset password
+      if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reset_user_id'])){
+        $user_id = intval($_POST['reset_user_id']);
+        $new_password = $_POST['new_password'] ?? 'Temporal123!';
+        $hash = password_hash($new_password, PASSWORD_DEFAULT);
+        try {
+          $stmt = $pdo->prepare('UPDATE users SET password = ? WHERE id = ?');
+          $stmt->execute([$hash, $user_id]);
+          echo '<div class="ok">Contraseña reseteada correctamente.</div>';
+        } catch (Throwable $e) {
+          echo '<div class="error">Error al resetear contraseña.</div>';
+        }
+      }
+      
+      // Handle delete user
+      if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_user_id'])){
+        $user_id = intval($_POST['delete_user_id']);
+        try {
+          $stmt = $pdo->prepare('DELETE FROM users WHERE id = ?');
+          $stmt->execute([$user_id]);
+          echo '<div class="ok">Usuario eliminado.</div>';
+        } catch (Throwable $e) {
+          echo '<div class="error">Error al eliminar usuario.</div>';
+        }
+      }
+      
+      $rows = $pdo->query('SELECT id,username,is_admin,created_at FROM users ORDER BY id')->fetchAll();
+    ?>
+    <div class="table-responsive">
+      <table class="sheet">
+        <thead>
+          <tr><th>ID</th><th>Usuario</th><th>Admin</th><th>Creado</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+        <?php foreach($rows as $r): ?>
+          <tr>
+            <td><?php echo $r['id']?></td>
+            <td><?php echo htmlspecialchars($r['username'])?></td>
+            <td><?php echo $r['is_admin'] ? 'Sí' : '' ?></td>
+            <td><?php echo $r['created_at']?></td>
+            <td>
+              <button class="btn btn-sm" type="button" onclick="openResetModal(<?php echo $r['id']; ?>, '<?php echo htmlspecialchars($r['username']); ?>')">Reset clave</button>
+              <button class="btn btn-sm btn-danger" type="button" onclick="openDeleteModal(<?php echo $r['id']; ?>, '<?php echo htmlspecialchars($r['username']); ?>')">Eliminar</button>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+
+    <button class="btn btn-primary" id="open-add-user-btn" type="button" style="margin-top: 1rem;">+ Añadir usuario</button>
+  </div>
+
+  <!-- Modal for adding a user -->
+  <div id="userModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
+    <div id="userModal" class="modal-dialog" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Añadir usuario</h3>
+      </div>
+      <div class="modal-body">
+        <form id="add-user-form" method="post" class="row-form">
+          <input type="hidden" name="add_user_action" value="1">
+          <div style="margin-bottom: 1rem;">
+            <label class="form-label">Usuario</label>
+            <input class="form-control" name="username" required>
+          </div>
+          <div style="margin-bottom: 1rem;">
+            <label class="form-label">Contraseña</label>
+            <input class="form-control" type="password" name="password" required>
+          </div>
+          <div style="margin-bottom: 1rem;">
+            <label class="form-label"><input type="checkbox" name="is_admin" value="1"> Administrador</label>
+          </div>
+          <div class="form-actions modal-actions mt-2">
+            <button class="btn btn-secondary" type="button" id="closeUserModal">Cancelar</button>
+            <button class="btn btn-primary" type="submit">Añadir</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for resetting password -->
+  <div id="resetModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
+    <div id="resetModal" class="modal-dialog" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Resetear contraseña</h3>
+      </div>
+      <div class="modal-body">
+        <form method="post" class="row-form">
+          <input type="hidden" name="reset_user_id" id="reset_user_id">
+          <div style="margin-bottom: 1rem;">
+            <label class="form-label">Usuario: <strong id="reset_username"></strong></label>
+          </div>
+          <div style="margin-bottom: 1rem;">
+            <label class="form-label">Nueva contraseña</label>
+            <input class="form-control" type="password" name="new_password" placeholder="Dejar en blanco para usar Temporal123!">
+          </div>
+          <div class="form-actions modal-actions mt-2">
+            <button class="btn btn-secondary" type="button" id="closeResetModal">Cancelar</button>
+            <button class="btn btn-primary" type="submit">Resetear</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for deleting user -->
+  <div id="deleteModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
+    <div id="deleteModal" class="modal-dialog" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Eliminar usuario</h3>
+      </div>
+      <div class="modal-body">
+        <p>¿Estás seguro de que quieres eliminar el usuario <strong id="delete_username"></strong>?</p>
+        <form method="post" class="row-form">
+          <input type="hidden" name="delete_user_id" id="delete_user_id">
+          <div class="form-actions modal-actions mt-2">
+            <button class="btn btn-secondary" type="button" id="closeDeleteModal">Cancelar</button>
+            <button class="btn btn-danger" type="submit">Eliminar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
+// User management modals
+(function(){
+  const openBtn = document.getElementById('open-add-user-btn');
+  const userOverlay = document.getElementById('userModalOverlay');
+  const closeBtn = document.getElementById('closeUserModal');
+  const resetOverlay = document.getElementById('resetModalOverlay');
+  const closeResetBtn = document.getElementById('closeResetModal');
+  const deleteOverlay = document.getElementById('deleteModalOverlay');
+  const closeDeleteBtn = document.getElementById('closeDeleteModal');
+
+  if (openBtn && userOverlay) {
+    openBtn.addEventListener('click', () => {
+      userOverlay.style.display = 'flex';
+      userOverlay.setAttribute('aria-hidden','false');
+      try{ document.getElementById('add-user-form').querySelector('input[name="username"]').focus(); }catch(e){}
+    });
+  }
+
+  if (closeBtn && userOverlay) {
+    closeBtn.addEventListener('click', () => {
+      userOverlay.style.display = 'none';
+      userOverlay.setAttribute('aria-hidden','true');
+    });
+  }
+
+  if (userOverlay) {
+    userOverlay.addEventListener('click', (e)=>{ if (e.target===userOverlay) { userOverlay.style.display='none'; userOverlay.setAttribute('aria-hidden','true'); } });
+  }
+
+  window.openResetModal = function(userId, username) {
+    document.getElementById('reset_user_id').value = userId;
+    document.getElementById('reset_username').textContent = username;
+    resetOverlay.style.display = 'flex';
+    resetOverlay.setAttribute('aria-hidden','false');
+  };
+
+  if (closeResetBtn && resetOverlay) {
+    closeResetBtn.addEventListener('click', () => {
+      resetOverlay.style.display = 'none';
+      resetOverlay.setAttribute('aria-hidden','true');
+    });
+  }
+
+  if (resetOverlay) {
+    resetOverlay.addEventListener('click', (e)=>{ if (e.target===resetOverlay) { resetOverlay.style.display='none'; resetOverlay.setAttribute('aria-hidden','true'); } });
+  }
+
+  window.openDeleteModal = function(userId, username) {
+    document.getElementById('delete_user_id').value = userId;
+    document.getElementById('delete_username').textContent = username;
+    deleteOverlay.style.display = 'flex';
+    deleteOverlay.setAttribute('aria-hidden','false');
+  };
+
+  if (closeDeleteBtn && deleteOverlay) {
+    closeDeleteBtn.addEventListener('click', () => {
+      deleteOverlay.style.display = 'none';
+      deleteOverlay.setAttribute('aria-hidden','true');
+    });
+  }
+
+  if (deleteOverlay) {
+    deleteOverlay.addEventListener('click', (e)=>{ if (e.target===deleteOverlay) { deleteOverlay.style.display='none'; deleteOverlay.setAttribute('aria-hidden','true'); } });
+  }
+})();
+
 // Holidays date picker and AJAX glue (migrated from holidays.php)
 (function(){
   const monthSel = document.getElementById('hd_month');
@@ -511,8 +712,7 @@ if ($hol_pdo) {
       }).catch(err => { console.error(err); if (submitBtn){ submitBtn.disabled = false; submitBtn.innerText = origText; } alert('Error de red'); });
   }, false);
 })();
-</script>
-<script>
+
 // Modal open/close for holiday add (mirrors year modal behavior)
 (function(){
   const openBtn = document.getElementById('openAddHolidayBtn');
@@ -524,7 +724,6 @@ if ($hol_pdo) {
   closeBtn && closeBtn.addEventListener('click', () => { overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); });
   overlay.addEventListener('click', (e)=>{ if (e.target===overlay) { overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); } });
 })();
-</script>
 <style>
 /* Settings page: force listing panels to have white background for readability */
 .table-responsive { background: #ffffff !important; padding: 12px !important; border-radius: 8px; }
@@ -555,18 +754,17 @@ if ($hol_pdo) {
   display: none !important;
 }
 
-/* Simple modal styles */
-#yearModalOverlay{position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;z-index:9999}
-#yearModal{background:#fff;padding:18px;border-radius:6px;max-width:720px;width:100%;box-shadow:0 6px 24px rgba(0,0,0,0.2)}
-#yearModal .form-grid {margin-bottom:8px}
-#yearModal .modal-actions {display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+/* (Modal styles are shared in styles.css via .modal-*) */
 </style>
 
 <!-- Modal for adding a new year -->
-<div id="yearModalOverlay" aria-hidden="true">
-  <div id="yearModal" role="dialog" aria-modal="true">
-    <h3>Añadir configuración de año</h3>
-    <form method="post" id="yearAddForm">
+<div id="yearModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
+  <div id="yearModal" class="modal-dialog" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <h3 class="modal-title">Añadir configuración de año</h3>
+    </div>
+    <div class="modal-body">
+    <form method="post" id="yearAddForm" class="form-wrapper">
       <input type="hidden" name="save_year_config" value="1">
       <div class="form-grid">
         <div class="form-group"><label class="form-label">Año</label><input class="form-control" name="yearcfg_year" type="number" required></div>
@@ -599,10 +797,11 @@ if ($hol_pdo) {
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn-secondary" type="button" id="closeYearModal">Cancelar</button>
-        <button class="btn-primary" type="submit">Crear año</button>
+        <button class="btn btn-secondary" type="button" id="closeYearModal">Cancelar</button>
+        <button class="btn btn-primary" type="submit">Crear año</button>
       </div>
     </form>
+    </div>
   </div>
 </div>
 
@@ -716,7 +915,7 @@ if ($hol_pdo) {
       globalTd._orig = globalTd.innerHTML;
       // Always show editable checkbox for 'global' in inline edit; server enforces admin rights
       const checked = (tr.dataset.global === '1') ? 'checked' : '';
-      globalTd.innerHTML = '<label><input type="checkbox" name="global" ' + checked + '> Global</label>';
+      globalTd.innerHTML = '<label class="form-check"><input type="checkbox" name="global" ' + checked + '><span>Global</span></label>';
     }
     const saveBtn = document.createElement('button'); saveBtn.type='button'; saveBtn.className='btn-primary save-holiday-btn icon-btn'; saveBtn.title='Guardar'; saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM12 19a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" fill="currentColor"/></svg>';
     const cancelBtn = document.createElement('button'); cancelBtn.type='button'; cancelBtn.className='btn-secondary cancel-holiday-btn icon-btn'; cancelBtn.title='Cancelar'; cancelBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.41 4.29 19.71 2.88 18.3 9.17 12 2.88 5.71 4.29 4.29 10.59 10.59 16.88 4.29z" fill="currentColor"/></svg>';
