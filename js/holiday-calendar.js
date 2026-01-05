@@ -48,12 +48,14 @@ class HolidayCalendar {
     const firstDay = new Date(year, month - 1, 1);
     const lastDay = new Date(year, month, 0);
     const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
+    // Convert getDay() (0=Sun) to week starting Monday (0=Mon, 6=Sun)
+    let startingDayOfWeek = firstDay.getDay();
+    startingDayOfWeek = (startingDayOfWeek === 0) ? 6 : startingDayOfWeek - 1;
 
     let html = '<div class="calendar-grid">';
 
     // Day headers (Mon-Sun)
-    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
     dayNames.forEach(day => {
       html += `<div class="calendar-day-header">${day}</div>`;
     });
