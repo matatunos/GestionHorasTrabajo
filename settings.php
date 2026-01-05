@@ -805,8 +805,8 @@ if ($hol_pdo) {
         <div class="form-group">
           <label class="form-label">Invierno</label>
           <div style="display:flex;gap:8px;">
-            <input class="form-control" name="yearcfg_mon_thu" placeholder="Lun-Jue e.g. 7:30 o 7.5">
-            <input class="form-control" name="yearcfg_friday" placeholder="Viernes e.g. 6">
+            <input class="form-control" name="yearcfg_mon_thu" placeholder="Lun-Jue e.g. 08:00 o 8.5">
+            <input class="form-control" name="yearcfg_friday" placeholder="Viernes e.g. 06:00 o 6">
           </div>
         </div>
       </div>
@@ -814,17 +814,17 @@ if ($hol_pdo) {
         <div class="form-group">
           <label class="form-label">Verano</label>
           <div style="display:flex;gap:8px;">
-            <input class="form-control" name="yearcfg_summer_mon_thu" placeholder="Lun-Jue e.g. 7:30">
-            <input class="form-control" name="yearcfg_summer_friday" placeholder="Viernes e.g. 6">
+            <input class="form-control" name="yearcfg_summer_mon_thu" placeholder="Lun-Jue e.g. 07:30 o 7.5">
+            <input class="form-control" name="yearcfg_summer_friday" placeholder="Viernes e.g. 06:00 o 6">
           </div>
         </div>
       </div>
       <div class="form-grid">
         <div class="form-group">
-          <label class="form-label">Minutos</label>
+          <label class="form-label">Descansos</label>
           <div style="display:flex;gap:8px;">
-            <input class="form-control" name="yearcfg_coffee_minutes" placeholder="Café e.g. 15 o 0:15">
-            <input class="form-control" name="yearcfg_lunch_minutes" placeholder="Comida e.g. 30 o 0:30">
+            <input class="form-control" name="yearcfg_coffee_minutes" placeholder="Café e.g. 00:15 o 15">
+            <input class="form-control" name="yearcfg_lunch_minutes" placeholder="Comida e.g. 00:30 o 30">
           </div>
         </div>
       </div>

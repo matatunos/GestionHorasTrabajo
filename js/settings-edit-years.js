@@ -4,6 +4,26 @@
  */
 
 (function(){
+  // Convert decimal hours (8.5) to hh:mm format (08:30)
+  function decimalToHHMM(decimal) {
+    if (!decimal || decimal === '') return '';
+    const num = parseFloat(decimal);
+    if (isNaN(num)) return '';
+    const hours = Math.floor(num);
+    const minutes = Math.round((num - hours) * 60);
+    return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
+  }
+
+  // Convert decimal minutes (90) to hh:mm format (01:30)
+  function decimalMinutesToHHMM(decimal) {
+    if (!decimal || decimal === '') return '';
+    const num = parseInt(decimal, 10);
+    if (isNaN(num)) return '';
+    const hours = Math.floor(num / 60);
+    const minutes = num % 60;
+    return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
+  }
+
   document.addEventListener('click', function(e){
     const btn = e.target.closest('.edit-year-btn');
     if (!btn) return;
@@ -23,19 +43,30 @@
     });
     
     // Replace cells with inputs
-    function setInput(cls, name, val){
+    function setInput(cls, name, val, isMinutes){
       const td = tr.querySelector('.yc-' + cls);
       if (!td) return;
-      td.innerHTML = '<input class="form-control" name="' + name + '" value="' + (val !== null && val !== undefined ? String(val) : '') + '">';
+      // Convert value to hh:mm format if it's hours or minutes
+      let displayVal = val;
+      if (val && (cls.includes('mon_thu') || cls.includes('friday') || cls.includes('coffee') || cls.includes('lunch'))) {
+        if (cls.includes('coffee') || cls.includes('lunch')) {
+          // These are minutes
+          displayVal = decimalMinutesToHHMM(val);
+        } else {
+          // These are hours
+          displayVal = decimalToHHMM(val);
+        }
+      }
+      td.innerHTML = '<input class="form-control" name="' + name + '" value="' + (displayVal !== null && displayVal !== undefined && displayVal !== '' ? String(displayVal) : '') + '">';
     }
     
     setInput('year', 'yearcfg_year', tr.dataset.year);
-    setInput('mon_thu', 'yearcfg_mon_thu', tr.dataset.mon_thu);
-    setInput('friday', 'yearcfg_friday', tr.dataset.friday);
-    setInput('summer_mon_thu', 'yearcfg_summer_mon_thu', tr.dataset.summer_mon_thu);
-    setInput('summer_friday', 'yearcfg_summer_friday', tr.dataset.summer_friday);
-    setInput('coffee_minutes', 'yearcfg_coffee_minutes', tr.dataset.coffee_minutes);
-    setInput('lunch_minutes', 'yearcfg_lunch_minutes', tr.dataset.lunch_minutes);
+    setInput('mon_thu', 'yearcfg_mon_thu', tr.dataset.mon_thu, false);
+    setInput('friday', 'yearcfg_friday', tr.dataset.friday, false);
+    setInput('summer_mon_thu', 'yearcfg_summer_mon_thu', tr.dataset.summer_mon_thu, false);
+    setInput('summer_friday', 'yearcfg_summer_friday', tr.dataset.summer_friday, false);
+    setInput('coffee_minutes', 'yearcfg_coffee_minutes', tr.dataset.coffee_minutes, true);
+    setInput('lunch_minutes', 'yearcfg_lunch_minutes', tr.dataset.lunch_minutes, true);
     
     // Replace actions with Save/Cancel buttons
     const actionsTd = btn.parentElement;
