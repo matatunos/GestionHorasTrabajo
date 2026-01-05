@@ -13,6 +13,43 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/lib.php';
 
+// ⚠️ CORS Headers para permitir solicitudes desde la extensión Chrome
+// Cuando usamos credentials: 'include' en fetch, no podemos usar Access-Control-Allow-Origin: *
+// Necesitamos permitir el origin específico del cliente (en este caso la extensión de Chrome)
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+// Permitir extensión Chrome y localhost
+$allowed_origins = [
+  'chrome-extension://',  // Cualquier extensión (es básicamente inseguro, pero necesario para extensiones)
+  'http://localhost',
+  'http://127.0.0.1',
+  'https://calendar.favala.es',
+  'https://localhost'
+];
+
+$should_allow = false;
+foreach ($allowed_origins as $allowed) {
+  if (strpos($origin, $allowed) === 0) {
+    $should_allow = true;
+    break;
+  }
+}
+
+if ($should_allow || strpos($origin, 'chrome-extension://') === 0) {
+  header('Access-Control-Allow-Origin: ' . $origin);
+  header('Access-Control-Allow-Credentials: true');
+}
+
+header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, X-Requested-With, X-CSRF-Token');
+header('Access-Control-Max-Age: 86400');
+
+// Manejar preflight requests (OPTIONS)
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+  http_response_code(200);
+  exit;
+}
+
 // Solo AJAX
 if (empty($_SERVER['HTTP_X_REQUESTED_WITH']) || $_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest') {
   http_response_code(403);
@@ -29,6 +66,11 @@ if ($protocol === 'http' && $_SERVER['HTTP_HOST'] !== 'localhost' && $_SERVER['H
   echo json_encode(['ok' => false, 'error' => 'insecure', 'message' => 'API solo disponible por HTTPS']);
   exit;
 }
+}
+
+// ⚠️ IMPORTANTE: Leer php://input UNA SOLA VEZ al inicio (no se puede leer dos veces)
+$raw_input = file_get_contents('php://input');
+$global_input = json_decode($raw_input, true);
 
 // Autenticación HÍBRIDA: Sesión O Token
 $user = null;
@@ -43,8 +85,7 @@ if (!empty($_SESSION['user_id'])) {
 
 // 2. Si no hay sesión, intentar token
 if (!$user) {
-  $input = json_decode(file_get_contents('php://input'), true);
-  $token = $input['token'] ?? null;
+  $token = $global_input['token'] ?? null;
   
   if ($token) {
     $user_id = validate_extension_token($token);
@@ -79,9 +120,23 @@ $method = $_SERVER['REQUEST_METHOD'];
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $path = str_replace('/api.php', '', $path);
 
+// GET /api.php/debug - Ver datos que llegan (solo para debugging)
+if ($method === 'GET' && $path === '/debug') {
+  echo json_encode([
+    'debug' => 'API funcionando',
+    'method' => $_SERVER['REQUEST_METHOD'],
+    'path' => $path,
+    'user' => ['id' => $user['id'], 'email' => $user['email']],
+    'raw_input_length' => strlen($raw_input),
+    'parsed_input_keys' => $global_input ? array_keys($global_input) : [],
+    'timestamp' => date('Y-m-d H:i:s')
+  ]);
+  exit;
+}
+
 // POST /api.php/import - Importar múltiples fichajes
 if ($method === 'POST' && ($path === '' || $path === '/')) {
-  handleImportFichajes();
+  handleImportFichajes($global_input);
 }
 // GET /api.php/status - Estado de la extensión
 else if ($method === 'GET' && ($path === '' || $path === '/')) {
@@ -99,7 +154,7 @@ else if ($method === 'GET' && ($path === '' || $path === '/')) {
 }
 // POST /api.php/entry - Crear/actualizar entrada
 else if ($method === 'POST' && $path === '/entry') {
-  handleCreateEntry();
+  handleCreateEntry($global_input);
 }
 // DELETE /api.php/entry/{date} - Eliminar entrada
 else if ($method === 'DELETE' && preg_match('#^/entry/(.+)$#', $path, $matches)) {
@@ -117,10 +172,15 @@ else {
  * POST /api.php/import
  * Body: { entries: [{ date, start, end, coffee_out, coffee_in, lunch_out, lunch_in, note }] }
  */
-function handleImportFichajes() {
+function handleImportFichajes($input) {
   global $pdo, $user;
   
-  $input = json_decode(file_get_contents('php://input'), true);
+  // DEBUG: Loguear qué se recibe
+  $debug_log = fopen('/tmp/gestion_import_debug.log', 'a');
+  fwrite($debug_log, "\n=== " . date('Y-m-d H:i:s') . " ===\n");
+  fwrite($debug_log, "User: " . ($user['email'] ?? 'UNKNOWN') . "\n");
+  fwrite($debug_log, "Input received:\n" . json_encode($input, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n");
+  fclose($debug_log);
   
   if (!isset($input['entries']) || !is_array($input['entries'])) {
     http_response_code(400);
@@ -210,10 +270,8 @@ function handleImportFichajes() {
  * POST /api.php/entry
  * Body: { date, start, end, ... }
  */
-function handleCreateEntry() {
+function handleCreateEntry($input) {
   global $pdo, $user;
-  
-  $input = json_decode(file_get_contents('php://input'), true);
   
   if (!isset($input['date'])) {
     http_response_code(400);

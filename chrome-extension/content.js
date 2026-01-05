@@ -42,6 +42,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
       } else {
         console.log('[GestionHoras] ✅ Captura exitosa:', Object.keys(data).length + ' registros');
+        console.log('[GestionHoras] 📦 Datos capturados:', JSON.stringify(data, null, 2).substring(0, 500) + '...');
         sendResponse({ 
           success: true, 
           data: data,
@@ -85,27 +86,82 @@ function extractTragsaData() {
       return null;
     }
     
-    // Obtener el año de la página o del selector de semana
+    // Obtener el año - estrategia:
+    // 1. Intentar detectar del HTML si hay indicación del año
+    // 2. Si hay datos de diciembre/noviembre y estamos en enero-marzo → año pasado
+    // 3. Si no, usar el año actual
     let year = new Date().getFullYear();
-    const weekSelect = document.getElementById('ddl_semanas');
-    if (weekSelect && weekSelect.value) {
-      const [day, month] = weekSelect.value.split('-');
-      const selectedDate = new Date(year, 
-        new Date(`${month} 1, ${year}`).getMonth(), 
-        parseInt(day)
-      );
-      if (selectedDate > new Date()) year--;
+    
+    // Primero: chequear si estamos en enero-marzo y hay meses de nov-dic
+    // Si es así, el año debería ser el anterior
+    const today = new Date();
+    if (today.getMonth() <= 2) { // enero=0, febrero=1, marzo=2
+      // Chequear si hay fechas con mes dic o nov
+      const hasDecOrNov = dates.some(d => {
+        const monthText = d.split('-')[1].toLowerCase();
+        return ['dic', 'diciembre', 'dec', 'december', 'nov', 'noviembre', 'november'].includes(monthText);
+      });
+      
+      if (hasDecOrNov) {
+        // Si hay diciembre/noviembre en enero-marzo, el año es anterior
+        year = year - 1;
+        console.log('[GestionHoras] TRAGSA: Detectado mes de año anterior, usando año:', year);
+      }
     }
+    
+    // Intenta encontrar el año en la página si no se ha ajustado arriba
+    // Busca en el contexto de "tabla" o "fichajes"
+    const tableText = table.innerText || '';
+    const yearMatches = tableText.match(/20\d{2}/g);
+    if (yearMatches && yearMatches.length > 0) {
+      // Usa el año más frecuente en la tabla
+      const potentialYear = parseInt(yearMatches[0]);
+      if (potentialYear > 2000 && potentialYear < 2100) {
+        console.log('[GestionHoras] TRAGSA: Año detectado de tabla:', potentialYear);
+        // Si la tabla tiene un año explícito y es diferente al nuestro, úsalo
+        if (potentialYear !== year && !hasDecOrNov) {
+          year = potentialYear;
+        }
+      }
+    }
+    
+    console.log('[GestionHoras] TRAGSA: Año final a usar:', year);
     
     // Extraer tiempos de la fila de horas
     const hoursRow = table.querySelector('tr.horas');
     if (hoursRow) {
+      // Función para convertir nombre de mes a número
+      const monthMap = {
+        'ene': '01', 'enero': '01', 'jan': '01', 'january': '01',
+        'feb': '02', 'febrero': '02',
+        'mar': '03', 'marzo': '03',
+        'apr': '04', 'abr': '04', 'abril': '04',
+        'may': '05', 'mayo': '05',
+        'jun': '06', 'junio': '06', 'june': '06',
+        'jul': '07', 'julio': '07', 'july': '07',
+        'ago': '08', 'agosto': '08', 'aug': '08', 'august': '08',
+        'sep': '09', 'septiembre': '09', 'sept': '09',
+        'oct': '10', 'octubre': '10',
+        'nov': '11', 'noviembre': '11',
+        'dic': '12', 'diciembre': '12', 'dec': '12', 'december': '12'
+      };
+      
       const cells = hoursRow.querySelectorAll('td');
       cells.forEach((cell, idx) => {
         if (idx > 0 && idx <= dates.length) {
           const dateText = dates[idx - 1];
-          const [day, month] = dateText.split('-');
-          const fullDate = `${year}-${month}-${day}`;
+          const [day, monthText] = dateText.split('-');
+          
+          // Convertir nombre del mes a número
+          const monthKey = monthText.toLowerCase().trim();
+          const monthNum = monthMap[monthKey];
+          
+          if (!monthNum) {
+            console.warn(`[GestionHoras] Mes desconocido: "${monthText}"`);
+            return;
+          }
+          
+          const fullDate = `${year}-${monthNum}-${day.padStart(2, '0')}`;
           
           const times = [];
           cell.querySelectorAll('span').forEach(span => {
@@ -126,19 +182,8 @@ function extractTragsaData() {
       return null;
     }
     
-    // ✅ NUEVA LOGICA: Si una fecha es posterior a HOY, asumir que es del año anterior
-    const today = new Date();
-    for (let dateStr of Object.keys(data)) {
-      const parsedDate = new Date(dateStr);
-      // Si la fecha parseada es posterior a hoy, mover al año anterior
-      if (parsedDate > today) {
-        const parts = dateStr.split('-');
-        const correctedDate = `${parseInt(parts[0]) - 1}-${parts[1]}-${parts[2]}`;
-        data[correctedDate] = data[dateStr];
-        delete data[dateStr];
-        console.log(`[GestionHoras] 📅 ${dateStr} → ${correctedDate} (es posterior a hoy)`);
-      }
-    }
+    // Nota: La lógica de ajuste de año para marzo/diciembre está arriba
+    // en la sección de obtención del año
     
     return Object.keys(data).length > 0 ? data : null;
   } catch (error) {

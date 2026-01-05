@@ -133,23 +133,50 @@ async function importFichajes(data, sourceFormat, appUrl) {
     
     const body = { entries: entries };
     
+    // DEBUG: Log what we're sending
+    console.log('[Background] 📤 Enviando entradas:', JSON.stringify(body, null, 2));
+    console.log('[Background] 🌐 URL:', `${finalUrl}/api.php`);
+    console.log('[Background] 📨 Headers:', headers);
+    
     // Si está disponible, incluir token en el payload
     if (typeof EXTENSION_TOKEN !== 'undefined' && EXTENSION_TOKEN) {
       body.token = EXTENSION_TOKEN;
+      console.log('[Background] 🔐 Token incluido (primeros 10 caracteres):', EXTENSION_TOKEN.substring(0, 10) + '...');
+    } else {
+      console.log('[Background] ⚠️ No hay token, usando sesión');
     }
     
-    const response = await fetch(`${finalUrl}/api.php`, {
+    console.log('[Background] 🚀 Iniciando fetch...');
+    
+    const fetchPromise = fetch(`${finalUrl}/api.php`, {
       method: 'POST',
       headers: headers,
       credentials: 'include',  // Para sesión
       body: JSON.stringify(body)
     });
     
+    const response = await fetchPromise.catch(err => {
+      console.error('[Background] 🌐 Error de red:', err.message);
+      console.error('[Background] Detalles:', {
+        url: `${finalUrl}/api.php`,
+        method: 'POST',
+        hasCredentials: true,
+        error: err.toString()
+      });
+      throw err;
+    });
+    
+    console.log('[Background] 📥 Respuesta HTTP:', response.status, response.statusText);
+    
     if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status}`);
+      const text = await response.text();
+      console.error('[Background] ❌ HTTP Error body:', text);
+      throw new Error(`HTTP Error: ${response.status} - ${text.substring(0, 100)}`);
     }
     
     const result = await response.json();
+    
+    console.log('[Background] 📋 Resultado:', JSON.stringify(result, null, 2));
     
     if (result.ok) {
       console.log(`[Background] ✅ Importación exitosa: ${result.imported}/${result.total}`);
@@ -158,7 +185,8 @@ async function importFichajes(data, sourceFormat, appUrl) {
       throw new Error(result.message || 'Error del servidor');
     }
   } catch (error) {
-    console.error('[Background] Error de importación:', error);
+    console.error('[Background] ❌ Error de importación:', error);
+    console.error('[Background] Stack:', error.stack);
     return { count: 0, errors: [error.message] };
   }
 }
@@ -170,18 +198,49 @@ function formatDate(dateStr) {
     return dateStr;
   }
   
-  // Si es DD-mes
-  if (/^\d{2}-[a-z]{3}$/i.test(dateStr)) {
-    const [day, monthText] = dateStr.split('-');
-    const months = {
-      'ene': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
-      'jul': '07', 'ago': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12',
-      'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
-      'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
-    };
-    const month = months[monthText.toLowerCase()];
-    const year = new Date().getFullYear();
-    return `${year}-${month}-${day}`;
+  // Mapa de meses (para convertir "dic" → "12")
+  const months = {
+    'ene': '01', 'enero': '01', 'jan': '01', 'january': '01',
+    'feb': '02', 'febrero': '02',
+    'mar': '03', 'marzo': '03',
+    'apr': '04', 'abr': '04', 'abril': '04',
+    'may': '05', 'mayo': '05',
+    'jun': '06', 'junio': '06', 'june': '06',
+    'jul': '07', 'julio': '07', 'july': '07',
+    'ago': '08', 'agosto': '08', 'aug': '08', 'august': '08',
+    'sep': '09', 'septiembre': '09', 'sept': '09',
+    'oct': '10', 'octubre': '10',
+    'nov': '11', 'noviembre': '11',
+    'dic': '12', 'diciembre': '12', 'dec': '12', 'december': '12'
+  };
+  
+  // Si es YYYY-mes-DD (ej: 2025-dic-01)
+  if (/^\d{4}-[a-z]+(-\d{1,2})?$/i.test(dateStr)) {
+    const parts = dateStr.split('-');
+    const year = parts[0];
+    const monthText = parts[1].toLowerCase();
+    const day = parts[2] ? parts[2].padStart(2, '0') : '01';
+    
+    const month = months[monthText];
+    if (month) {
+      return `${year}-${month}-${day}`;
+    }
+  }
+  
+  // Si es DD-mes o DD-mes-YYYY
+  if (/^\d{1,2}-[a-z]+(-\d{2,4})?$/i.test(dateStr)) {
+    const parts = dateStr.split('-');
+    const day = parts[0].padStart(2, '0');
+    const monthText = parts[1].toLowerCase();
+    let year = parts[2] ? parseInt(parts[2]) : new Date().getFullYear();
+    
+    // Si el año es de 2 dígitos, convertir a 4
+    if (year < 100) year += 2000;
+    
+    const month = months[monthText];
+    if (month) {
+      return `${year}-${month}-${day}`;
+    }
   }
   
   // Si es DD/MM o DD/MM/YY
@@ -194,5 +253,6 @@ function formatDate(dateStr) {
     return `${year}-${month}-${day}`;
   }
   
+  console.warn('[Background] ⚠️ No se pudo convertir fecha:', dateStr);
   return dateStr;
 }
