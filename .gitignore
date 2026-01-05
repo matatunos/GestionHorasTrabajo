@@ -10,3 +10,7 @@ data/*.db
 /tmp/
 package.json
 package-lock.json
+HORARIO_2024.xlsx
+PDO::*
+parsed_fichajes.csv
+*.xlsx

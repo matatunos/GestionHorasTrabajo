@@ -5,23 +5,7 @@ require_once __DIR__ . '/config.php';
 $current = null;
 try { $current = current_user(); } catch (Throwable $e) { $current = null; }
 
-// prepare year options from entries table (fallback to current year)
-$years = [];
-// Prefer a $year variable provided by the including page (index.php sets it),
-// otherwise fall back to GET or current year.
-$selYear = isset($year) ? intval($year) : intval($_GET['year'] ?? date('Y'));
-try {
-    $pdo = get_pdo();
-    if ($pdo) {
-        $yearRows = $pdo->query("SELECT DISTINCT YEAR(date) AS y FROM entries ORDER BY y DESC")->fetchAll();
-        foreach ($yearRows as $r) $years[] = intval($r['y']);
-    }
-} catch (Throwable $e) { /* ignore */ }
-// Ensure the selected year appears in the list even if there are no DB rows for it
-if (!in_array($selYear, $years, true)) {
-  array_unshift($years, intval($selYear));
-}
-if (empty($years)) { $years = [intval(date('Y'))]; }
+// Layout header: no year selector and no "hide weekends" control
 ?>
 <div class="app-container">
   <aside class="sidebar">
@@ -39,11 +23,8 @@ if (empty($years)) { $years = [intval(date('Y'))]; }
         <!-- 'Años' link removed: management consolidated into settings.php -->
         <a class="menu-item" href="import.php">Importar Fichajes</a>
         <?php if (!empty($current) && $current['is_admin']): ?>
+          <a class="menu-item" href="reports.php">Reportes</a>
           <a class="menu-item" href="settings.php">Configuración</a>
-          <a class="menu-item" href="users.php">Usuarios</a>
-        <?php endif; ?>
-        <?php if (!empty($current)): ?>
-          <a class="menu-item" href="dashboard.php">Dashboard</a>
         <?php endif; ?>
 
         <?php if (!empty($current)): ?>
@@ -64,18 +45,19 @@ if (empty($years)) { $years = [intval(date('Y'))]; }
 
   <div class="main-content">
     <?php $site_cfg = get_config(); $site_name = $site_cfg['site_name'] ?? 'GestionHoras'; ?>
-    <header class="header">
-      <div class="header-brand">
-        <a class="header-brand-logo" href="dashboard.php"><!-- optional logo --></a>
-        <a class="header-brand-text" href="dashboard.php"><?php echo htmlspecialchars($site_name); ?></a>
-      </div>
-      <div class="header-actions">
-        <!-- Header actions intentionally minimal; year selector moved to Registro page -->
-      </div>
-    </header>
+    <?php if (empty($hidePageHeader)): ?>
+      <header class="header">
+        <div class="header-brand">
+          <a class="header-brand-logo" href="dashboard.php"><!-- optional logo --></a>
+        </div>
+        <div class="header-actions">
+        </div>
+      </header>
+    <?php endif; ?>
 
     <script>
     (function(){
+      // Handle menu-user dropdown
       document.addEventListener('click', function(e){
         const mu = document.querySelector('.menu-user');
         if(!mu) return;
@@ -85,7 +67,14 @@ if (empty($years)) { $years = [intval(date('Y'))]; }
           mu.classList.remove('open');
         }
       });
-      document.addEventListener('keydown', function(e){ if (e.key === 'Escape') { const mu = document.querySelector('.menu-user'); if(mu) mu.classList.remove('open'); } });
+      
+      // Close menus on Escape
+      document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape') {
+          const mu = document.querySelector('.menu-user');
+          if(mu) mu.classList.remove('open');
+        }
+      });
     })();
     </script>
 
