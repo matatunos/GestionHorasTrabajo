@@ -20,8 +20,15 @@ try {
 $years = array_values(array_unique(array_filter($years)));
 rsort($years);
 
-// If requested year has no data, fall back to most recent year with data
-if (!empty($years) && !in_array($year, $years, true)) {
+// Always allow viewing current year and upcoming years, even with no data
+$currentYear = intval(date('Y'));
+if (!in_array($currentYear, $years)) {
+  $years[] = $currentYear;
+  rsort($years);
+}
+
+// If requested year has no data AND it's not current year, fall back to most recent year with data
+if (!empty($years) && !in_array($year, $years, true) && $year !== $currentYear) {
   $year = $years[0];
 }
 
@@ -42,11 +49,22 @@ foreach ($rows as $r) $entries[$r['date']] = $r;
 // load holidays for year (map annual to selected year)
 $holidayMap = [];
 try {
-  $hstmt = $pdo->prepare('SELECT date,label,type,annual,user_id FROM holidays WHERE (YEAR(date) = ? OR annual = 1) AND (user_id IS NULL OR user_id = ?)');
-  $hstmt->execute([$year, $user['id']]);
+  $hstmt = $pdo->prepare('SELECT date,label,type,annual,user_id FROM holidays WHERE user_id IS NULL OR user_id = ?');
+  $hstmt->execute([$user['id']]);
   foreach ($hstmt->fetchAll() as $h) {
     $keyDate = $h['date'];
-    if (!empty($h['annual'])) $keyDate = sprintf('%04d-%s', $year, substr($h['date'],5));
+    // Si es un festivo anual, reconstruir la fecha para el año seleccionado
+    if (!empty($h['annual'])) {
+      $hMonth = intval(substr($h['date'], 5, 2)); // MM
+      $hDay = intval(substr($h['date'], 8, 2));   // DD
+      $keyDate = sprintf('%04d-%02d-%02d', $year, $hMonth, $hDay);
+    } else {
+      // Si no es anual, solo incluir si coincide con el año seleccionado
+      $hYear = intval(substr($h['date'], 0, 4)); // YYYY
+      if ($hYear !== $year) {
+        continue;
+      }
+    }
     $holidayMap[$keyDate] = ['label'=>$h['label'],'type'=>$h['type']];
   }
 } catch (Throwable $e) { }
@@ -365,6 +383,9 @@ function svg_sparkline(array $values, $w=120, $h=28){
     <!-- Alertas -->
     <?php
       $alerts = [];
+      
+      // Debug
+      // echo "<!-- DEBUG: todayInYear=$todayInYear, year=$year, today=$today, entryExists=" . (isset($entries[$today]) ? 'yes' : 'no') . ", inHolidayMap=" . (isset($holidayMap[$today]) ? 'yes' : 'no') . " -->";
       
       // Check if today's entry is missing (but only on working days)
       if ($todayInYear && empty($entries[$today])) {
