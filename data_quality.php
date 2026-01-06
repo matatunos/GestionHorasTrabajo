@@ -35,6 +35,39 @@ $stmt = $pdo->prepare($query);
 $stmt->execute([$user['id'], $startDate->format('Y-m-d'), $endDate->format('Y-m-d')]);
 $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Cargar festivos/ausencias del usuario
+$holidayMap = [];
+try {
+  // Load holidays that apply: global (user_id IS NULL) or user-specific (user_id = current user)
+  $holQuery = 'SELECT date, type, label, annual FROM holidays 
+               WHERE (user_id = ? OR user_id IS NULL)';
+  $holStmt = $pdo->prepare($holQuery);
+  $holStmt->execute([$user['id']]);
+  $holidays = $holStmt->fetchAll(PDO::FETCH_ASSOC);
+  
+  foreach ($holidays as $hol) {
+    $hDate = $hol['date'];
+    $holDate = $hDate; // Start with original date
+    
+    // If it's an annual holiday, reconstruct it for the selected year
+    if (!empty($hol['annual'])) {
+      $hMonth = intval(substr($hDate, 5, 2)); // MM
+      $hDay = intval(substr($hDate, 8, 2));   // DD
+      $holDate = sprintf('%04d-%02d-%02d', $selectedYear, $hMonth, $hDay);
+    } else {
+      // For non-annual holidays, only include if they match the selected year
+      $holYear = intval(substr($hDate, 0, 4)); // YYYY
+      if ($holYear !== $selectedYear) {
+        continue; // Skip holidays from other years
+      }
+    }
+    
+    $holidayMap[$holDate] = $hol;
+  }
+} catch (Exception $e) {
+  // Silenciosamente ignorar si la tabla de holidays no existe
+}
+
 // Helpers
 function timeToMinutes($time) {
   if (!$time) return null;
@@ -86,6 +119,20 @@ foreach ($entries as $entry) {
   $issues = [];
   $severity = 'ok';
   
+  // Verificar si el día está marcado como festivo/ausencia
+  if (isset($holidayMap[$entry['date']])) {
+    $holiday = $holidayMap[$entry['date']];
+    $typeLabel = [
+      'holiday' => 'Festivo',
+      'vacation' => 'Vacaciones',
+      'personal' => 'Asuntos propios',
+      'enfermedad' => 'Enfermedad',
+      'permiso' => 'Permiso'
+    ][$holiday['type']] ?? ucfirst($holiday['type']);
+    $issues[] = 'Fichaje registrado en ' . $typeLabel;
+    $severity = 'danger';
+  }
+  
   if ($endMin < (16 * 60)) {
     $issues[] = 'Salida muy temprana (' . minutesToTime($endMin) . ')';
     $severity = 'danger';
@@ -113,25 +160,100 @@ foreach ($entries as $entry) {
   }
 }
 
-// Detectar laborables sin fichajes
+// Contadores por tipo de problema
+$problemsByType = [
+  'danger' => 0,
+  'warning' => 0,
+  'holiday' => 0
+];
+
+// Contar problemas por severidad
+foreach ($issuesByDate as $problem) {
+  $sev = $problem['severity'] ?? 'ok';
+  if (isset($problemsByType[$sev])) {
+    $problemsByType[$sev]++;
+  }
+}
+
+// Detectar laborables sin fichajes (excluyendo festivos/ausencias y días futuros)
 $currentDate = clone $startDate;
+$today = new DateTime();
 $missingWorkdays = 0;
 while ($currentDate <= $endDate) {
   $dayOfWeek = $currentDate->format('N');
   $dateStr = $currentDate->format('Y-m-d');
   
-  if ($dayOfWeek <= 5 && !isset($entryDates[$dateStr])) {
+  // Saltar si ya tiene entrada de trabajo
+  if (isset($entryDates[$dateStr])) {
+    $currentDate->modify('+1 day');
+    continue;
+  }
+  
+  // Saltar si es fin de semana
+  if ($dayOfWeek > 5) {
+    $currentDate->modify('+1 day');
+    continue;
+  }
+  
+  // Saltar si es festivo/ausencia
+  if (isset($holidayMap[$dateStr])) {
+    $currentDate->modify('+1 day');
+    continue;
+  }
+  
+  // Saltar si es fecha futura (aún no ha llegado)
+  if ($currentDate > $today) {
+    $currentDate->modify('+1 day');
+    continue;
+  }
+  
+  // Es un día laboral pasado sin fichajes ni festivo
+  $issuesByDate[$dateStr] = [
+    'issues' => ['Sin fichajes'],
+    'severity' => 'danger',
+    'hoursWorked' => 0,
+    'entry' => null
+  ];
+  $missingWorkdays++;
+  $totalProblems++;
+  
+  $currentDate->modify('+1 day');
+}
+
+// Agregar festivos/ausencias al mapa de problemas para visualización
+// (aunque no sean problemas, es útil verlos en el calendario)
+foreach ($holidayMap as $dateStr => $holiday) {
+  // Solo agregar si no está ya en el mapa (es decir, si no tiene otros problemas)
+  if (!isset($issuesByDate[$dateStr])) {
+    $typeLabel = [
+      'holiday' => 'Festivo',
+      'vacation' => 'Vacaciones',
+      'personal' => 'Asuntos propios',
+      'enfermedad' => 'Enfermedad',
+      'permiso' => 'Permiso'
+    ][$holiday['type']] ?? ucfirst($holiday['type']);
+    
     $issuesByDate[$dateStr] = [
-      'issues' => ['Sin fichajes'],
-      'severity' => 'danger',
+      'issues' => [$typeLabel],
+      'severity' => 'holiday', // Nueva categoría para festivos
       'hoursWorked' => 0,
       'entry' => null
     ];
-    $missingWorkdays++;
-    $totalProblems++;
   }
-  
-  $currentDate->modify('+1 day');
+}
+
+// Recontar problemas después de agregar festivos
+$problemsByType = [
+  'danger' => 0,
+  'warning' => 0,
+  'holiday' => 0
+];
+
+foreach ($issuesByDate as $problem) {
+  $sev = $problem['severity'] ?? 'ok';
+  if (isset($problemsByType[$sev])) {
+    $problemsByType[$sev]++;
+  }
 }
 
 // Manejo de correcciones
@@ -151,6 +273,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $updateStmt = $pdo->prepare($updateQuery);
     $updateStmt->execute([$start, $end, $coffee_out, $coffee_in, $lunch_out, $lunch_in, $user['id'], $date]);
     
+    // Procesar festivo si se marcó
+    if (!empty($_POST['is_holiday'])) {
+      $holiday_type = $_POST['holiday_type'] ?? 'holiday';
+      $holiday_label = $_POST['holiday_label'] ?? '';
+      $holiday_annual = !empty($_POST['holiday_annual']) ? 1 : 0;
+      $holiday_global = !empty($_POST['holiday_global']) ? 1 : 0;
+      
+      // Usar la conexión de festivos si está disponible
+      try {
+        $hol_pdo = get_pdo(); // Usar la misma conexión
+        
+        // Primero eliminar si existe
+        $delQuery = 'DELETE FROM holidays WHERE date = ? AND user_id = ?';
+        $delStmt = $hol_pdo->prepare($delQuery);
+        $delStmt->execute([$date, $user['id']]);
+        
+        // Luego insertar el nuevo
+        $insQuery = 'INSERT INTO holidays (user_id, date, label, type, annual) VALUES (?, ?, ?, ?, ?)';
+        $insStmt = $hol_pdo->prepare($insQuery);
+        $insStmt->execute([$user['id'], $date, $holiday_label, $holiday_type, $holiday_annual]);
+      } catch (Exception $e) {
+        // Silenciosamente ignorar si la tabla no existe
+      }
+    }
+    
     header('Location: data_quality.php?year=' . $selectedYear . '&fixed=' . urlencode($date));
     exit;
   }
@@ -164,9 +311,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $lunch_out = $_POST['lunch_out'] ?? null;
     $lunch_in = $_POST['lunch_in'] ?? null;
     
-    $insertQuery = 'INSERT INTO entries (user_id, date, start, end, coffee_out, coffee_in, lunch_out, lunch_in, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-    $insertStmt = $pdo->prepare($insertQuery);
-    $insertStmt->execute([$user['id'], $date, $start, $end, $coffee_out, $coffee_in, $lunch_out, $lunch_in, 'Añadido manualmente']);
+    // Si está marcado como festivo, no crear entrada de trabajo
+    if (empty($_POST['is_holiday'])) {
+      $insertQuery = 'INSERT INTO entries (user_id, date, start, end, coffee_out, coffee_in, lunch_out, lunch_in, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+      $insertStmt = $pdo->prepare($insertQuery);
+      $insertStmt->execute([$user['id'], $date, $start, $end, $coffee_out, $coffee_in, $lunch_out, $lunch_in, 'Añadido manualmente']);
+    }
+    
+    // Procesar festivo si se marcó
+    if (!empty($_POST['is_holiday'])) {
+      $holiday_type = $_POST['holiday_type'] ?? 'holiday';
+      $holiday_label = $_POST['holiday_label'] ?? '';
+      $holiday_annual = !empty($_POST['holiday_annual']) ? 1 : 0;
+      $holiday_global = !empty($_POST['holiday_global']) ? 1 : 0;
+      
+      // Usar la conexión de festivos si está disponible
+      try {
+        $hol_pdo = get_pdo(); // Usar la misma conexión
+        
+        // Insertar el festivo
+        $insQuery = 'INSERT INTO holidays (user_id, date, label, type, annual) VALUES (?, ?, ?, ?, ?)';
+        $insStmt = $hol_pdo->prepare($insQuery);
+        $insStmt->execute([$user['id'], $date, $holiday_label, $holiday_type, $holiday_annual]);
+      } catch (Exception $e) {
+        // Silenciosamente ignorar si la tabla no existe
+      }
+    }
     
     header('Location: data_quality.php?year=' . $selectedYear . '&added=' . urlencode($date));
     exit;
@@ -295,6 +465,7 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
     .calendar-day.ok { background: #d4edda; border-color: #28a745; border-width: 2px; }
     .calendar-day.warning { background: #fff3cd; border-color: #ffc107; border-width: 2px; }
     .calendar-day.danger { background: #f8d7da; border-color: #dc3545; border-width: 2px; }
+    .calendar-day.holiday { background: #e7f3ff; border-color: #0056b3; border-width: 2px; }
     .calendar-day.today { box-shadow: inset 0 0 0 2px #007bff; }
     
     .calendar-day-number { font-weight: bold; font-size: 1em; }
@@ -434,8 +605,16 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
         <div class="stat-label">Problemas detectados</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value"><?php echo $missingWorkdays; ?></div>
-        <div class="stat-label">Laborables sin fichajes</div>
+        <div class="stat-value" style="color: #dc3545;"><?php echo $problemsByType['danger']; ?></div>
+        <div class="stat-label">🔴 Críticos</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" style="color: #ff9800;"><?php echo $problemsByType['warning']; ?></div>
+        <div class="stat-label">🟠 Advertencias</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" style="color: #0056b3;"><?php echo $problemsByType['holiday']; ?></div>
+        <div class="stat-label">📅 Festivos</div>
       </div>
       <div class="stat-box">
         <div class="stat-value"><?php echo intval((count($entryDates) / 251) * 100); ?>%</div>
@@ -461,6 +640,10 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
         <div class="legend-item">
           <div class="legend-dot danger"></div>
           <span>Problema grave (sin fichajes, salida muy temprana/tardía)</span>
+        </div>
+        <div class="legend-item">
+          <div style="width: 24px; height: 24px; border-radius: 4px; border: 2px solid #0056b3; background: #e7f3ff; flex-shrink: 0;"></div>
+          <span>Festivo/Ausencia registrado</span>
         </div>
         <div class="legend-item">
           <div class="legend-dot empty"></div>
@@ -520,19 +703,32 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
           $status = $issue['severity'];
           $issueText = implode(' | ', $issue['issues']);
         } elseif (isset($entryDates[$dateStr])) {
-          $status = 'ok';
+          // Tiene fichajes, pero verificar si es fin de semana (naranja)
+          $dayOfWeek = intval($day->format('N'));
+          if ($dayOfWeek > 5) {
+            $status = 'warning'; // Fin de semana con fichajes
+            $issueText = 'Fichaje en fin de semana';
+          } else {
+            $status = 'ok';
+          }
         } else {
+          // Sin fichajes: solo mostrar como problema si es día pasado
           $dayOfWeek = intval($day->format('N'));
           if ($dayOfWeek <= 5) {
-            $status = 'danger';
-            $issueText = 'Sin fichajes';
+            // Es un día laboral (lunes-viernes)
+            $todayDate = new DateTime();
+            if ($day < $todayDate) {
+              // Es un día pasado sin fichajes
+              $status = 'danger';
+              $issueText = 'Sin fichajes';
+            }
           }
         }
         
         $today = date('Y-m-d') === $dateStr ? ' today' : '';
         $classStr = 'calendar-day ' . $status . $today;
         
-        echo '<div class="' . $classStr . '" onclick="openDetailModal(\'' . htmlspecialchars($dateStr) . '\')" title="' . htmlspecialchars($issueText) . '">';
+        echo '<div class="' . $classStr . '" onclick="openDetailModal(\'' . htmlspecialchars($dateStr) . '\'); return false;" title="' . htmlspecialchars($issueText) . '" style="cursor: pointer;">';
         echo '<div class="calendar-day-number">' . $dayNum . '</div>';
         if ($issueText && $status !== 'ok') {
           $preview = substr($issueText, 0, 15);
@@ -573,7 +769,7 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
         
         foreach (array_slice($sortedIssues, 0, 20) as $date => $data):
         ?>
-          <div class="problem-card <?php echo $data['severity']; ?>" onclick="openDetailModal('<?php echo htmlspecialchars($date); ?>')">
+          <div class="problem-card <?php echo $data['severity']; ?>" onclick="openDetailModal('<?php echo htmlspecialchars($date); ?>'); return false;" style="cursor: pointer;">
             <h4 style="margin-top: 0;">
               <?php echo date('d/m/Y (l)', strtotime($date)); ?>
             </h4>
@@ -605,7 +801,7 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
 </div>
 
 <!-- Modal de detalle y corrección -->
-<div class="modal-overlay" id="detailModal" onclick="if(event.target === this) closeDetailModal()">
+<div class="modal-overlay" id="detailModal" style="display:none;">
   <div class="modal-content">
     <h3 id="modalTitle" style="margin-top: 0;"></h3>
     
@@ -615,36 +811,85 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
       <input type="hidden" name="action" id="modalAction" value="">
       <input type="hidden" name="date" id="modalDate" value="">
       
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Entrada</label>
-          <input type="time" name="start" id="modalStart" class="form-control">
+      <!-- Hora de trabajo -->
+      <div id="workTimeSection" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #e0e0e0;">
+        <h4 style="margin-top: 0; margin-bottom: 12px; font-size: 0.95em; color: #333;">Horas de trabajo</h4>
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Entrada</label>
+            <input type="time" name="start" id="modalStart" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Salida</label>
+            <input type="time" name="end" id="modalEnd" class="form-control">
+          </div>
         </div>
-        <div class="form-group">
-          <label>Salida</label>
-          <input type="time" name="end" id="modalEnd" class="form-control">
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Café - Salida</label>
+            <input type="time" name="coffee_out" id="modalCoffeeOut" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Café - Entrada</label>
+            <input type="time" name="coffee_in" id="modalCoffeeIn" class="form-control">
+          </div>
+        </div>
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Comida - Salida</label>
+            <input type="time" name="lunch_out" id="modalLunchOut" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Comida - Entrada</label>
+            <input type="time" name="lunch_in" id="modalLunchIn" class="form-control">
+          </div>
         </div>
       </div>
-      
-      <div class="form-grid">
+
+      <!-- Marcar como festivo -->
+      <div id="holidaySection" style="margin-bottom: 20px;">
+        <h4 style="margin-top: 0; margin-bottom: 12px; font-size: 0.95em; color: #333;">Marcar como festivo/ausencia</h4>
+        
         <div class="form-group">
-          <label>Café - Salida</label>
-          <input type="time" name="coffee_out" id="modalCoffeeOut" class="form-control">
+          <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="modalIsHoliday" name="is_holiday" onchange="document.getElementById('holidayDetailsSection').style.display = this.checked ? 'block' : 'none';">
+            Este día es una ausencia/festivo
+          </label>
         </div>
-        <div class="form-group">
-          <label>Café - Entrada</label>
-          <input type="time" name="coffee_in" id="modalCoffeeIn" class="form-control">
-        </div>
-      </div>
-      
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Comida - Salida</label>
-          <input type="time" name="lunch_out" id="modalLunchOut" class="form-control">
-        </div>
-        <div class="form-group">
-          <label>Comida - Entrada</label>
-          <input type="time" name="lunch_in" id="modalLunchIn" class="form-control">
+
+        <div id="holidayDetailsSection" style="display: none; padding-left: 12px; border-left: 3px solid #e0e0e0;">
+          <div class="form-group">
+            <label>Tipo</label>
+            <select class="form-control" name="holiday_type" id="modalHolidayType">
+              <option value="holiday">Festivo</option>
+              <option value="vacation">Vacaciones</option>
+              <option value="personal">Asuntos propios</option>
+              <option value="enfermedad">Enfermedad</option>
+              <option value="permiso">Permiso</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Descripción (opcional)</label>
+            <input type="text" class="form-control" name="holiday_label" id="modalHolidayLabel" placeholder="Ej: Vacaciones verano">
+          </div>
+
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" name="holiday_annual" id="modalHolidayAnnual">
+              Repite anualmente
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" name="holiday_global" id="modalHolidayGlobal">
+              Visible a todos (global)
+            </label>
+          </div>
         </div>
       </div>
       
@@ -672,6 +917,14 @@ function openDetailModal(date) {
   body += '</div>';
   document.getElementById('modalBody').innerHTML = body;
   
+  // Reset holiday fields
+  document.getElementById('modalIsHoliday').checked = false;
+  document.getElementById('holidayDetailsSection').style.display = 'none';
+  document.getElementById('modalHolidayType').value = 'holiday';
+  document.getElementById('modalHolidayLabel').value = '';
+  document.getElementById('modalHolidayAnnual').checked = false;
+  document.getElementById('modalHolidayGlobal').checked = false;
+  
   if (entry && entry.start) {
     document.getElementById('modalAction').value = 'fix_hours';
     document.getElementById('modalStart').value = entry.start || '';
@@ -690,12 +943,31 @@ function openDetailModal(date) {
     document.getElementById('modalLunchIn').value = '14:00';
   }
   
-  document.getElementById('detailModal').classList.add('active');
+  document.getElementById('detailModal').style.display = 'flex';
 }
 
 function closeDetailModal() {
-  document.getElementById('detailModal').classList.remove('active');
+  document.getElementById('detailModal').style.display = 'none';
 }
+
+// Cerrar modal al hacer click en el overlay (fuera del contenido)
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('detailModal');
+  const modalContent = document.querySelector('.modal-content');
+  
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      closeDetailModal();
+    }
+  });
+  
+  // Cerrar modal al presionar ESC
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && modal.classList.contains('active')) {
+      closeDetailModal();
+    }
+  });
+});
 </script>
 
 <?php include __DIR__ . '/footer.php'; ?>

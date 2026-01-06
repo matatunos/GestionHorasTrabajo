@@ -126,8 +126,8 @@ for ($ts = $startTs; $ts <= $endTs; $ts += 86400) {
     $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
   }
   $calc = compute_day($e, $config);
-  // compute_day returns worked_minutes and expected_minutes
-  $worked = $calc['worked_minutes'] ?? 0;
+  // compute_day returns worked_minutes_for_display (which excludes excess coffee and lunch)
+  $worked = $calc['worked_minutes_for_display'] ?? 0;
   $expected = $calc['expected_minutes'] ?? 0;
   // Exclude weekends without any recorded times: when there is no entry and compute_day produced blank display
   $is_real_entry = isset($entries[$d]);

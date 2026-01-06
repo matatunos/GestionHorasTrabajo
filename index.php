@@ -406,7 +406,8 @@ $holidayMap = [];
       $end = new DateTimeImmutable("$year-12-31");
       for ($cur = $dt; $cur <= $end; $cur = $cur->modify('+1 day')) {
         $d = $cur->format('Y-m-d');
-        $month = strftime('%B', $cur->getTimestamp());
+        $monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        $month = $monthNames[intval($cur->format('n')) - 1];
         $monthKey = $cur->format('Y-m');
         $week = (int)$cur->format('W');
         $dow = (int)$cur->format('N');
@@ -465,7 +466,7 @@ $holidayMap = [];
               echo '<tr class="month-summary">';
               echo '<td colspan="13">';
               echo '<div class="month-summary-row">';
-              echo '<span class="month-summary-title">Resumen '.htmlspecialchars($monthNameForStats ?? $currentMonth).'</span>';
+              echo '<span class="month-summary-title">📅 Resumen '.htmlspecialchars($monthNameForStats ?? $currentMonth).'</span>';
               echo '<span class="pill '.$mBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($mBal>0)?'↑':(($mBal<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($mBal)).'</span></span>';
               echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Esperadas '.htmlspecialchars(minutes_to_hours_formatted($mExp)).'</span></span>';
               echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Hechas '.htmlspecialchars(minutes_to_hours_formatted($mWork)).'</span></span>';
@@ -508,7 +509,7 @@ $holidayMap = [];
           echo "<th>Entrada comida</th>";
           echo "<th>Saldo comida</th>";
           echo "<th>Hora salida</th>";
-          echo "<th>Rango horario</th>";
+          echo "<th>Horas trabajadas</th>";
           echo "<th>Balance día</th>";
           echo "<th>Nota</th>";
           echo "<th>Acciones</th>";
@@ -555,13 +556,13 @@ $holidayMap = [];
                     $monthStats['missing_workdays'] += 1;
                   }
                 }
-                if ($calc['worked_minutes'] !== null) {
-                  $monthStats['worked_minutes'] += intval($calc['worked_minutes']);
+                if ($calc['worked_minutes_for_display'] !== null) {
+                  $monthStats['worked_minutes'] += intval($calc['worked_minutes_for_display']);
                   $monthStats['days_with_worked'] += 1;
                 }
-                // Keep definition consistent with dashboard: lunch_balance >= 60
+                // Diet is earned when lunch_balance >= 0 (i.e., lunch taken >= configured minutes)
                 $lb = $calc['lunch_balance'] ?? null;
-                if ($lb !== null && intval($lb) >= 60) $monthStats['dietas'] += 1;
+                if ($lb !== null && intval($lb) >= 0) $monthStats['dietas'] += 1;
 
                 $cb = $calc['coffee_balance'] ?? null;
                 if ($cb !== null && intval($cb) > 0) {
@@ -576,8 +577,8 @@ $holidayMap = [];
                 if ($exp > 0) {
                   $weekStats['expected_minutes'] += $exp;
                 }
-                if ($calc['worked_minutes'] !== null) {
-                  $weekStats['worked_minutes'] += intval($calc['worked_minutes']);
+                if ($calc['worked_minutes_for_display'] !== null) {
+                  $weekStats['worked_minutes'] += intval($calc['worked_minutes_for_display']);
                 }
               }
     ?>
@@ -625,8 +626,15 @@ $holidayMap = [];
           <?php endif; ?>
         </td>
         <td><?php echo htmlspecialchars($e['end'] ?? ''); ?></td>
-        <td>
-          <?php echo get_hours_display($e['start'] ?? null, $e['end'] ?? null, $calc['worked_minutes'] ?? null); ?>
+        <td class="balance-cell">
+          <?php 
+            $worked_display = $calc['worked_minutes_for_display'] ?? null;
+            if ($worked_display === null) {
+              echo '<span class="muted">—</span>';
+            } else {
+              echo htmlspecialchars(minutes_to_hours_formatted($worked_display));
+            }
+          ?>
         </td>
         <td class="balance-cell<?php echo $dayCellClass; ?>">
           <?php if ($calc['day_balance'] === null): ?>
@@ -707,7 +715,7 @@ $holidayMap = [];
           echo '<tr class="month-summary">';
           echo '<td colspan="13">';
           echo '<div class="month-summary-row">';
-          echo '<span class="month-summary-title">Resumen '.htmlspecialchars($monthNameForStats ?? $currentMonth).'</span>';
+          echo '<span class="month-summary-title">📅 Resumen '.htmlspecialchars($monthNameForStats ?? $currentMonth).'</span>';
           echo '<span class="pill '.$mBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($mBal>0)?'↑':(($mBal<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($mBal)).'</span></span>';
           echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Esperadas '.htmlspecialchars(minutes_to_hours_formatted($mExp)).'</span></span>';
           echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Hechas '.htmlspecialchars(minutes_to_hours_formatted($mWork)).'</span></span>';

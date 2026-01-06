@@ -1034,10 +1034,35 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .pill.balance--missing { color: var(--text-muted); }
 
 /* Month summary row */
-.sheet tr.month-summary td { background: var(--bg-secondary); border-top: 1px solid var(--border-color); }
-.month-summary-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.month-summary-title { font-weight: 800; color: var(--text-primary); margin-right: 6px; }
-.month-summary-meta { color: var(--text-muted); font-weight: 600; font-size: 12px; margin-left: auto; }
+.sheet tr.month-summary td { 
+  background: #eff6ff !important;
+  border-top: 2px solid #3b82f6 !important;
+  border-bottom: 2px solid #3b82f6 !important;
+  padding: 10px 12px !important;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+}
+.sheet tr.month-summary {
+  background: #eff6ff !important;
+}
+.month-summary-row { 
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 12px; 
+  align-items: center;
+  padding: 2px 0;
+}
+.month-summary-title { 
+  font-weight: 700; 
+  color: #1e40af !important;
+  margin-right: 12px;
+  font-size: 1.05em;
+}
+.month-summary-meta { 
+  color: #3b82f6 !important; 
+  font-weight: 600; 
+  font-size: 13px; 
+  margin-left: auto;
+}
 @media (max-width: 900px){
     .month-summary-meta { width: 100%; margin-left: 0; }
 }
@@ -1052,7 +1077,41 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 }
 
 /* Make month rows stand out */
-.sheet tr.month td { background: var(--bg-secondary); font-weight: 700; text-transform: uppercase; }
+.sheet tr.month td { 
+  background: linear-gradient(90deg, #dbeafe 0%, #eff6ff 100%) !important;
+  font-weight: 700 !important; 
+  text-transform: uppercase;
+  color: #1e40af !important;
+  padding: 11px 14px !important;
+  border-top: 2px solid #3b82f6 !important;
+  border-bottom: none !important;
+  border-left: 2px solid #3b82f6 !important;
+  border-right: 2px solid #3b82f6 !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  font-size: 0.95em;
+}
+.sheet tr.month {
+  background: linear-gradient(90deg, #dbeafe 0%, #eff6ff 100%) !important;
+}
+.sheet tr.month:hover td {
+  background: linear-gradient(90deg, #bfdbfe 0%, #dbeafe 100%) !important;
+  box-shadow: none !important;
+}
+
+/* Remove bottom border from month header and top border from columns header */
+.sheet tr.month td { border-bottom: none !important; }
+.sheet tr.month-columns th { 
+  border-top: none !important;
+}
+
+/* Border sides for month group rows - REMOVED, too cluttered */
+
+/* Month summary closing the rectangle */
+.sheet tr.month-summary td {
+  border-bottom: 2px solid #3b82f6 !important;
+}
 
 /* Form layout improvements for inline forms */
 .row-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
@@ -1311,6 +1370,42 @@ label.form-label { display: flex; flex-direction: column; gap: 6px; margin: 0; f
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xl);
 }
+
+/* Modal compacto para festivos - dentro del contenedor */
+.modal-overlay-compact {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 16px;
+    inset: 0;
+}
+.modal-dialog-compact {
+    width: min(420px, 95%);
+    max-height: 80vh;
+    overflow-y: auto;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+}
+
+/* Modal compacto para festivos - centrado pero pequeño (alternativa fija) */
+.modal-overlay.compact-modal {
+    align-items: center;
+    justify-content: center;
+}
+.modal-overlay.compact-modal .modal-dialog {
+    width: min(420px, 95%);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
 .modal-header{
     padding: 14px 16px;
     border-bottom: 1px solid var(--border-color);

@@ -109,7 +109,22 @@ function compute_day(array $entry, array $config = null): array {
         }
     }
 
-    $day_balance = ($worked_minutes === null) ? null : ($worked_minutes - $expected_minutes);
+    // Calculate worked hours for daily display: (end - start) - excess_coffee - lunch_duration
+    $worked_minutes_for_display = null;
+    if ($start !== null && $end !== null) {
+        $worked_minutes_for_display = ($end - $start);
+        // Subtract only the EXCESS of coffee (not the full duration)
+        if ($coffee_taken && $coffee_duration > intval($config['coffee_minutes'])) {
+            $worked_minutes_for_display -= ($coffee_duration - intval($config['coffee_minutes']));
+        }
+        // Subtract full lunch duration
+        if ($lunch_taken) {
+            $worked_minutes_for_display -= intval($lunch_duration ?? 0);
+        }
+    }
+
+    // Calculate day_balance using worked_minutes_for_display (which excludes coffee excess and lunch)
+    $day_balance = ($worked_minutes_for_display === null) ? null : ($worked_minutes_for_display - $expected_minutes);
 
     // balances compared to configured minutes (positive means longer than configured)
     $coffee_balance = $coffee_taken ? ($coffee_duration - intval($config['coffee_minutes'])) : null;
@@ -119,6 +134,7 @@ function compute_day(array $entry, array $config = null): array {
     $hasAnyTime = ($start !== null || $coffee_out !== null || $coffee_in !== null || $lunch_out !== null || $lunch_in !== null || $end !== null);
     if ($weekday >= 6 && !$hasAnyTime) {
         $worked_minutes = null;
+        $worked_minutes_for_display = null;
         $day_balance = null;
         $coffee_balance = null;
         $lunch_balance = null;
@@ -131,6 +147,7 @@ function compute_day(array $entry, array $config = null): array {
         'season' => $season,
         'expected_minutes' => $expected_minutes,
         'worked_minutes' => $worked_minutes,
+        'worked_minutes_for_display' => $worked_minutes_for_display,
         'day_balance' => $day_balance,
         'coffee_taken' => $coffee_taken,
         'coffee_duration' => $coffee_duration,

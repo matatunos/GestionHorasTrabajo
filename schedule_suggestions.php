@@ -451,8 +451,8 @@ try {
         
         $entry_calc = compute_day($entry, $year_config);
         
-        if ($entry_calc['worked_minutes'] !== null) {
-            $hours = $entry_calc['worked_minutes'] / 60;
+        if ($entry_calc['worked_minutes_for_display'] !== null) {
+            $hours = $entry_calc['worked_minutes_for_display'] / 60;
             $worked_hours_this_week += $hours;
             
             $dow = (int)date('N', strtotime($entry['date']));

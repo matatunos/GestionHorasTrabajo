@@ -25,6 +25,62 @@ register_shutdown_function(function(){
   }
 });
 
+// Handle AJAX GET for holidays by year/month
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_holidays') {
+  require_once __DIR__ . '/db.php';
+  require_once __DIR__ . '/auth.php';
+  $pdo = get_pdo();
+  $year = intval($_GET['year'] ?? date('Y'));
+  $month = intval($_GET['month'] ?? date('m'));
+  
+  // Get current user
+  $currentUser = null;
+  try {
+    $currentUser = current_user();
+  } catch (Exception $e) {
+    // User not logged in
+  }
+  
+  // Fetch holidays: global (user_id IS NULL) and user-specific
+  $query = 'SELECT date, type, label, annual FROM holidays WHERE user_id IS NULL';
+  $params = [];
+  if ($currentUser) {
+    $query .= ' OR user_id = ?';
+    $params[] = $currentUser['id'];
+  }
+  
+  $stmt = $pdo->prepare($query);
+  $stmt->execute($params);
+  $all_holidays = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  
+  $result = [];
+  foreach ($all_holidays as $h) {
+    $hDate = $h['date']; // e.g., "2026-01-01"
+    
+    // Extract month-day from stored date
+    $hMonth = intval(substr($hDate, 5, 2)); // Extract MM
+    $hDay = intval(substr($hDate, 8, 2));   // Extract DD
+    
+    // Check if this holiday matches the requested month
+    if ($hMonth !== $month) {
+      continue; // Skip holidays not in this month
+    }
+    
+    // Reconstruct the date for the selected year
+    $dateStr = sprintf('%04d-%02d-%02d', $year, $hMonth, $hDay);
+    
+    $result[] = [
+      'date' => $dateStr,
+      'type' => $h['type'] ?? 'holiday',
+      'label' => $h['label'] ?? ''
+    ];
+  }
+  
+  header('Content-Type: application/json');
+  echo json_encode($result);
+  exit;
+}
+
 // Admin-triggered recalculation (moved from years.php)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'recalc') {
   require_once __DIR__ . '/db.php';
@@ -310,16 +366,40 @@ if ($hol_pdo) {
       $validTypes[] = $row['code'];
     }
     
-    if ($_POST['holiday_action'] === 'add' && !empty($_POST['date'])) {
-      $d = $_POST['date'];
-      $y = intval(date('Y', strtotime($d)));
+    if ($_POST['holiday_action'] === 'add' && !empty($_POST['dates_json'])) {
+      $datesjson = $_POST['dates_json'];
+      
+      // Intentar parsear como JSON (múltiples fechas)
+      $dates = [];
+      if (substr($datesjson, 0, 1) === '[') {
+        $dates = json_decode($datesjson, true) ?? [];
+      } else {
+        // Si no es JSON, es una fecha única
+        $dates = [$datesjson];
+      }
+      
+      if (empty($dates)) {
+        $dates = [];
+      }
+      
       $label = trim($_POST['label'] ?? '');
       $type = in_array($_POST['type'] ?? '', $validTypes) ? $_POST['type'] : 'holiday';
       $annual = !empty($_POST['annual']) ? 1 : 0;
       $is_global = (!empty($hol_user) && !empty($hol_user['is_admin']) && !empty($_POST['global']));
       $uid = $is_global ? null : ($hol_user['id'] ?? null);
+      
+      // Procesar cada fecha
       $stmt = $hol_pdo->prepare('REPLACE INTO holidays (user_id,date,label,type,annual) VALUES (?,?,?,?,?)');
-      $stmt->execute([$uid, $d, $label, $type, $annual]);
+      foreach ($dates as $d) {
+        $d = trim($d);
+        if (!empty($d)) {
+          $stmt->execute([$uid, $d, $label, $type, $annual]);
+        }
+      }
+      
+      // Determinar año para redirección (usar el primer año de las fechas)
+      $y = !empty($dates[0]) ? intval(date('Y', strtotime($dates[0]))) : intval(date('Y'));
+      
       if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest'){
         header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
       }
@@ -359,11 +439,15 @@ if ($hol_pdo) {
   $holiday_rows = [];
 }
 ?>
+<?php header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0'); header('Pragma: no-cache'); header('Expires: 0'); ?>
 <!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Configuración — GestionHoras</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
   <link rel="stylesheet" href="styles.css">
@@ -475,93 +559,6 @@ if ($hol_pdo) {
     <div style="margin-top:12px;">
       <div style="margin-bottom:8px;"></div>
       <div class="card">
-        <h3>Festivos — Año <?php echo $selHolidayYear; ?></h3>
-        <form method="get" class="form-wrapper mb-2">
-          <div class="form-grid"><div class="form-group"><label class="form-label">Año</label>
-            <select class="form-control" name="holiday_year" onchange="this.form.submit()">
-              <?php for($y = date('Y')-2; $y <= date('Y')+2; $y++): ?>
-                <option value="<?php echo $y;?>" <?php if($y==$selHolidayYear) echo 'selected';?>><?php echo $y;?></option>
-              <?php endfor; ?>
-            </select>
-          </div></div>
-        </form>
-
-        <div style="margin-bottom:12px;">
-          <button id="openAddHolidayBtn" class="btn btn-primary" type="button">Añadir festivo</button>
-        </div>
-
-        <!-- Modal for adding a holiday -->
-        <div id="holidayModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
-          <div id="holidayModal" class="modal-dialog" role="dialog" aria-modal="true">
-            <div class="modal-header">
-              <h3 class="modal-title">Añadir festivo/vacaciones</h3>
-            </div>
-            <div class="modal-body">
-            <form method="post" id="holidayAddForm" class="form-wrapper">
-              <input type="hidden" name="holiday_action" value="add">
-              
-              <!-- Calendar selection -->
-              <div class="form-group" style="margin-bottom: 16px;">
-                <label class="form-label">Selecciona los días (Ctrl+click o Shift+click para periodos)</label>
-                <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center;">
-                  <select id="hd_calendar_month" class="form-control" style="flex: 1;">
-                    <option value="1">Enero</option>
-                    <option value="2">Febrero</option>
-                    <option value="3">Marzo</option>
-                    <option value="4">Abril</option>
-                    <option value="5">Mayo</option>
-                    <option value="6">Junio</option>
-                    <option value="7">Julio</option>
-                    <option value="8">Agosto</option>
-                    <option value="9">Septiembre</option>
-                    <option value="10">Octubre</option>
-                    <option value="11">Noviembre</option>
-                    <option value="12">Diciembre</option>
-                  </select>
-                  <select id="hd_calendar_year" class="form-control" style="flex: 1;">
-                    <?php for($y = date('Y')-2; $y <= date('Y')+2; $y++): ?>
-                      <option value="<?php echo $y;?>" <?php if($y==date('Y')) echo 'selected';?>><?php echo $y;?></option>
-                    <?php endfor; ?>
-                  </select>
-                </div>
-                <div id="holidayCalendar" class="holiday-calendar"></div>
-              </div>
-              
-              <!-- Selected dates display -->
-              <div class="form-group" style="margin-bottom: 16px;">
-                <label class="form-label">Días seleccionados</label>
-                <div id="selectedDatesDisplay" style="padding: 8px; background: #f0f0f0; border-radius: 4px; min-height: 40px; font-size: 13px; word-wrap: break-word;">
-                  <span style="color: #999;">Ninguno seleccionado</span>
-                </div>
-                <input type="hidden" id="hd_dates_json" name="dates_json" value="">
-              </div>
-              
-              <!-- Common options -->
-              <div class="form-grid">
-                <div class="form-group"><label class="form-label">Descripción</label><input class="form-control" type="text" name="label" placeholder="Ej: Vacaciones verano"></div>
-                <div class="form-group"><label class="form-label">Tipo</label>
-                  <select class="form-control" name="type">
-                    <?php
-                    $types = $hol_pdo->query("SELECT code, label FROM holiday_types ORDER BY sort_order")->fetchAll();
-                    foreach ($types as $type):
-                    ?>
-                    <option value="<?php echo htmlspecialchars($type['code']); ?>"><?php echo htmlspecialchars($type['label']); ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-                <div class="form-group"><?php echo render_checkbox('annual', 0, 'Repite anualmente'); ?></div>
-                <div class="form-group"><?php echo render_checkbox('global', 0, 'Visible a todos (global)'); ?></div>
-              </div>
-              
-              <div class="form-actions modal-actions mt-2">
-                <button class="btn btn-secondary" type="button" id="closeHolidayModal">Cancelar</button>
-                <button class="btn btn-primary" type="submit">Añadir</button>
-              </div>
-            </form>
-            </div>
-          </div>
-        </div>
-
         <h4>Listado de festivos</h4>
         <div class="table-responsive">
           <table class="table compact">
@@ -599,41 +596,384 @@ if ($hol_pdo) {
           </table>
         </div>
       </div>
-      <h3>Configuración por año</h3>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <h3>Calendario de Festivos</h3>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:15px;">
         <button class="btn btn-primary" type="button" id="openAddYearBtn">Añadir año</button>
-        <div class="small">Editar un año: pulsa <strong>Editar</strong> en la fila; los datos aparecerán arriba para modificar.</div>
-      </div>
-      
       </div>
 
-      <?php if (!empty($year_configs)): ?>
-      <table class="table" style="margin-top:8px; width:100%;">
-        <thead><tr><th>Año</th><th>Lun-Jue</th><th>Viernes</th><th>Verano L-J</th><th>Verano V</th><th>Café</th><th>Comida</th><th>Acciones</th></tr></thead>
-        <tbody>
-        <?php foreach ($year_configs as $yc): ?>
-          <tr data-year="<?php echo intval($yc['year']); ?>" data-mon_thu="<?php echo htmlspecialchars($yc['mon_thu']); ?>" data-friday="<?php echo htmlspecialchars($yc['friday']); ?>" data-summer_mon_thu="<?php echo htmlspecialchars($yc['summer_mon_thu']); ?>" data-summer_friday="<?php echo htmlspecialchars($yc['summer_friday']); ?>" data-coffee_minutes="<?php echo htmlspecialchars($yc['coffee_minutes']); ?>" data-lunch_minutes="<?php echo htmlspecialchars($yc['lunch_minutes']); ?>">
-            <td class="yc-year"><?php echo htmlspecialchars($yc['year']); ?></td>
-            <td class="yc-mon_thu"><?php echo htmlspecialchars($yc['mon_thu']); ?></td>
-            <td class="yc-friday"><?php echo htmlspecialchars($yc['friday']); ?></td>
-            <td class="yc-summer_mon_thu"><?php echo htmlspecialchars($yc['summer_mon_thu']); ?></td>
-            <td class="yc-summer_friday"><?php echo htmlspecialchars($yc['summer_friday']); ?></td>
-            <td class="yc-coffee_minutes"><?php echo htmlspecialchars($yc['coffee_minutes']); ?></td>
-            <td class="yc-lunch_minutes"><?php echo htmlspecialchars($yc['lunch_minutes']); ?></td>
-            <td class="yc-actions">
-              <button class="btn edit-year-btn highlight-edit-btn icon-btn btn-edit" type="button" title="Editar configuración"><i class="fas fa-pencil"></i></button>
-              <form method="post" onsubmit="return confirm('Eliminar configuración del año <?php echo intval($yc['year']); ?>?');">
-                <input type="hidden" name="delete_year_config" value="<?php echo intval($yc['year']); ?>">
-                <button class="btn btn-danger icon-btn btn-delete" type="submit" title="Eliminar configuración"><i class="fas fa-trash"></i></button>
-              </form>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-        </tbody>
-      </table>
-      <?php else: ?>
-        <div class="small">No hay configuraciones por año todavía.</div>
-      <?php endif; ?>
+      <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center;">
+        <div>
+          <label for="month-year-select" style="font-weight: 600; margin-right: 10px;">Año:</label>
+          <select id="month-year-select" style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px;">
+            <option value="">Selecciona un año</option>
+            <?php 
+            // Show configured years first
+            if (!empty($year_configs)):
+              foreach ($year_configs as $yc):
+            ?>
+              <option value="<?php echo intval($yc['year']); ?>"><?php echo intval($yc['year']); ?></option>
+            <?php 
+              endforeach;
+            endif;
+            // Also show current year and next few years as options
+            $currentYear = intval(date('Y'));
+            for ($y = $currentYear; $y <= $currentYear + 5; $y++):
+              $found = false;
+              if (!empty($year_configs)):
+                foreach ($year_configs as $yc):
+                  if (intval($yc['year']) === $y) { $found = true; break; }
+                endforeach;
+              endif;
+              if (!$found):
+            ?>
+              <option value="<?php echo $y; ?>"><?php echo $y; ?></option>
+            <?php 
+              endif;
+            endfor;
+            ?>
+          </select>
+        </div>
+        <div>
+          <label for="month-month-select" style="font-weight: 600; margin-right: 10px;">Mes:</label>
+          <select id="month-month-select" style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px;">
+            <option value="">Selecciona un mes</option>
+            <option value="1">Enero</option>
+            <option value="2">Febrero</option>
+            <option value="3">Marzo</option>
+            <option value="4">Abril</option>
+            <option value="5">Mayo</option>
+            <option value="6">Junio</option>
+            <option value="7">Julio</option>
+            <option value="8">Agosto</option>
+            <option value="9">Septiembre</option>
+            <option value="10">Octubre</option>
+            <option value="11">Noviembre</option>
+            <option value="12">Diciembre</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="calendar-container" style="display: none; margin-top: 20px; position: relative;">
+        <div style="margin-bottom: 16px;">
+          <strong style="font-size: 1.1em;" id="month-display"></strong>
+          <div style="margin-top: 8px; font-size: 0.85em;">
+            <span style="display: inline-block; margin-right: 20px;"><span style="display: inline-block; width: 14px; height: 14px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 3px; margin-right: 6px;"></span>Festivo</span>
+            <span style="display: inline-block; margin-right: 20px;"><span style="display: inline-block; width: 14px; height: 14px; background: #cfe2ff; border: 1px solid #0d6efd; border-radius: 3px; margin-right: 6px;"></span>Vacaciones</span>
+            <span style="display: inline-block; margin-right: 20px;"><span style="display: inline-block; width: 14px; height: 14px; background: #d1e7dd; border: 1px solid #198754; border-radius: 3px; margin-right: 6px;"></span>Personal</span>
+            <span style="display: inline-block;"><span style="display: inline-block; width: 14px; height: 14px; background: #f8d7da; border: 1px solid #dc3545; border-radius: 3px; margin-right: 6px;"></span>Enfermedad</span>
+          </div>
+          <div style="margin-top: 8px; font-size: 0.8em; color: #666; font-style: italic;">
+            <strong>Selecciona múltiples días:</strong> Click = selecciona día • Shift+Click = rango • Ctrl/Cmd+Click = agregar/quitar • Doble click o botón = abrir formulario
+          </div>
+        </div>
+        <div style="padding: 15px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+          <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+            <div style="font-weight: 600; text-align: center; font-size: 0.85em; color: #666; padding: 6px 0;">Lun</div>
+            <div style="font-weight: 600; text-align: center; font-size: 0.85em; color: #666; padding: 6px 0;">Mar</div>
+            <div style="font-weight: 600; text-align: center; font-size: 0.85em; color: #666; padding: 6px 0;">Mié</div>
+            <div style="font-weight: 600; text-align: center; font-size: 0.85em; color: #666; padding: 6px 0;">Jue</div>
+            <div style="font-weight: 600; text-align: center; font-size: 0.85em; color: #666; padding: 6px 0;">Vie</div>
+            <div style="font-weight: 600; text-align: center; font-size: 0.85em; color: #666; padding: 6px 0;">Sab</div>
+            <div style="font-weight: 600; text-align: center; font-size: 0.85em; color: #666; padding: 6px 0;">Dom</div>
+            <div id="calendar-grid" style="grid-column: 1/-1; display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;"></div>
+          </div>
+        </div>
+        
+        <!-- Modal for adding a holiday -->
+        <div id="holidayModalOverlay" class="modal-overlay-compact" aria-hidden="true" style="display:none;">
+          <div id="holidayModal" class="modal-dialog-compact" role="dialog" aria-modal="true">
+            <div class="modal-header">
+              <h3 class="modal-title">Añadir festivo/vacaciones</h3>
+            </div>
+            <div class="modal-body">
+            <form method="post" id="holidayAddForm" class="form-wrapper">
+              <input type="hidden" name="holiday_action" value="add">
+              <input type="hidden" id="hd_single_date" name="dates_json" value="">
+              
+              <!-- Common options -->
+              <div class="form-grid">
+                <div class="form-group"><label class="form-label">Descripción</label><input class="form-control" type="text" name="label" placeholder="Ej: Vacaciones verano"></div>
+                <div class="form-group"><label class="form-label">Tipo</label>
+                  <select class="form-control" name="type">
+                    <?php
+                    $types = $hol_pdo->query("SELECT code, label FROM holiday_types ORDER BY sort_order")->fetchAll();
+                    foreach ($types as $type):
+                    ?>
+                    <option value="<?php echo htmlspecialchars($type['code']); ?>"><?php echo htmlspecialchars($type['label']); ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="form-group"><?php echo render_checkbox('annual', 0, 'Repite anualmente'); ?></div>
+                <div class="form-group"><?php echo render_checkbox('global', 0, 'Visible a todos (global)'); ?></div>
+              </div>
+              
+              <!-- Selected date display -->
+              <div class="form-group" style="margin-bottom: 16px; margin-top: 16px;">
+                <label class="form-label">Día seleccionado</label>
+                <div id="selectedDatesDisplay" style="padding: 8px; background: #f0f0f0; border-radius: 4px; min-height: 30px; font-size: 13px;">
+                  <span style="color: #999;">Ninguno seleccionado</span>
+                </div>
+              </div>
+              
+              <div class="form-actions modal-actions mt-2">
+                <button class="btn btn-secondary" type="button" id="closeHolidayModal">Cancelar</button>
+                <button class="btn btn-primary" type="submit">Añadir</button>
+              </div>
+            </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        .calendar-day-cell {
+          aspect-ratio: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-start;
+          padding: 6px 4px;
+          border: 1px solid #e5e7eb;
+          border-radius: 4px;
+          background: white;
+          font-size: 0.8em;
+          min-height: 70px;
+        }
+        .calendar-day-cell.other-month {
+          background: #f3f4f6;
+          color: #d1d5db;
+          border-color: #d1d5db;
+        }
+        .calendar-day-number {
+          font-weight: 700;
+          font-size: 0.95em;
+          margin-bottom: 2px;
+        }
+        .calendar-day-label {
+          font-size: 0.65em;
+          text-align: center;
+          line-height: 1.2;
+          color: #374151;
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          word-break: break-word;
+        }
+        .calendar-day-cell.holiday {
+          background: #fff3cd;
+          border-color: #ffc107;
+        }
+        .calendar-day-cell.vacation {
+          background: #cfe2ff;
+          border-color: #0d6efd;
+        }
+        .calendar-day-cell.personal {
+          background: #d1e7dd;
+          border-color: #198754;
+        }
+        .calendar-day-cell.enfermedad {
+          background: #f8d7da;
+          border-color: #dc3545;
+        }
+      </style>
+
+      <script>
+        let currentCalendarYear = null;
+        let currentCalendarMonth = null;
+        let selectedDates = new Set();
+        let lastClickedDate = null;
+        
+        function openHolidayModalForDates(dates) {
+          // Convertir Set a array si es necesario
+          const dateArray = Array.from(dates).sort();
+          
+          if (dateArray.length === 0) return;
+          
+          // Establecer las fechas en el input oculto como JSON
+          document.getElementById('hd_single_date').value = JSON.stringify(dateArray);
+          document.getElementById('holidayAddForm').reset();
+          
+          // Mostrar fechas seleccionadas
+          let displayText = '';
+          if (dateArray.length === 1) {
+            displayText = '<span style="color: #333; font-weight: 600;">' + dateArray[0] + '</span>';
+          } else {
+            displayText = '<span style="color: #333; font-weight: 600;">' + dateArray.length + ' días seleccionados:</span><br>';
+            displayText += dateArray.map(d => '<span style="display: inline-block; margin: 4px 6px 4px 0; padding: 4px 8px; background: #e9ecef; border-radius: 3px; font-size: 12px;">' + d + '</span>').join('');
+          }
+          document.getElementById('selectedDatesDisplay').innerHTML = displayText;
+          
+          document.getElementById('holidayModalOverlay').style.display = 'flex';
+        }
+        
+        function toggleDateSelection(dateStr, event) {
+          if (event.shiftKey && lastClickedDate) {
+            // Rango: desde last clicked hasta actual
+            const [y1, m1, d1] = lastClickedDate.split('-').map(Number);
+            const [y2, m2, d2] = dateStr.split('-').map(Number);
+            
+            const start = new Date(y1, m1 - 1, d1);
+            const end = new Date(y2, m2 - 1, d2);
+            if (start > end) {
+              [start, end] = [end, start];
+            }
+            
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+              const ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+              selectedDates.add(ds);
+            }
+          } else if (event.ctrlKey || event.metaKey) {
+            // Ctrl/Cmd: toggle individual
+            if (selectedDates.has(dateStr)) {
+              selectedDates.delete(dateStr);
+            } else {
+              selectedDates.add(dateStr);
+            }
+          } else {
+            // Click normal: seleccionar solo este día
+            selectedDates.clear();
+            selectedDates.add(dateStr);
+          }
+          
+          lastClickedDate = dateStr;
+          
+          // Actualizar visual (sin abrir modal)
+          updateCalendarSelectionUI();
+        }
+        
+        function updateCalendarSelectionUI() {
+          const cells = document.querySelectorAll('[data-date]');
+          cells.forEach(cell => {
+            const dateStr = cell.getAttribute('data-date');
+            if (selectedDates.has(dateStr)) {
+              cell.style.boxShadow = 'inset 0 0 0 2px #0056b3';
+              cell.style.backgroundColor = cell.style.backgroundColor || 'white';
+            } else {
+              cell.style.boxShadow = 'none';
+            }
+          });
+        }
+        
+        function renderCalendar() {
+          const year = document.getElementById('month-year-select').value;
+          const month = document.getElementById('month-month-select').value;
+          const container = document.getElementById('calendar-container');
+          
+          if (!year || !month) {
+            container.style.display = 'none';
+            return;
+          }
+          
+          currentCalendarYear = year;
+          currentCalendarMonth = month;
+          selectedDates.clear();
+          lastClickedDate = null;
+          
+          fetch(location.pathname + '?action=get_holidays&year=' + year + '&month=' + month, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+          })
+          .then(r => r.json())
+          .then(holidays => {
+            const monthNames = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                               'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            document.getElementById('month-display').textContent = monthNames[parseInt(month)] + ' de ' + year;
+            
+            const holidayMap = {};
+            holidays.forEach(h => {
+              holidayMap[h.date] = { type: h.type, label: h.label };
+            });
+            
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0);
+            const startDow = firstDay.getDay() || 7;
+            
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+            
+            // Empty cells before first day
+            for (let i = 1; i < startDow; i++) {
+              const cell = document.createElement('div');
+              cell.className = 'calendar-day-cell other-month';
+              grid.appendChild(cell);
+            }
+            
+            // Days of month
+            for (let d = 1; d <= lastDay.getDate(); d++) {
+              const dateStr = year + '-' + String(month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+              const cell = document.createElement('div');
+              cell.className = 'calendar-day-cell';
+              cell.style.cursor = 'pointer';
+              cell.setAttribute('data-date', dateStr);
+              
+              const numDiv = document.createElement('div');
+              numDiv.className = 'calendar-day-number';
+              numDiv.textContent = d;
+              cell.appendChild(numDiv);
+              
+              if (holidayMap[dateStr]) {
+                const event = holidayMap[dateStr];
+                cell.classList.add(event.type || 'holiday');
+                if (event.label) {
+                  const labelDiv = document.createElement('div');
+                  labelDiv.className = 'calendar-day-label';
+                  labelDiv.textContent = event.label;
+                  cell.appendChild(labelDiv);
+                }
+              }
+              
+              // Selección múltiple: click, shift+click, ctrl+click
+              cell.addEventListener('click', function(e) {
+                e.preventDefault();
+                toggleDateSelection(dateStr, e);
+              });
+              
+              // Doble click para abrir el modal
+              cell.addEventListener('dblclick', function(e) {
+                e.preventDefault();
+                openHolidayModalForDates(selectedDates);
+              });
+              
+              grid.appendChild(cell);
+            }
+            
+            // Agregar botón para abrir modal con selección actual
+            const buttonDiv = document.createElement('div');
+            buttonDiv.style.marginTop = '12px';
+            buttonDiv.style.textAlign = 'center';
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-primary';
+            btn.textContent = 'Crear festivo con selección';
+            btn.addEventListener('click', function() {
+              if (selectedDates.size === 0) {
+                alert('Selecciona al menos un día');
+                return;
+              }
+              openHolidayModalForDates(selectedDates);
+            });
+            buttonDiv.appendChild(btn);
+            document.getElementById('calendar-container').insertBefore(buttonDiv, document.getElementById('calendar-container').querySelector('.modal-overlay-compact'));
+            
+            container.style.display = 'block';
+          })
+          .catch(err => console.error('Error loading holidays:', err));
+        }
+        
+        // Esperar a que el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+          document.getElementById('month-year-select').addEventListener('change', renderCalendar);
+          document.getElementById('month-month-select').addEventListener('change', renderCalendar);
+          
+          // Cerrar modal
+          document.getElementById('closeHolidayModal').addEventListener('click', function() {
+            document.getElementById('holidayModalOverlay').style.display = 'none';
+            selectedDates.clear();
+            lastClickedDate = null;
+            updateCalendarSelectionUI();
+          });
+        });
+      </script>
     </div>
     <div class="footer small">Config stored in <strong>DB (app_settings.site_config)</strong></div>
   </div>
