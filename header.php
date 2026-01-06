@@ -36,6 +36,7 @@ $site_name = $site_cfg['site_name'] ?? 'GestionHoras';
             <span class="menu-user-name"><?php echo htmlspecialchars($current['username']); ?></span>
             <div class="menu-user-dropdown" role="menu">
               <a class="dropdown-item" href="profile.php">👤 Perfil</a>
+              <a class="dropdown-item" href="#" onclick="openScheduleSuggestions(event)">⚡ Sugerencias de Horario (Beta)</a>
               <a class="dropdown-item" href="data_quality.php">📊 Calidad de Datos</a>
               <a class="dropdown-item" href="chrome-addon-help.php">🧩 Extensión Chrome</a>
               <a class="dropdown-item" href="extension-tokens.php">🔐 Tokens</a>

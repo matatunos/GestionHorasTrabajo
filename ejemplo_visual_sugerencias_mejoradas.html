@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sugerencias de Horario Mejoradas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .shift-pattern-info {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #0099cc;
+            margin-top: 15px;
+        }
+
+        .shift-pattern-info strong {
+            color: #0099cc;
+        }
+
+        .suggestions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .suggestion-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .suggestion-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        .day-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .date {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-partida {
+            background-color: #FFA500;
+            color: white;
+        }
+
+        .badge-continua {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .badge-friday {
+            background-color: #FF6B6B;
+            color: white;
+        }
+
+        .confidence {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .time-section {
+            margin: 15px 0;
+        }
+
+        .time-display {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 10px 0;
+        }
+
+        .time-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+        }
+
+        .hours-info {
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 10px;
+            border-left: 3px solid #667eea;
+        }
+
+        .shift-type-section {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        .shift-type-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .shift-type-value {
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .meal-info {
+            background: #fff3cd;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 15px 0;
+            border-left: 3px solid #ffc107;
+            font-size: 14px;
+        }
+
+        .meal-info.with-lunch {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+
+        .meal-info.no-lunch {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .meal-icon {
+            font-size: 18px;
+            margin-right: 5px;
+        }
+
+        .reasoning {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .friday-special {
+            position: relative;
+        }
+
+        .friday-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #FF6B6B;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .empty-state {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            text-align: center;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .suggestions {
+                grid-template-columns: 1fr;
+            }
+
+            .time-display {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header con estadísticas -->
+        <div class="header">
+            <h1>📅 Sugerencias de Horario para la Semana</h1>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-label">Horas Trabajadas</div>
+                    <div class="stat-value">32.5 h</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Objetivo Semanal</div>
+                    <div class="stat-value">38.0 h</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Horas Faltantes</div>
+                    <div class="stat-value">5.5 h</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Días Pendientes</div>
+                    <div class="stat-value">4 días</div>
+                </div>
+            </div>
+
+            <div class="shift-pattern-info">
+                <strong>🔍 Patrón de Jornada Detectado:</strong> Jornada Partida (con pausa comida)<br>
+                <em style="font-size: 12px; color: #0066cc;">Se aplicará a lunes-jueves. Viernes siempre será jornada continua.</em>
+            </div>
+        </div>
+
+        <!-- Sugerencias de horarios -->
+        <div class="suggestions">
+            <!-- MARTES -->
+            <div class="suggestion-card">
+                <div class="day-header">
+                    <div>
+                        <div class="day-name">📅 Martes</div>
+                        <div class="date">09 de Enero, 2024</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="badge badge-partida">Partida</div>
+                        <div class="confidence">Alta Confianza</div>
+                    </div>
+                </div>
+
+                <div class="shift-type-section">
+                    <div class="shift-type-label">Tipo de Jornada</div>
+                    <div class="shift-type-value">
+                        <span>🏢 Jornada Partida</span>
+                    </div>
+                </div>
+
+                <div class="time-section">
+                    <div class="time-label">Horario Sugerido</div>
+                    <div class="time-display">08:00 - 17:00</div>
+                    <div class="hours-info">⏱️ 8 horas de trabajo (más pausa comida)</div>
+                </div>
+
+                <div class="meal-info with-lunch">
+                    <span class="meal-icon">🍽️</span>
+                    <strong>Pausa comida:</strong> ~60 min (aprox. 13:45-14:45)
+                </div>
+
+                <div class="reasoning">
+                    <strong>Basado en:</strong> 25 registros históricos | Jornada partida
+                </div>
+            </div>
+
+            <!-- MIÉRCOLES -->
+            <div class="suggestion-card">
+                <div class="day-header">
+                    <div>
+                        <div class="day-name">📅 Miércoles</div>
+                        <div class="date">10 de Enero, 2024</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="badge badge-partida">Partida</div>
+                        <div class="confidence">Alta Confianza</div>
+                    </div>
+                </div>
+
+                <div class="shift-type-section">
+                    <div class="shift-type-label">Tipo de Jornada</div>
+                    <div class="shift-type-value">
+                        <span>🏢 Jornada Partida</span>
+                    </div>
+                </div>
+
+                <div class="time-section">
+                    <div class="time-label">Horario Sugerido</div>
+                    <div class="time-display">08:00 - 17:00</div>
+                    <div class="hours-info">⏱️ 8 horas de trabajo (más pausa comida)</div>
+                </div>
+
+                <div class="meal-info with-lunch">
+                    <span class="meal-icon">🍽️</span>
+                    <strong>Pausa comida:</strong> ~60 min (aprox. 13:45-14:45)
+                </div>
+
+                <div class="reasoning">
+                    <strong>Basado en:</strong> 25 registros históricos | Jornada partida
+                </div>
+            </div>
+
+            <!-- JUEVES -->
+            <div class="suggestion-card">
+                <div class="day-header">
+                    <div>
+                        <div class="day-name">📅 Jueves</div>
+                        <div class="date">11 de Enero, 2024</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="badge badge-partida">Partida</div>
+                        <div class="confidence">Alta Confianza</div>
+                    </div>
+                </div>
+
+                <div class="shift-type-section">
+                    <div class="shift-type-label">Tipo de Jornada</div>
+                    <div class="shift-type-value">
+                        <span>🏢 Jornada Partida</span>
+                    </div>
+                </div>
+
+                <div class="time-section">
+                    <div class="time-label">Horario Sugerido</div>
+                    <div class="time-display">08:00 - 17:00</div>
+                    <div class="hours-info">⏱️ 8 horas de trabajo (más pausa comida)</div>
+                </div>
+
+                <div class="meal-info with-lunch">
+                    <span class="meal-icon">🍽️</span>
+                    <strong>Pausa comida:</strong> ~60 min (aprox. 13:45-14:45)
+                </div>
+
+                <div class="reasoning">
+                    <strong>Basado en:</strong> 25 registros históricos | Jornada partida
+                </div>
+            </div>
+
+            <!-- VIERNES (ESPECIAL) -->
+            <div class="suggestion-card friday-special">
+                <div class="friday-badge">⭐ VIERNES</div>
+                
+                <div class="day-header">
+                    <div>
+                        <div class="day-name">📅 Viernes</div>
+                        <div class="date">12 de Enero, 2024</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="badge badge-continua">Continua</div>
+                        <div class="confidence">Alta Confianza</div>
+                    </div>
+                </div>
+
+                <div class="shift-type-section">
+                    <div class="shift-type-label">Tipo de Jornada</div>
+                    <div class="shift-type-value">
+                        <span>🏢 Jornada Continua</span>
+                    </div>
+                </div>
+
+                <div class="time-section">
+                    <div class="time-label">Horario Sugerido</div>
+                    <div class="time-display" style="color: #FF6B6B;">08:00 - 14:00</div>
+                    <div class="hours-info">⏱️ 6 horas (jornada corta)</div>
+                </div>
+
+                <div class="meal-info no-lunch">
+                    <span class="meal-icon">⏸️</span>
+                    <strong>Sin pausa comida</strong> - Jornada continua
+                </div>
+
+                <div class="reasoning">
+                    <strong>Basado en:</strong> 25 registros históricos | Viernes: Jornada continua, salida 14:00 (sin pausa comida)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Ejemplo de cómo interactuar con los datos
+        const exampleResponse = {
+            suggestions: [
+                {
+                    day_name: "Tuesday",
+                    shift_type: "partida",
+                    shift_label: "Jornada Partida",
+                    has_lunch_break: true,
+                    lunch_note: "Pausa comida: ~60 min (aprox. 13:45-14:45)"
+                }
+            ]
+        };
+
+        // Filtrar solo jornadas partidas
+        function getSplitShiftDays(suggestions) {
+            return suggestions.filter(s => s.shift_type === 'partida');
+        }
+
+        // Filtrar solo jornadas continuas
+        function getContinuousShiftDays(suggestions) {
+            return suggestions.filter(s => s.shift_type === 'continua');
+        }
+
+        // Obtener días con pausa comida
+        function getDaysWithLunch(suggestions) {
+            return suggestions.filter(s => s.has_lunch_break);
+        }
+
+        console.log('Ejemplos de funciones disponibles:', {
+            getSplitShiftDays,
+            getContinuousShiftDays,
+            getDaysWithLunch
+        });
+    </script>
+</body>
+</html>
