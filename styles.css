@@ -74,12 +74,12 @@ a:hover { color: var(--primary-dark); }
 
 /* ===== Layout ===== */
 .app-container { display: flex; min-height: 100vh; }
-.sidebar { width: var(--sidebar-width); background-color: var(--surface-color); border-right: 1px solid var(--border-color); box-shadow: var(--shadow-sm); position: fixed; height: 100vh; overflow-y: auto; z-index: 100; }
-.main-content { flex: 1; margin-left: var(--sidebar-width); min-height: 100vh; display: flex; flex-direction: column; }
+.sidebar { width: var(--sidebar-width); background-color: #1a2847; border-right: 1px solid rgba(255,255,255,0.1); box-shadow: var(--shadow-sm); position: fixed; height: 100vh; overflow-y: auto; z-index: 100; }
+.main-content { flex: 1; margin-left: var(--sidebar-width); min-height: 100vh; display: flex; flex-direction: column; background: rgba(8,10,20,0.6); }
 .header { height: var(--header-height); background-color: var(--surface-color); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; box-shadow: var(--shadow-sm); }
 /* Make header a positioning context for absolute dropdowns */
-.header { position: relative; display: none; }
-.content { flex: 1; padding: 1.5rem; }
+.header { position: relative; display: flex; }
+.content { flex: 1; padding: 1.5rem; background: rgba(8,10,20,0.55); }
 
 /* Top menu alignment: push menu items to the right and style user dropdown */
 .menu-section { margin-left: auto; align-items: center; }
@@ -121,18 +121,23 @@ a:hover { color: var(--primary-dark); }
 }
 
 body {
-    background: var(--bg-main);
+    background-image: url('images/background-clocks.svg');
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-color: #0f1724;
     color: var(--text-color);
 }
 
 /* Header and sidebar vibrant */
-.header { background: rgba(55,66,250,0.95); color: white; box-shadow: 0 8px 30px rgba(8,10,20,0.6); }
-.sidebar { background: linear-gradient(180deg, rgba(8,10,20,0.6), rgba(12,18,28,0.6)); border-right: 1px solid rgba(255,255,255,0.03); }
-.sidebar .menu-item { color: var(--text-muted); }
-.sidebar .menu-item:hover, .sidebar .menu-item.active { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+.header { background: #3742fa; color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.sidebar { background: #1a2847; border-right: 1px solid rgba(255,255,255,0.1); }
+.sidebar .menu-item { color: #b8d3ff; padding: 0.75rem 1.5rem; }
+.sidebar .menu-item:hover, .sidebar .menu-item.active { background: rgba(255,255,255,0.15); color: #ffffff; }
 
 /* Cards: glassy, accented */
-.card { background: #151e2e; border: 1px solid #2a3f5f; box-shadow: inset 0 1px 3px rgba(255,255,255,0.1), 0 8px 32px rgba(0,0,0,0.4); }
+.card { background: rgba(21,30,46,0.9); border: 1px solid #2a3f5f; box-shadow: inset 0 1px 3px rgba(255,255,255,0.1), 0 8px 32px rgba(0,0,0,0.4); backdrop-filter: blur(10px); }
 .card h1, .card h3, .card h4 { color: var(--text-primary); }
 .dashboard-cards .card { background: #1a2639; border: 1px solid #2a3f5f; border-left: 4px solid var(--brand-accent); }
 
@@ -172,6 +177,7 @@ svg polyline { stroke: var(--brand-accent) !important; stroke-linecap: round; st
 /* ===== Sidebar ===== */
 .sidebar-header { padding: 1.5rem; }
 .logo { font-size: 1.5rem; font-weight: 700; color: var(--primary-color); display: flex; align-items: center; gap: 0.75rem; }
+.logo h1 { margin: 0; }
 .logo img { max-height: 40px; max-width: 150px; width: auto; height: auto; object-fit: contain; }
 /* Visually hidden utility for screen-readers (when logo image is present we hide textual site name) */
 .visually-hidden { position: absolute !important; height: 1px; width: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); white-space: nowrap; border: 0; padding: 0; margin: -1px; }
@@ -221,7 +227,7 @@ body.mobile-menu-open .sidebar {
 .user-dropdown { display: none; }
 .user-dropdown.show { display: block; }
 
-/* Force topbar layout to ensure menu items are visible and not clipped */
+/* Sidebar vertical styling */
 .app-container > .sidebar { display: flex; align-items: center; padding: 0 1rem; box-shadow: none; }
 .app-container > .sidebar .sidebar-menu { display: flex; align-items: center; width: 100%; overflow: visible; }
 .app-container > .sidebar .menu-section { margin-left: auto; display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
@@ -897,8 +903,8 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 /* (legacy .modal styles removed; project uses .modal-overlay + .modal-dialog block at the end) */
 
 /* ===== Login Page ===== */
-.login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-.login-card { background-color: var(--surface-color); border-radius: var(--radius-lg); padding: 2.5rem; width: 100%; max-width: 400px; box-shadow: var(--shadow-lg); }
+.login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; background-image: url('images/background-clocks.svg'); background-attachment: fixed; background-position: center; background-repeat: no-repeat; background-size: cover; background-color: #0f1724; }
+.login-card { background-color: rgba(21,30,46,0.95); border-radius: var(--radius-lg); padding: 2.5rem; width: 100%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
 .login-header { text-align: center; margin-bottom: 2rem; }
 .login-header .logo { justify-content: center; margin-bottom: 1rem; }
 .login-header h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
@@ -1114,26 +1120,32 @@ label.form-label { display: flex; flex-direction: column; gap: 6px; margin: 0; f
 /* Mobile menu toggle button */
 .mobile-menu-toggle {
   display: none;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
+  background: rgba(255,255,255,0.98);
+  border: 2px solid #3742fa;
+  font-size: 1.8rem;
   cursor: pointer;
-  color: var(--text-primary);
-  padding: 0.5rem 0.75rem;
+  color: #3742fa;
+  padding: 0.75rem 1rem;
   align-items: center;
   justify-content: center;
-  z-index: 210;
+  z-index: 999;
   transition: all 0.2s;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  font-weight: bold;
 }
 
 .mobile-menu-toggle:hover {
-  opacity: 0.7;
+  background: rgba(255,255,255,1);
+  border-color: #1e40af;
+  transform: scale(1.1);
 }
 
 #mobileMenuOpen {
-  position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 999;
 }
 
 #mobileMenuClose {
@@ -1161,9 +1173,11 @@ label.form-label { display: flex; flex-direction: column; gap: 6px; margin: 0; f
     overflow-y: auto;
     transform: translateX(-100%);
     transition: transform 0.3s ease;
-    z-index: 200;
+    z-index: 215;
     display: flex;
     flex-direction: column;
+    background: #1a2847;
+    border-right: 1px solid rgba(255,255,255,0.1);
   }
   
   .sidebar.open {
@@ -1228,8 +1242,22 @@ label.form-label { display: flex; flex-direction: column; gap: 6px; margin: 0; f
   
   .menu-item {
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
     border-radius: 0;
+    color: #b8d3ff;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+  }
+  
+  .menu-item:hover {
+    background-color: rgba(255,255,255,0.15);
+    color: #ffffff;
+  }
+  
+  .menu-item.active {
+    background-color: #3742fa;
+    color: white;
   }
   
   .menu-user {

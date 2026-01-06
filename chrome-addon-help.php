@@ -4,7 +4,7 @@ require_login();
 require_once __DIR__ . '/header.php';
 ?>
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Extensión Chrome - Ayuda</title><link rel="stylesheet" href="styles.css"><style>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Extensión Chrome - Ayuda</title><link rel="icon" type="image/svg+xml" href="images/favicon.svg"><link rel="stylesheet" href="styles.css"><style>
   .help-section { margin-bottom: 30px; }
   .help-section h3 { color: #007bff; margin-top: 20px; margin-bottom: 10px; }
   .step-number { display: inline-block; background: #007bff; color: white; width: 32px; height: 32px; border-radius: 50%; text-align: center; line-height: 32px; font-weight: bold; margin-right: 10px; }

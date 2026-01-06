@@ -299,6 +299,7 @@ if ($hol_pdo) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Configuración — GestionHoras</title>
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>

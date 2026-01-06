@@ -335,7 +335,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
 
 ?>
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard</title><link rel="stylesheet" href="styles.css"></head><body>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard</title><link rel="icon" type="image/svg+xml" href="images/favicon.svg"><link rel="stylesheet" href="styles.css"></head><body>
 <?php include __DIR__ . '/header.php'; ?>
 <div class="container">
   <div class="card">

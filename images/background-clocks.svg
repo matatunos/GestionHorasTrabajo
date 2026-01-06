@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5f5ff;stop-opacity:1" />
+      <stop offset="30%" style="stop-color:#e8eef8;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#d4dff5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c0d9f0;stop-opacity:1" />
+    </linearGradient>
+    
+    <radialGradient id="clockGradient1" cx="40%" cy="40%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.9" />
+      <stop offset="60%" style="stop-color:#e8ecf5;stop-opacity:0.85" />
+      <stop offset="100%" style="stop-color:#b8c9e8;stop-opacity:0.8" />
+    </radialGradient>
+    
+    <radialGradient id="clockGradient2" cx="40%" cy="40%">
+      <stop offset="0%" style="stop-color:#f0f4ff;stop-opacity:0.95" />
+      <stop offset="60%" style="stop-color:#d4dff5;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#9fb8d9;stop-opacity:0.85" />
+    </radialGradient>
+    
+    <filter id="shadow">
+      <feDropShadow dx="2" dy="4" stdDeviation="3" flood-opacity="0.2"/>
+    </filter>
+    
+    <filter id="softGlow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Main background -->
+  <rect width="1920" height="1080" fill="url(#bgGradient)"/>
+  
+  <!-- Flowing waves background -->
+  <path d="M0,300 Q240,250 480,300 T960,300 T1440,300 T1920,300 L1920,1080 L0,1080 Z" fill="#d8e5f5" opacity="0.4"/>
+  <path d="M0,500 Q240,450 480,500 T960,500 T1440,500 T1920,500 L1920,1080 L0,1080 Z" fill="#c8dff0" opacity="0.25"/>
+  <path d="M0,700 Q240,680 480,700 T960,700 T1440,700 T1920,700 L1920,1080 L0,1080 Z" fill="#b8d9e8" opacity="0.15"/>
+  
+  <!-- Left side: Large melting clock -->
+  <g transform="translate(320, 400)" filter="url(#shadow)">
+    <!-- Clock face -->
+    <ellipse cx="0" cy="0" rx="140" ry="160" fill="url(#clockGradient1)" opacity="0.95"/>
+    <ellipse cx="0" cy="-15" rx="130" ry="145" fill="url(#clockGradient1)" opacity="0.98"/>
+    
+    <!-- Clock border -->
+    <ellipse cx="0" cy="-15" rx="130" ry="145" fill="none" stroke="#a8bcd8" stroke-width="3" opacity="0.6"/>
+    
+    <!-- Hour markers -->
+    <circle cx="0" cy="-130" r="5" fill="#5a7aa8"/>
+    <circle cx="92" cy="-65" r="4.5" fill="#5a7aa8"/>
+    <circle cx="115" cy="25" r="4.5" fill="#5a7aa8"/>
+    <circle cx="92" cy="115" r="4.5" fill="#5a7aa8"/>
+    <circle cx="0" cy="140" r="5" fill="#5a7aa8"/>
+    <circle cx="-92" cy="115" r="4.5" fill="#5a7aa8"/>
+    <circle cx="-115" cy="25" r="4.5" fill="#5a7aa8"/>
+    <circle cx="-92" cy="-65" r="4.5" fill="#5a7aa8"/>
+    
+    <!-- Hour hand -->
+    <line x1="0" y1="0" x2="-35" y2="-80" stroke="#4a6a98" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+    <!-- Minute hand -->
+    <line x1="0" y1="0" x2="65" y2="-45" stroke="#4a6a98" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+    <!-- Center dot -->
+    <circle cx="0" cy="0" r="7" fill="#5a7aa8"/>
+    
+    <!-- Melting effect - drips -->
+    <path d="M-100,-160 Q-110,-190 -105,-220" stroke="#b8c9e8" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.7"/>
+    <path d="M-50,-165 Q-55,-200 -50,-235" stroke="#c8d9f0" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <path d="M50,-160 Q55,-195 60,-230" stroke="#b8c9e8" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.65"/>
+    <path d="M100,-155 Q115,-190 120,-225" stroke="#c8d9f0" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.6"/>
+    
+    <!-- Bottom melting drips -->
+    <path d="M-90,140 Q-100,180 -95,220" stroke="#b8c9e8" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <path d="M0,145 Q-5,190 0,235" stroke="#c8d9f0" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.55"/>
+    <path d="M90,140 Q100,180 105,220" stroke="#b8c9e8" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.6"/>
+  </g>
+  
+  <!-- Right side: Medium melting clock -->
+  <g transform="translate(1420, 300)" filter="url(#shadow)">
+    <!-- Clock face -->
+    <ellipse cx="0" cy="0" rx="120" ry="135" fill="url(#clockGradient2)" opacity="0.93"/>
+    <ellipse cx="0" cy="-10" rx="110" ry="125" fill="url(#clockGradient2)" opacity="0.96"/>
+    
+    <!-- Clock border -->
+    <ellipse cx="0" cy="-10" rx="110" ry="125" fill="none" stroke="#9aabcc" stroke-width="2.5" opacity="0.5"/>
+    
+    <!-- Hour markers -->
+    <circle cx="0" cy="-110" r="4.5" fill="#5a7aa8"/>
+    <circle cx="78" cy="-55" r="4" fill="#5a7aa8"/>
+    <circle cx="100" cy="20" r="4" fill="#5a7aa8"/>
+    <circle cx="78" cy="90" r="4" fill="#5a7aa8"/>
+    <circle cx="0" cy="120" r="4.5" fill="#5a7aa8"/>
+    <circle cx="-78" cy="90" r="4" fill="#5a7aa8"/>
+    <circle cx="-100" cy="20" r="4" fill="#5a7aa8"/>
+    <circle cx="-78" cy="-55" r="4" fill="#5a7aa8"/>
+    
+    <!-- Hour hand -->
+    <line x1="0" y1="0" x2="30" y2="-70" stroke="#4a6a98" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+    <!-- Minute hand -->
+    <line x1="0" y1="0" x2="-60" y2="30" stroke="#4a6a98" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+    <!-- Center dot -->
+    <circle cx="0" cy="0" r="6" fill="#5a7aa8"/>
+    
+    <!-- Melting effect -->
+    <path d="M-90,-135 Q-100,-165 -95,-195" stroke="#b8c9e8" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.65"/>
+    <path d="M0,-140 Q-5,-175 0,-210" stroke="#c8d9f0" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.55"/>
+    <path d="M90,-135 Q105,-170 110,-205" stroke="#b8c9e8" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.65"/>
+    
+    <path d="M-80,120 Q-90,160 -85,200" stroke="#b8c9e8" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.55"/>
+    <path d="M80,120 Q95,160 100,200" stroke="#b8c9e8" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.55"/>
+  </g>
+  
+  <!-- Center-top: Small melting clock -->
+  <g transform="translate(700, 250)" filter="url(#shadow)">
+    <!-- Clock face -->
+    <ellipse cx="0" cy="0" rx="100" ry="110" fill="url(#clockGradient1)" opacity="0.9"/>
+    <ellipse cx="0" cy="-8" rx="92" ry="102" fill="url(#clockGradient1)" opacity="0.94"/>
+    
+    <!-- Hour markers -->
+    <circle cx="0" cy="-92" r="3.5" fill="#5a7aa8"/>
+    <circle cx="65" cy="-46" r="3" fill="#5a7aa8"/>
+    <circle cx="85" cy="18" r="3" fill="#5a7aa8"/>
+    <circle cx="0" cy="100" r="3.5" fill="#5a7aa8"/>
+    <circle cx="-85" cy="18" r="3" fill="#5a7aa8"/>
+    
+    <!-- Hands -->
+    <line x1="0" y1="0" x2="0" y2="-60" stroke="#4a6a98" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+    <line x1="0" y1="0" x2="50" y2="25" stroke="#4a6a98" stroke-width="2.5" stroke-linecap="round" opacity="0.8"/>
+    <circle cx="0" cy="0" r="5" fill="#5a7aa8"/>
+    
+    <!-- Melting drips -->
+    <path d="M-75,-110 Q-85,-140 -80,-170" stroke="#b8c9e8" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <path d="M75,-110 Q85,-140 90,-170" stroke="#b8c9e8" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <path d="M0,100 Q-8,145 -5,190" stroke="#c8d9f0" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.5"/>
+  </g>
+  
+  <!-- Floating particles/sparkles -->
+  <circle cx="180" cy="200" r="2" fill="#ffd700" opacity="0.6" filter="url(#softGlow)"/>
+  <circle cx="1500" cy="450" r="1.5" fill="#ffd700" opacity="0.5" filter="url(#softGlow)"/>
+  <circle cx="900" cy="150" r="1" fill="#ffd700" opacity="0.4" filter="url(#softGlow)"/>
+  <circle cx="400" cy="800" r="1.5" fill="#ffd700" opacity="0.4" filter="url(#softGlow)"/>
+  <circle cx="1650" cy="650" r="1" fill="#ffd700" opacity="0.35" filter="url(#softGlow)"/>
+  <circle cx="550" cy="300" r="1.5" fill="#ffecb3" opacity="0.45" filter="url(#softGlow)"/>
+  <circle cx="1200" cy="750" r="1" fill="#ffecb3" opacity="0.35" filter="url(#softGlow)"/>
+</svg>
