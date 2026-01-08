@@ -35,7 +35,7 @@ foreach ($allowed_origins as $allowed) {
   }
 }
 
-if ($should_allow || strpos($origin, 'chrome-extension://') === 0) {
+if ($should_allow) {
   header('Access-Control-Allow-Origin: ' . $origin);
   header('Access-Control-Allow-Credentials: true');
 }
@@ -88,15 +88,27 @@ $path = str_replace('/api.php', '', $path);
 // ENDPOINT LOGIN (sin autenticación requerida)
 // ============================================
 if ($method === 'POST' && $path === '/login') {
-  $username = $global_input['username'] ?? null;
-  $password = $global_input['password'] ?? null;
+  $username = trim($global_input['username'] ?? '');
+  $password = $global_input['password'] ?? '';
   
-  if (!$username || !$password) {
+  // Validación de entrada
+  if (empty($username) || empty($password)) {
     http_response_code(400);
     echo json_encode([
       'ok' => false,
       'error' => 'missing_fields',
       'message' => 'Usuario y contraseña requeridos'
+    ]);
+    exit;
+  }
+  
+  // Validar longitud máxima
+  if (strlen($username) > 255 || strlen($password) > 255) {
+    http_response_code(400);
+    echo json_encode([
+      'ok' => false,
+      'error' => 'invalid_input',
+      'message' => 'Los datos ingresados son inválidos'
     ]);
     exit;
   }
@@ -136,7 +148,13 @@ if ($method === 'POST' && $path === '/login') {
     exit;
   }
   
-  // Generar JWT token
+  // Generar JWT token con secreto seguro
+  $secret_key = getenv('JWT_SECRET_KEY');
+  if (!$secret_key || strlen($secret_key) < 32) {
+    // Fallback a hash de configuración si no está configurado
+    $secret_key = hash('sha256', php_uname() . __FILE__);
+  }
+  
   $header = base64_encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
   $payload = base64_encode(json_encode([
     'user_id' => $user_data['id'],
@@ -144,7 +162,7 @@ if ($method === 'POST' && $path === '/login') {
     'iat' => time(),
     'exp' => time() + (30 * 24 * 60 * 60) // 30 días
   ]));
-  $signature = base64_encode(hash_hmac('sha256', "$header.$payload", 'gestion_horas_secret_key', true));
+  $signature = base64_encode(hash_hmac('sha256', "$header.$payload", $secret_key, true));
   $token = "$header.$payload.$signature";
   
   echo json_encode([
@@ -180,14 +198,27 @@ if (!$user) {
     // Validar JWT token
     $parts = explode('.', $token);
     if (count($parts) === 3) {
-      $payload = json_decode(base64_decode($parts[1]), true);
-      if ($payload && isset($payload['user_id']) && $payload['exp'] > time()) {
-        $user_id = $payload['user_id'];
-        $pdo = get_pdo();
-        $stmt = $pdo->prepare('SELECT id, username, email, name FROM users WHERE id = ?');
-        $stmt->execute([$user_id]);
-        $user = $stmt->fetch();
-        $auth_method = 'bearer_token';
+      // Obtener secreto para validar firma
+      $secret_key = getenv('JWT_SECRET_KEY');
+      if (!$secret_key || strlen($secret_key) < 32) {
+        $secret_key = hash('sha256', php_uname() . __FILE__);
+      }
+      
+      // Validar firma
+      $expected_signature = base64_encode(hash_hmac('sha256', "$parts[0].$parts[1]", $secret_key, true));
+      $token_signature = base64_decode($parts[2]);
+      $expected_sig_decoded = base64_decode($expected_signature);
+      
+      if (hash_equals($token_signature, $expected_sig_decoded)) {
+        $payload = json_decode(base64_decode($parts[1]), true);
+        if ($payload && isset($payload['user_id']) && $payload['exp'] > time()) {
+          $user_id = $payload['user_id'];
+          $pdo = get_pdo();
+          $stmt = $pdo->prepare('SELECT id, username, email, name FROM users WHERE id = ?');
+          $stmt->execute([$user_id]);
+          $user = $stmt->fetch();
+          $auth_method = 'bearer_token';
+        }
       }
     }
   }
@@ -297,7 +328,8 @@ else if ($method === 'GET' && $path === '/entries/today') {
     ]);
   } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => $e->getMessage()]);
+    error_log('Entries/today error: ' . $e->getMessage());
+    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => 'Error procesando solicitud']);
   }
   exit;
 }
@@ -331,7 +363,8 @@ else if ($method === 'GET' && $path === '/entries') {
     ]);
   } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => $e->getMessage()]);
+    error_log('Entries error: ' . $e->getMessage());
+    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => 'Error procesando solicitud']);
   }
   exit;
 }
@@ -393,7 +426,8 @@ else if ($method === 'POST' && $path === '/entries/checkin') {
     ]);
   } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => $e->getMessage()]);
+    error_log('Checkin error: ' . $e->getMessage());
+    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => 'Error procesando solicitud']);
   }
   exit;
 }
@@ -445,7 +479,8 @@ else if ($method === 'POST' && $path === '/entries/checkout') {
     ]);
   } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => $e->getMessage()]);
+    error_log('Checkout error: ' . $e->getMessage());
+    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => 'Error procesando solicitud']);
   }
   exit;
 }
@@ -612,7 +647,8 @@ function handleCreateEntry($input) {
     echo json_encode(['ok' => true, 'message' => 'Entrada guardada']);
   } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => $e->getMessage()]);
+    error_log('Create entry error: ' . $e->getMessage());
+    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => 'Error procesando solicitud']);
   }
 }
 
@@ -636,7 +672,8 @@ function handleDeleteEntry($date) {
     echo json_encode(['ok' => true, 'message' => 'Entrada eliminada']);
   } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => $e->getMessage()]);
+    error_log('Delete entry error: ' . $e->getMessage());
+    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => 'Error procesando solicitud']);
   }
 }
 ?>
