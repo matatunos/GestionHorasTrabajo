@@ -381,9 +381,9 @@ $holidayMap = [];
         <label class="form-label">Hasta <input class="form-control auto-filter-trigger" type="date" name="filter_date_to" value="<?php echo htmlspecialchars($_GET['filter_date_to'] ?? ''); ?>" style="width:150px;"></label>
         <label class="form-label">Estado <select class="form-control auto-filter-trigger" name="filter_status" style="width:150px;">
           <option value="">Todos</option>
-          <option value="complete" <?php echo ($_GET['filter_status'] ?? '') === 'complete' ? 'selected' : ''; ?>>Completo</option>
-          <option value="incomplete" <?php echo ($_GET['filter_status'] ?? '') === 'incomplete' ? 'selected' : ''; ?>>Incompleto</option>
-          <option value="absence" <?php echo ($_GET['filter_status'] ?? '') === 'absence' ? 'selected' : ''; ?>>Con ausencia</option>
+          <option value="complete" <?php echo htmlspecialchars(($_GET['filter_status'] ?? '')) === 'complete' ? 'selected' : ''; ?>>Completo</option>
+          <option value="incomplete" <?php echo htmlspecialchars(($_GET['filter_status'] ?? '')) === 'incomplete' ? 'selected' : ''; ?>>Incompleto</option>
+          <option value="absence" <?php echo htmlspecialchars(($_GET['filter_status'] ?? '')) === 'absence' ? 'selected' : ''; ?>>Con ausencia</option>
         </select></label>
         <label class="form-label">Buscar <input class="form-control auto-filter-trigger" type="text" name="filter_search" placeholder="Buscar en notas..." value="<?php echo htmlspecialchars($_GET['filter_search'] ?? ''); ?>" style="width:200px;"></label>
       </div>
