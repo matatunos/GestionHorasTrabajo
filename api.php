@@ -9,6 +9,8 @@
  * - CSRF token en X-CSRF-Token (opcional pero recomendado)
  */
 
+require_once __DIR__ . '/JWTHelper.php';
+
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/lib.php';
@@ -43,6 +45,17 @@ if ($should_allow) {
 header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-Requested-With, X-CSRF-Token');
 header('Access-Control-Max-Age: 86400');
+
+// Security Headers - Protección contra ataques comunes
+header('X-Content-Type-Options: nosniff'); // Prevent MIME type sniffing
+header('X-Frame-Options: DENY'); // Prevent clickjacking
+header('X-XSS-Protection: 1; mode=block'); // Enable XSS filter
+header('Content-Security-Policy: default-src \'self\'; script-src \'self\' \'unsafe-inline\'; style-src \'self\' \'unsafe-inline\''); // CSP
+header('Referrer-Policy: strict-origin-when-cross-origin'); // Control referrer info
+header('Permissions-Policy: geolocation=(), microphone=(), camera=()'); // Restrict APIs
+if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+  header('Strict-Transport-Security: max-age=31536000; includeSubDomains'); // HSTS - solo si HTTPS
+}
 
 // Manejar preflight requests (OPTIONS)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -120,6 +133,12 @@ if ($method === 'POST' && $path === '/login') {
   $user_data = $stmt->fetch();
   
   if (!$user_data) {
+    error_log('[LOGIN_FAILED] Usuario no encontrado: ' . json_encode([
+      'username' => $username,
+      'ip' => $_SERVER['REMOTE_ADDR'],
+      'timestamp' => date('Y-m-d H:i:s'),
+      'reason' => 'user_not_found'
+    ]));
     http_response_code(401);
     echo json_encode([
       'ok' => false,
@@ -139,6 +158,13 @@ if ($method === 'POST' && $path === '/login') {
   }
   
   if (!$password_valid) {
+    error_log('[LOGIN_FAILED] Contraseña incorrecta: ' . json_encode([
+      'username' => $username,
+      'user_id' => $user_data['id'],
+      'ip' => $_SERVER['REMOTE_ADDR'],
+      'timestamp' => date('Y-m-d H:i:s'),
+      'reason' => 'invalid_password'
+    ]));
     http_response_code(401);
     echo json_encode([
       'ok' => false,
@@ -148,22 +174,18 @@ if ($method === 'POST' && $path === '/login') {
     exit;
   }
   
-  // Generar JWT token con secreto seguro
-  $secret_key = getenv('JWT_SECRET_KEY');
-  if (!$secret_key || strlen($secret_key) < 32) {
-    // Fallback a hash de configuración si no está configurado
-    $secret_key = hash('sha256', php_uname() . __FILE__);
-  }
+  // Generar JWT token usando JWTHelper
+  $token = JWTHelper::create($user_data['id'], $user_data['username'], [
+    'email' => $user_data['email'],
+    'name' => $user_data['name']
+  ]);
   
-  $header = base64_encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
-  $payload = base64_encode(json_encode([
+  error_log('[LOGIN_SUCCESS] Autenticación exitosa: ' . json_encode([
     'user_id' => $user_data['id'],
     'username' => $user_data['username'],
-    'iat' => time(),
-    'exp' => time() + (30 * 24 * 60 * 60) // 30 días
+    'ip' => $_SERVER['REMOTE_ADDR'],
+    'timestamp' => date('Y-m-d H:i:s')
   ]));
-  $signature = base64_encode(hash_hmac('sha256', "$header.$payload", $secret_key, true));
-  $token = "$header.$payload.$signature";
   
   echo json_encode([
     'ok' => true,
@@ -196,30 +218,14 @@ if (!$user) {
   if (preg_match('/Bearer\s+(\S+)/', $auth_header, $matches)) {
     $token = $matches[1];
     // Validar JWT token
-    $parts = explode('.', $token);
-    if (count($parts) === 3) {
-      // Obtener secreto para validar firma
-      $secret_key = getenv('JWT_SECRET_KEY');
-      if (!$secret_key || strlen($secret_key) < 32) {
-        $secret_key = hash('sha256', php_uname() . __FILE__);
-      }
-      
-      // Validar firma
-      $expected_signature = base64_encode(hash_hmac('sha256', "$parts[0].$parts[1]", $secret_key, true));
-      $token_signature = base64_decode($parts[2]);
-      $expected_sig_decoded = base64_decode($expected_signature);
-      
-      if (hash_equals($token_signature, $expected_sig_decoded)) {
-        $payload = json_decode(base64_decode($parts[1]), true);
-        if ($payload && isset($payload['user_id']) && $payload['exp'] > time()) {
-          $user_id = $payload['user_id'];
-          $pdo = get_pdo();
-          $stmt = $pdo->prepare('SELECT id, username, email, name FROM users WHERE id = ?');
-          $stmt->execute([$user_id]);
-          $user = $stmt->fetch();
-          $auth_method = 'bearer_token';
-        }
-      }
+    $payload = JWTHelper::verify($token);
+    if ($payload && isset($payload['user_id'])) {
+      $user_id = $payload['user_id'];
+      $pdo = get_pdo();
+      $stmt = $pdo->prepare('SELECT id, username, email, name FROM users WHERE id = ?');
+      $stmt->execute([$user_id]);
+      $user = $stmt->fetch();
+      $auth_method = 'bearer_token';
     }
   }
   
