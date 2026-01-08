@@ -636,7 +636,7 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
         <div class="stat-label">📅 Festivos</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value" style="color: #e91e63;"><?php echo $problemsByType['odd']; ?></div>
+        <div class="stat-value" style="color: #e91e63;"><?php echo isset($problemsByType['odd']) ? $problemsByType['odd'] : count($oddEntries); ?></div>
         <div class="stat-label">⚡ Fichajes impares</div>
       </div>
       <div class="stat-box">
