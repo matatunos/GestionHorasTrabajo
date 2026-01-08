@@ -152,6 +152,193 @@ else if ($method === 'GET' && ($path === '' || $path === '/')) {
   ]);
   exit;
 }
+// GET /api.php/me - Datos del usuario actual (NUEVO)
+else if ($method === 'GET' && $path === '/me') {
+  echo json_encode([
+    'ok' => true,
+    'data' => [
+      'id' => $user['id'],
+      'username' => $user['username'],
+      'email' => $user['email'],
+      'name' => $user['name'] ?? $user['username'],
+    ]
+  ]);
+  exit;
+}
+// GET /api.php/entries/today - Fichajes de hoy (NUEVO - para móvil)
+else if ($method === 'GET' && $path === '/entries/today') {
+  $pdo = get_pdo();
+  $today = date('Y-m-d');
+  
+  try {
+    $stmt = $pdo->prepare('
+      SELECT id, user_id, date, start, end, lunch_out, lunch_in, coffee_out, coffee_in, note, absence_type
+      FROM entries
+      WHERE user_id = ? AND date = ?
+      LIMIT 1
+    ');
+    $stmt->execute([$user['id'], $today]);
+    $entry = $stmt->fetch();
+    
+    echo json_encode([
+      'ok' => true,
+      'data' => $entry ? [$entry] : [],
+      'timestamp' => date('Y-m-d H:i:s')
+    ]);
+  } catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => $e->getMessage()]);
+  }
+  exit;
+}
+// GET /api.php/entries - Historial de fichajes con paginación (NUEVO - para móvil)
+else if ($method === 'GET' && $path === '/entries') {
+  $limit = (int)($_GET['limit'] ?? 30);
+  $offset = (int)($_GET['offset'] ?? 0);
+  $limit = min($limit, 100); // Máximo 100
+  
+  $pdo = get_pdo();
+  
+  try {
+    $stmt = $pdo->prepare('
+      SELECT id, user_id, date, start, end, lunch_out, lunch_in, coffee_out, coffee_in, note, absence_type
+      FROM entries
+      WHERE user_id = ?
+      ORDER BY date DESC, start DESC
+      LIMIT ? OFFSET ?
+    ');
+    $stmt->execute([$user['id'], $limit, $offset]);
+    $entries = $stmt->fetchAll();
+    
+    echo json_encode([
+      'ok' => true,
+      'data' => $entries,
+      'pagination' => [
+        'limit' => $limit,
+        'offset' => $offset,
+        'count' => count($entries)
+      ]
+    ]);
+  } catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => $e->getMessage()]);
+  }
+  exit;
+}
+// POST /api.php/entries/checkin - Registrar entrada (NUEVO - para móvil)
+else if ($method === 'POST' && $path === '/entries/checkin') {
+  $pdo = get_pdo();
+  $today = date('Y-m-d');
+  $now = date('H:i:s');
+  
+  try {
+    // Verificar si ya existe entrada hoy
+    $stmt = $pdo->prepare('
+      SELECT id, end FROM entries
+      WHERE user_id = ? AND date = ?
+      LIMIT 1
+    ');
+    $stmt->execute([$user['id'], $today]);
+    $existing = $stmt->fetch();
+    
+    if ($existing && $existing['end']) {
+      // Ya tiene entrada y salida hoy, error
+      http_response_code(400);
+      echo json_encode([
+        'ok' => false,
+        'error' => 'already_checked_out',
+        'message' => 'Ya completaste tu jornada hoy'
+      ]);
+      exit;
+    } elseif ($existing && !$existing['end']) {
+      // Ya tiene entrada sin salida, error
+      http_response_code(400);
+      echo json_encode([
+        'ok' => false,
+        'error' => 'already_checked_in',
+        'message' => 'Ya tienes una entrada registrada sin salida'
+      ]);
+      exit;
+    }
+    
+    // Crear entrada nueva
+    $stmt = $pdo->prepare('
+      INSERT INTO entries (user_id, date, start)
+      VALUES (?, ?, ?)
+    ');
+    $stmt->execute([$user['id'], $today, $now]);
+    $id = $pdo->lastInsertId();
+    
+    // Retornar entrada creada
+    $stmt = $pdo->prepare('
+      SELECT id, user_id, date, start, end FROM entries WHERE id = ?
+    ');
+    $stmt->execute([$id]);
+    $entry = $stmt->fetch();
+    
+    echo json_encode([
+      'ok' => true,
+      'data' => $entry,
+      'message' => 'Entrada registrada'
+    ]);
+  } catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => $e->getMessage()]);
+  }
+  exit;
+}
+// POST /api.php/entries/checkout - Registrar salida (NUEVO - para móvil)
+else if ($method === 'POST' && $path === '/entries/checkout') {
+  $pdo = get_pdo();
+  $today = date('Y-m-d');
+  $now = date('H:i:s');
+  
+  try {
+    // Obtener entrada sin salida de hoy
+    $stmt = $pdo->prepare('
+      SELECT id FROM entries
+      WHERE user_id = ? AND date = ? AND end IS NULL
+      LIMIT 1
+    ');
+    $stmt->execute([$user['id'], $today]);
+    $entry = $stmt->fetch();
+    
+    if (!$entry) {
+      http_response_code(400);
+      echo json_encode([
+        'ok' => false,
+        'error' => 'no_active_entry',
+        'message' => 'No hay entrada activa para cerrar'
+      ]);
+      exit;
+    }
+    
+    // Actualizar con salida
+    $stmt = $pdo->prepare('
+      UPDATE entries
+      SET end = ?
+      WHERE id = ?
+    ');
+    $stmt->execute([$now, $entry['id']]);
+    
+    // Retornar entrada actualizada
+    $stmt = $pdo->prepare('
+      SELECT id, user_id, date, start, end FROM entries WHERE id = ?
+    ');
+    $stmt->execute([$entry['id']]);
+    $updatedEntry = $stmt->fetch();
+    
+    echo json_encode([
+      'ok' => true,
+      'data' => $updatedEntry,
+      'message' => 'Salida registrada'
+    ]);
+  } catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => $e->getMessage()]);
+  }
+  exit;
+}
 // POST /api.php/entry - Crear/actualizar entrada
 else if ($method === 'POST' && $path === '/entry') {
   handleCreateEntry($global_input);

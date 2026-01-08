@@ -87,9 +87,18 @@ function minutesToTime($minutes) {
 $issuesByDate = [];
 $entryDates = [];
 $totalProblems = 0;
+$oddEntries = []; // Fichajes impares (sin pareja)
 
 foreach ($entries as $entry) {
   $entryDates[$entry['date']] = $entry;
+  
+  // Detectar fichajes impares (entrada sin salida o salida sin entrada)
+  $hasStart = !empty($entry['start']);
+  $hasEnd = !empty($entry['end']);
+  
+  if (($hasStart && !$hasEnd) || (!$hasStart && $hasEnd)) {
+    $oddEntries[$entry['date']] = $entry;
+  }
   
   $startMin = timeToMinutes($entry['start']);
   $endMin = timeToMinutes($entry['end']);
@@ -118,6 +127,14 @@ foreach ($entries as $entry) {
   $hoursWorked = $totalMinutes / 60;
   $issues = [];
   $severity = 'ok';
+  
+  // Detectar fichajes impares (entrada sin salida o salida sin entrada)
+  $hasStart = !empty($entry['start']);
+  $hasEnd = !empty($entry['end']);
+  if (($hasStart && !$hasEnd) || (!$hasStart && $hasEnd)) {
+    $issues[] = $hasStart && !$hasEnd ? 'Entrada sin salida' : 'Salida sin entrada';
+    $severity = 'danger';
+  }
   
   // Verificar si el día está marcado como festivo/ausencia
   if (isset($holidayMap[$entry['date']])) {
@@ -164,7 +181,8 @@ foreach ($entries as $entry) {
 $problemsByType = [
   'danger' => 0,
   'warning' => 0,
-  'holiday' => 0
+  'holiday' => 0,
+  'odd' => count($oddEntries)
 ];
 
 // Contar problemas por severidad
@@ -466,6 +484,7 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
     .calendar-day.warning { background: #fff3cd; border-color: #ffc107; border-width: 2px; }
     .calendar-day.danger { background: #f8d7da; border-color: #dc3545; border-width: 2px; }
     .calendar-day.holiday { background: #e7f3ff; border-color: #0056b3; border-width: 2px; }
+    .calendar-day.odd { background: #f3e5f5; border-color: #e91e63; border-width: 2px; }
     .calendar-day.today { box-shadow: inset 0 0 0 2px #007bff; }
     
     .calendar-day-number { font-weight: bold; font-size: 1em; }
@@ -617,6 +636,10 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
         <div class="stat-label">📅 Festivos</div>
       </div>
       <div class="stat-box">
+        <div class="stat-value" style="color: #e91e63;"><?php echo $problemsByType['odd']; ?></div>
+        <div class="stat-label">⚡ Fichajes impares</div>
+      </div>
+      <div class="stat-box">
         <div class="stat-value"><?php echo intval((count($entryDates) / 251) * 100); ?>%</div>
         <div class="stat-label">Cobertura</div>
       </div>
@@ -640,6 +663,10 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
         <div class="legend-item">
           <div class="legend-dot danger"></div>
           <span>Problema grave (sin fichajes, salida muy temprana/tardía)</span>
+        </div>
+        <div class="legend-item">
+          <div style="width: 24px; height: 24px; border-radius: 4px; border: 2px solid #e91e63; background: #f3e5f5; flex-shrink: 0;"></div>
+          <span>Fichaje impar (entrada sin salida, o viceversa)</span>
         </div>
         <div class="legend-item">
           <div style="width: 24px; height: 24px; border-radius: 4px; border: 2px solid #0056b3; background: #e7f3ff; flex-shrink: 0;"></div>
@@ -702,6 +729,13 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
           $issue = $issuesByDate[$dateStr];
           $status = $issue['severity'];
           $issueText = implode(' | ', $issue['issues']);
+        } elseif (isset($oddEntries[$dateStr])) {
+          // Tiene fichaje impar (entrada sin salida o viceversa)
+          $status = 'odd';
+          $entry = $oddEntries[$dateStr];
+          $hasStart = !empty($entry['start']);
+          $hasEnd = !empty($entry['end']);
+          $issueText = $hasStart && !$hasEnd ? 'Entrada sin salida' : 'Salida sin entrada';
         } elseif (isset($entryDates[$dateStr])) {
           // Tiene fichajes, pero verificar si es fin de semana (naranja)
           $dayOfWeek = intval($day->format('N'));
@@ -753,6 +787,31 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
       $currentDate->modify('first day of next month');
     }
     ?>
+    
+    <!-- Fichajes impares listados -->
+    <?php if (!empty($oddEntries)): ?>
+      <div class="problems-list" style="margin-bottom: 30px; padding: 20px; background: #f3e5f5; border-left: 5px solid #e91e63; border-radius: 4px;">
+        <h2 style="margin-top: 0; color: #e91e63;">⚡ Fichajes Impares Detectados</h2>
+        <p style="color: #666; margin-bottom: 15px;">Los siguientes días tienen fichajes incompletos (entrada sin salida, o salida sin entrada):</p>
+        
+        <?php foreach ($oddEntries as $date => $entry): ?>
+          <div class="problem-card" style="border-left-color: #e91e63; margin-bottom: 10px;" onclick="openDetailModal('<?php echo htmlspecialchars($date); ?>'); return false;" style="cursor: pointer;">
+            <h4 style="margin: 0 0 8px 0;">
+              <?php echo date('d/m/Y (l)', strtotime($date)); ?>
+            </h4>
+            <div style="margin-bottom: 8px;">
+              <span style="display: inline-block; background: #ffffff; padding: 4px 8px; border-radius: 3px; border-left: 3px solid #e91e63; font-size: 0.9em; font-weight: 500;">
+                <?php 
+                  $hasStart = !empty($entry['start']);
+                  $hasEnd = !empty($entry['end']);
+                  echo $hasStart && !$hasEnd ? '⚠️ Entrada sin salida (' . htmlspecialchars($entry['start']) . ')' : '⚠️ Salida sin entrada (' . htmlspecialchars($entry['end']) . ')';
+                ?>
+              </span>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
     
     <!-- Problemas listados -->
     <?php if ($totalProblems > 0): ?>

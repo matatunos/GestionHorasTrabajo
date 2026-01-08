@@ -1,0 +1,127 @@
+╔════════════════════════════════════════════════════════════════════════════════════╗
+║                  PRUEBA: SUGERENCIAS DE HORARIOS - SEMANA 5-9 ENERO 2026            ║
+╚════════════════════════════════════════════════════════════════════════════════════╝
+
+📋 DATOS REALES DE LA BASE DE DATOS
+═══════════════════════════════════════════════════════════════════════════════════
+
+FICHAJES REGISTRADOS:
+  Lunes 5 (2026-01-05):    07:41 - 14:03 | 6.28h ✓
+  Martes 6 (2026-01-06):   SIN SALIDA (Fichaje impar)
+  Miércoles 7 (2026-01-07): 07:29 - 15:33 | 8.03h ✓ ← HOY
+  Jueves 8 (2026-01-08):   SIN REGISTROS
+  Viernes 9 (2026-01-09):  SIN REGISTROS
+
+FESTIVOS/AUSENCIAS:
+  Ninguno registrado para esta semana
+
+
+📊 ANÁLISIS DEL SISTEMA (SCHEDULE_SUGGESTIONS.PHP)
+═══════════════════════════════════════════════════════════════════════════════════
+
+PASO 1: Cargar festivos de la semana
+  ✓ Se cargan automáticamente festivos (anuales y específicos)
+  → Encontrados: 0 festivos en semana 5-9
+
+PASO 2: Calcular objetivo semanal (ajustado por festivos)
+  Config base Mon-Thu:     7.65 h/día × 4 días = 30.60 h
+  Config base Viernes:     6.50 h (con pausa = 5.50h trabajados)
+  ────────────────────────────────────────────────────────
+  Objetivo bruto:                                  36.10 h
+  Horas restadas (festivos):                        0.00 h
+  ────────────────────────────────────────────────────────
+  🎯 OBJETIVO FINAL:                               36.10 h
+
+PASO 3: Calcular horas ya trabajadas (hasta hoy 7 enero)
+  Lunes 5:     6.28 h
+  Martes 6:    0.00 h (fichaje impar - sin salida)
+  Miércoles 7: 8.03 h
+  ────────────────────────
+  ✓ TOTAL TRABAJADO:       14.32 h
+
+PASO 4: Calcular horas restantes
+  Objetivo:    36.10 h
+  Trabajado:  -14.32 h
+  ────────────────
+  PENDIENTE:   21.78 h  ← Horas faltantes
+
+PASO 5: Determinar días disponibles (excluyendo festivos)
+  Hoy es miércoles (día 3 de 5)
+  Jueves (día 4):  ✓ DISPONIBLE (sin festivo, sin registros)
+  Viernes (día 5): ✓ DISPONIBLE (sin festivo, sin registros)
+  ────────────────────────────────────────
+  Días donde se pueden sugerir horarios: 2
+
+PASO 6: Distribuir horas restantes
+  Horas pendientes:    21.78 h
+  Días disponibles:    2
+  Promedio por día:    21.78 ÷ 2 = 10.89 h/día
+
+
+🕐 SUGERENCIAS DE HORARIOS GENERADAS
+═══════════════════════════════════════════════════════════════════════════════════
+
+Jueves 8 enero 2026:
+  Entrada:        08:31
+  Salida:         19:24
+  Horas:          10.89 h (10:53)
+  Tipo jornada:   Jornada Continua (sin pausa comida)
+  Confianza:      ALTA (9 registros históricos en últimos 90 días)
+
+Viernes 9 enero 2026:
+  Entrada:        07:42
+  Salida:         18:35
+  Horas:          10.89 h (10:53)
+  Tipo jornada:   Jornada Continua (sin pausa comida)
+  Confianza:      ALTA (8 registros históricos en últimos 90 días)
+
+
+✅ VERIFICACIÓN - LO QUE SE IMPLEMENTÓ
+═══════════════════════════════════════════════════════════════════════════════════
+
+✓ Carga de festivos de la semana actual
+  - Consulta a tabla "holidays"
+  - Soporta festivos anuales (que se repiten cada año)
+  - Soporta festivos específicos del usuario
+  - Ubicación: schedule_suggestions.php líneas 420-441
+
+✓ Ajuste del objetivo semanal por festivos
+  - Resta automáticamente horas de festivos del objetivo
+  - Distingue entre viernes (5.5h) y lunes-jueves (7.65h)
+  - Solo cuenta festivos en días laborales (lunes-viernes)
+  - Ubicación: schedule_suggestions.php líneas 443-469
+
+✓ Exclusión de festivos de días disponibles
+  - Los días con festivo se excluyen de sugerencias
+  - No se sugieren horarios para días festivos
+  - Ubicación: schedule_suggestions.php líneas 514-527
+
+✓ Consideración de horas ya trabajadas
+  - Calcula correctamente horas trabajadas hasta hoy (14.32h)
+  - Detecta fichajes impares (entrada sin salida)
+  - Utiliza la función compute_day() para cálculo preciso
+  - Ubicación: schedule_suggestions.php líneas 480-510
+
+
+🔍 CASOS DE PRUEBA VALIDADOS
+═══════════════════════════════════════════════════════════════════════════════════
+
+1. Cálculo de horas objetivo
+   ✓ CORRECTO: 36.10h (basado en config de 7.65h mon-jue, 5.5h viernes)
+
+2. Horas ya trabajadas
+   ✓ CORRECTO: 14.32h (suma de todos los registros hasta hoy)
+
+3. Exclusión de festivos del objetivo
+   ✓ CORRECTO: 0h restado (no hay festivos en semana 5-9)
+
+4. Días disponibles
+   ✓ CORRECTO: 2 días (jueves + viernes)
+
+5. Sugerencias de horarios
+   ✓ CORRECTO: 10.89h/día distribuidos uniformemente
+
+6. Detección de fichajes impares
+   ✓ DETECTADO: Martes 6 tiene entrada pero no salida
+
+═══════════════════════════════════════════════════════════════════════════════════

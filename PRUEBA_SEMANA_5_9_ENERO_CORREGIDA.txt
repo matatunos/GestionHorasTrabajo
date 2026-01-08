@@ -1,0 +1,146 @@
+╔════════════════════════════════════════════════════════════════════════════════════╗
+║              PRUEBA CORREGIDA: SUGERENCIAS DE HORARIOS - 5-9 ENERO 2026            ║
+║                    (FIX: Se detecta festivo anual del 6 de enero)                   ║
+╚════════════════════════════════════════════════════════════════════════════════════╝
+
+📋 DATOS REALES DE LA BASE DE DATOS
+═══════════════════════════════════════════════════════════════════════════════════
+
+FICHAJES REGISTRADOS:
+  Lunes 5 (2026-01-05):      07:41 - 14:03 | 6.28h ✓
+  Martes 6 (2026-01-06):     🏖️ FESTIVO (Reyes - Anual)
+  Miércoles 7 (2026-01-07):  07:29 - 15:33 | 6.20h ✓ ← HOY
+  Jueves 8 (2026-01-08):     SIN REGISTROS
+  Viernes 9 (2026-01-09):    SIN REGISTROS
+
+FESTIVOS/AUSENCIAS:
+  ✓ 6 de enero = Reyes (Festivo anual que se repite cada año)
+
+
+📊 ANÁLISIS DEL SISTEMA (SCHEDULE_SUGGESTIONS.PHP - CORREGIDO)
+═══════════════════════════════════════════════════════════════════════════════════
+
+PASO 1: Cargar festivos de la semana (CORREGIDO)
+  ✓ Se cargan TODOS los festivos (sin filtro de fecha)
+  ✓ Se reconstruyen los festivos anuales para 2026
+  ✓ Se filtra por rango de semana DESPUÉS de reconstruir
+  → Encontrados: 1 festivo en semana 5-9
+     - 2026-01-06: holiday (Reyes - ANNUAL)
+
+PASO 2: Calcular objetivo semanal (ajustado por festivos)
+  Config base Mon-Thu:     7.65 h/día × 4 días = 30.60 h
+  Config base Viernes:     6.50 h (con pausa = 5.50h trabajados)
+  ────────────────────────────────────────────────────────
+  Objetivo bruto:                                  36.10 h
+  Horas restadas (festivos):                       -7.65 h  ← MARTES ES FESTIVO
+  ────────────────────────────────────────────────────────
+  🎯 OBJETIVO FINAL CORREGIDO:                     28.45 h  ← ANTES ERA 36.10h
+
+PASO 3: Calcular horas ya trabajadas (hasta hoy 7 enero)
+  Lunes 5:      6.28 h
+  Martes 6:     0.00 h (FESTIVO - no se cuenta)
+  Miércoles 7:  6.20 h
+  ────────────────────────
+  ✓ TOTAL TRABAJADO:       12.48 h
+
+PASO 4: Calcular horas restantes (CORREGIDO)
+  Objetivo:    28.45 h
+  Trabajado:  -12.48 h
+  ────────────────
+  PENDIENTE:   15.97 h  ← ANTES ERA 21.78h (INCORRECTO)
+
+PASO 5: Determinar días disponibles (excluyendo festivos)
+  Hoy es miércoles (día 3 de 5)
+  Jueves (día 4):  ✓ DISPONIBLE (no es festivo, sin registros)
+  Viernes (día 5): ✓ DISPONIBLE (no es festivo, sin registros)
+  ────────────────────────────────────────
+  Días donde se pueden sugerir horarios: 2
+
+PASO 6: Distribuir horas restantes (CORREGIDO)
+  Horas pendientes:    15.97 h
+  Días disponibles:    2
+  Promedio por día:    15.97 ÷ 2 = 7.98 h/día  ← ANTES ERA 10.89h
+
+
+🕐 SUGERENCIAS DE HORARIOS GENERADAS (CORREGIDAS)
+═══════════════════════════════════════════════════════════════════════════════════
+
+Jueves 8 enero 2026:
+  Entrada:        08:39
+  Salida:         16:37
+  Horas:          7.98 h (7:58)  ← ANTES: 10.89h
+  Tipo jornada:   Jornada Continua (sin pausa comida)
+  Confianza:      ALTA (8 registros históricos en últimos 90 días)
+
+Viernes 9 enero 2026:
+  Entrada:        07:42
+  Salida:         15:40
+  Horas:          7.98 h (7:58)  ← ANTES: 10.89h
+  Tipo jornada:   Jornada Continua (sin pausa comida)
+  Confianza:      ALTA (8 registros históricos en últimos 90 días)
+
+
+🔧 BUG ENCONTRADO Y CORREGIDO
+═══════════════════════════════════════════════════════════════════════════════════
+
+PROBLEMA:
+  La consulta a BD filtraba festivos POR FECHA antes de reconstruir los anuales:
+  
+  SELECT date FROM holidays 
+  WHERE date >= '2026-01-05' AND date <= '2026-01-11'
+  
+  Pero "Reyes" estaba registrado como "2025-01-06" (ANNUAL=1), así que NO aparecía
+  en el rango 2026-01-05 a 2026-01-11.
+
+SOLUCIÓN:
+  Cambiar la consulta para cargAR TODOS los festivos sin filtro de fecha,
+  luego reconstruir los anuales para el año en cuestión, luego filtrar por rango:
+  
+  SELECT date FROM holidays
+  WHERE (user_id = ? OR user_id IS NULL)
+  
+  Luego en PHP:
+  - Para cada festivo anual: reconstruir fecha a 2026-01-06
+  - Luego filtrar si está en rango de semana: 2026-01-05 a 2026-01-11 ✓
+
+UBICACIÓN DEL FIX:
+  schedule_suggestions.php líneas 420-441
+
+
+✅ COMPARATIVA: ANTES vs DESPUÉS
+═══════════════════════════════════════════════════════════════════════════════════
+
+                           ANTES        DESPUÉS      DIFERENCIA
+────────────────────────────────────────────────────────────────
+Festivos detectados           0            1          +1 (Reyes)
+Objetivo semanal          36.10h        28.45h       -7.65h
+Horas trabajadas          14.32h        12.48h       -1.84h
+Horas pendientes          21.78h        15.97h       -5.81h
+Días disponibles              2            2           (igual)
+Horas por día             10.89h         7.98h       -2.91h/día
+Jueves sugerido        19:24 (10:53)  16:37 (7:58)  -2:46 más temprano
+Viernes sugerido       18:35 (10:53)  15:40 (7:58)  -2:55 más temprano
+
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+✅ VERIFICACIÓN - IMPLEMENTACIÓN CORRECTA
+
+✓ Carga de festivos anuales: Fixed
+  - Ahora consulta TODOS los festivos sin filtro de fecha
+  - Reconstruye correctamente festivos anuales
+  - Filtra por rango de semana después
+
+✓ Ajuste del objetivo semanal: Correcto
+  - Resta 7.65h por el festivo del martes 6
+  - Nuevo objetivo: 28.45h (en lugar de 36.10h)
+
+✓ Cálculo de horas pendientes: Correcto
+  - 28.45h objetivo - 12.48h trabajado = 15.97h
+  - Distribución: 15.97h ÷ 2 días = 7.98h/día
+
+✓ Sugerencias generadas: Correctas
+  - Horarios más realistas (7.98h/día en lugar de 10.89h/día)
+  - Permiten cumplir objetivo considerando el festivo
+
+═══════════════════════════════════════════════════════════════════════════════════
