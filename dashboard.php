@@ -2,6 +2,7 @@
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/lib.php';
+require_once __DIR__ . '/LogAnalytics.php';
 require_login();
 $user = current_user();
 $pdo = get_pdo();
@@ -571,6 +572,168 @@ function svg_sparkline(array $values, $w=120, $h=28){
         <div class="muted">Basado en días procesados (incluye fines de semana filtrados)</div>
       </div>
     </div>
+
+    <!-- SECURITY ANALYTICS SECTION -->
+    <?php
+      // Get log statistics - only for admin/current user view
+      $logStats = LogAnalytics::getLoginStats(30); // Last 30 days
+      $securityStats = LogAnalytics::getSecurityStats(30);
+      $recentActivity = LogAnalytics::getRecentActivity(5);
+    ?>
+    <h3 class="dashboard-section-title">🔐 Análisis de Seguridad</h3>
+    <div class="dashboard-cards">
+      <!-- Login Statistics Card -->
+      <div class="card">
+        <h4>Intentos de login (30 días)</h4>
+        <div class="dashboard-value"><?php echo $logStats['total']; ?></div>
+        <div class="muted">
+          <div>✅ Exitosos: <strong><?php echo $logStats['success']; ?></strong></div>
+          <div>❌ Fallidos: <strong><?php echo $logStats['failed']; ?></strong></div>
+          <div>Tasa éxito: <strong><?php echo $logStats['success_rate']; ?>%</strong></div>
+        </div>
+      </div>
+
+      <!-- Failed Login Reasons Card -->
+      <div class="card">
+        <h4>Razones de fallos</h4>
+        <?php if (!empty($logStats['failed_reasons'])): ?>
+          <div class="muted">
+            <?php foreach ($logStats['failed_reasons'] as $reason => $count): ?>
+              <div>
+                <?php 
+                  $reasonLabel = $reason === 'user_not_found' ? '👤 Usuario no encontrado' :
+                                 ($reason === 'invalid_password' ? '🔑 Contraseña inválida' : 
+                                  htmlspecialchars($reason));
+                ?>
+                <?php echo $reasonLabel; ?>: <strong><?php echo $count; ?></strong>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <div class="muted">Sin intentos fallidos 🎉</div>
+        <?php endif; ?>
+      </div>
+
+      <!-- Top IPs with Failed Attempts Card -->
+      <div class="card">
+        <h4>IPs con fallos</h4>
+        <?php if (!empty($securityStats['suspicious_ips']) || !empty($logStats['top_ips'])): ?>
+          <div class="muted">
+            <?php 
+              // Show suspicious IPs first, then all IPs
+              if (!empty($securityStats['suspicious_ips'])): 
+                foreach ($securityStats['suspicious_ips'] as $ip => $count):
+            ?>
+              <div style="padding: 0.5rem; background: rgba(220, 38, 38, 0.1); border-radius: 4px; margin-bottom: 0.25rem; border-left: 3px solid #dc2626;">
+                🚨 <?php echo htmlspecialchars($ip); ?><br>
+                <small><?php echo $count; ?> intentos fallidos</small>
+              </div>
+            <?php 
+                endforeach;
+              endif;
+              
+              // Show all IPs
+              if (!empty($logStats['top_ips'])):
+                foreach ($logStats['top_ips'] as $ip => $count):
+            ?>
+              <div>
+                📍 <?php echo htmlspecialchars($ip); ?>: <strong><?php echo $count; ?></strong>
+              </div>
+            <?php 
+                endforeach;
+              endif;
+            ?>
+          </div>
+        <?php else: ?>
+          <div class="muted">Sin intentos registrados</div>
+        <?php endif; ?>
+      </div>
+
+      <!-- Security Alerts Card -->
+      <div class="card">
+        <h4>Alertas de seguridad</h4>
+        <?php if (!empty($securityStats['alerts'])): ?>
+          <div>
+            <?php foreach ($securityStats['alerts'] as $alert): ?>
+              <div style="padding: 0.75rem; background: rgba(217, 119, 6, 0.1); border-left: 3px solid #d97706; border-radius: 4px; margin-bottom: 0.5rem;">
+                ⚠️ <?php echo htmlspecialchars($alert); ?>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <div class="muted">✅ Sin alertas - Sistema seguro</div>
+        <?php endif; ?>
+      </div>
+
+      <!-- Top Users Card -->
+      <div class="card">
+        <h4>Usuarios más activos (login)</h4>
+        <?php if (!empty($logStats['top_users'])): ?>
+          <div class="muted">
+            <?php foreach ($logStats['top_users'] as $user_name => $count): ?>
+              <div>
+                👤 <?php echo htmlspecialchars($user_name); ?>: <strong><?php echo $count; ?></strong>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <div class="muted">Sin intentos registrados</div>
+        <?php endif; ?>
+      </div>
+
+      <!-- Recent Activity Card -->
+      <div class="card card--wide">
+        <h4>Actividad reciente de login</h4>
+        <?php if (!empty($recentActivity)): ?>
+          <div style="max-height: 250px; overflow-y: auto;">
+            <table class="sheet compact" style="font-size: 0.85rem;">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Usuario</th>
+                  <th>Acción</th>
+                  <th>IP</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($recentActivity as $activity): ?>
+                  <tr>
+                    <td>
+                      <small><?php echo htmlspecialchars(substr($activity['timestamp'], 11, 8) ?? '—'); ?></small>
+                    </td>
+                    <td>
+                      <small><?php echo htmlspecialchars($activity['username']); ?></small>
+                    </td>
+                    <td>
+                      <small>
+                        <?php 
+                          if ($activity['action'] === 'LOGIN_SUCCESS') {
+                            echo '✅ Éxito';
+                          } elseif ($activity['action'] === 'LOGIN_FAILED') {
+                            $reasonLabel = $activity['reason'] === 'user_not_found' ? '(usuario no existe)' :
+                                          ($activity['reason'] === 'invalid_password' ? '(contraseña inválida)' :
+                                           '(' . htmlspecialchars($activity['reason']) . ')');
+                            echo '❌ Falló ' . $reasonLabel;
+                          } else {
+                            echo htmlspecialchars($activity['action']);
+                          }
+                        ?>
+                      </small>
+                    </td>
+                    <td>
+                      <small><?php echo htmlspecialchars($activity['ip']); ?></small>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php else: ?>
+          <div class="muted">Sin actividad registrada</div>
+        <?php endif; ?>
+      </div>
+    </div>
+    <!-- END SECURITY ANALYTICS SECTION -->
 
     <h3 class="dashboard-section-title">Resumen mensual</h3>
     <div class="table-responsive">
