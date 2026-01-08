@@ -50,8 +50,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
   exit;
 }
 
-// Solo AJAX
-if (empty($_SERVER['HTTP_X_REQUESTED_WITH']) || $_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest') {
+// Solo permitir AJAX y apps móviles (no navegador directo)
+// Permitir: X-Requested-With (AJAX), Authorization (Bearer token móvil)
+$is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest';
+$is_mobile = !empty($_SERVER['HTTP_AUTHORIZATION']);
+$is_login = strpos($_SERVER['REQUEST_URI'], '/login') !== false;
+
+if (!$is_ajax && !$is_mobile && !$is_login) {
   http_response_code(403);
   header('Content-Type: application/json');
   echo json_encode(['ok' => false, 'error' => 'forbidden', 'message' => 'Solo peticiones AJAX permitidas']);
@@ -66,15 +71,98 @@ if ($protocol === 'http' && $_SERVER['HTTP_HOST'] !== 'localhost' && $_SERVER['H
   echo json_encode(['ok' => false, 'error' => 'insecure', 'message' => 'API solo disponible por HTTPS']);
   exit;
 }
-}
 
 // ⚠️ IMPORTANTE: Leer php://input UNA SOLA VEZ al inicio (no se puede leer dos veces)
 $raw_input = file_get_contents('php://input');
 $global_input = json_decode($raw_input, true);
 
+// Responder JSON
+header('Content-Type: application/json');
+
+// Rutas de la API
+$method = $_SERVER['REQUEST_METHOD'];
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$path = str_replace('/api.php', '', $path);
+
+// ============================================
+// ENDPOINT LOGIN (sin autenticación requerida)
+// ============================================
+if ($method === 'POST' && $path === '/login') {
+  $username = $global_input['username'] ?? null;
+  $password = $global_input['password'] ?? null;
+  
+  if (!$username || !$password) {
+    http_response_code(400);
+    echo json_encode([
+      'ok' => false,
+      'error' => 'missing_fields',
+      'message' => 'Usuario y contraseña requeridos'
+    ]);
+    exit;
+  }
+  
+  // Validar credenciales
+  $pdo = get_pdo();
+  $stmt = $pdo->prepare('SELECT id, username, email, name, password FROM users WHERE username = ?');
+  $stmt->execute([$username]);
+  $user_data = $stmt->fetch();
+  
+  if (!$user_data) {
+    http_response_code(401);
+    echo json_encode([
+      'ok' => false,
+      'error' => 'invalid_credentials',
+      'message' => 'Usuario o contraseña inválidos'
+    ]);
+    exit;
+  }
+  
+  // Verificar contraseña (intentar ambos: password_verify y comparación directa)
+  $password_valid = false;
+  if (function_exists('password_verify')) {
+    $password_valid = password_verify($password, $user_data['password']);
+  } else {
+    // Fallback: comparación directa si no está hasheada
+    $password_valid = ($password === $user_data['password']);
+  }
+  
+  if (!$password_valid) {
+    http_response_code(401);
+    echo json_encode([
+      'ok' => false,
+      'error' => 'invalid_credentials',
+      'message' => 'Usuario o contraseña inválidos'
+    ]);
+    exit;
+  }
+  
+  // Generar JWT token
+  $header = base64_encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
+  $payload = base64_encode(json_encode([
+    'user_id' => $user_data['id'],
+    'username' => $user_data['username'],
+    'iat' => time(),
+    'exp' => time() + (30 * 24 * 60 * 60) // 30 días
+  ]));
+  $signature = base64_encode(hash_hmac('sha256', "$header.$payload", 'gestion_horas_secret_key', true));
+  $token = "$header.$payload.$signature";
+  
+  echo json_encode([
+    'ok' => true,
+    'token' => $token,
+    'user' => [
+      'id' => $user_data['id'],
+      'username' => $user_data['username'],
+      'email' => $user_data['email'],
+      'name' => $user_data['name']
+    ]
+  ]);
+  exit;
+}
+
+// ============================================
 // Autenticación HÍBRIDA: Sesión O Token
-$user = null;
-$auth_method = null;
+// ============================================
 
 // 1. Intentar autenticación por sesión
 session_start();
@@ -85,17 +173,39 @@ if (!empty($_SESSION['user_id'])) {
 
 // 2. Si no hay sesión, intentar token
 if (!$user) {
-  $token = $global_input['token'] ?? null;
+  // Intentar Bearer token primero (móvil)
+  $auth_header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+  if (preg_match('/Bearer\s+(\S+)/', $auth_header, $matches)) {
+    $token = $matches[1];
+    // Validar JWT token
+    $parts = explode('.', $token);
+    if (count($parts) === 3) {
+      $payload = json_decode(base64_decode($parts[1]), true);
+      if ($payload && isset($payload['user_id']) && $payload['exp'] > time()) {
+        $user_id = $payload['user_id'];
+        $pdo = get_pdo();
+        $stmt = $pdo->prepare('SELECT id, username, email, name FROM users WHERE id = ?');
+        $stmt->execute([$user_id]);
+        $user = $stmt->fetch();
+        $auth_method = 'bearer_token';
+      }
+    }
+  }
   
-  if ($token) {
-    $user_id = validate_extension_token($token);
-    if ($user_id) {
-      // Validar usuario existe
-      $pdo = get_pdo();
-      $stmt = $pdo->prepare('SELECT id, username, email, name FROM users WHERE id = ?');
-      $stmt->execute([$user_id]);
-      $user = $stmt->fetch();
-      $auth_method = 'token';
+  // Si no hay Bearer token, intentar token en JSON (extensión Chrome)
+  if (!$user) {
+    $token = $global_input['token'] ?? null;
+    
+    if ($token) {
+      $user_id = validate_extension_token($token);
+      if ($user_id) {
+        // Validar usuario existe
+        $pdo = get_pdo();
+        $stmt = $pdo->prepare('SELECT id, username, email, name FROM users WHERE id = ?');
+        $stmt->execute([$user_id]);
+        $user = $stmt->fetch();
+        $auth_method = 'token';
+      }
     }
   }
 }
