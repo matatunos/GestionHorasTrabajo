@@ -10,6 +10,10 @@
  */
 
 require_once __DIR__ . '/JWTHelper.php';
+require_once __DIR__ . '/LogConfig.php';
+
+// Inicializar logging
+LogConfig::init();
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/db.php';
@@ -133,12 +137,11 @@ if ($method === 'POST' && $path === '/login') {
   $user_data = $stmt->fetch();
   
   if (!$user_data) {
-    error_log('[LOGIN_FAILED] Usuario no encontrado: ' . json_encode([
-      'username' => $username,
-      'ip' => $_SERVER['REMOTE_ADDR'],
-      'timestamp' => date('Y-m-d H:i:s'),
-      'reason' => 'user_not_found'
-    ]));
+    LogConfig::jsonLog('auth', [
+      'action' => 'LOGIN_FAILED',
+      'reason' => 'user_not_found',
+      'username' => $username
+    ]);
     http_response_code(401);
     echo json_encode([
       'ok' => false,
@@ -158,13 +161,12 @@ if ($method === 'POST' && $path === '/login') {
   }
   
   if (!$password_valid) {
-    error_log('[LOGIN_FAILED] Contraseña incorrecta: ' . json_encode([
+    LogConfig::jsonLog('auth', [
+      'action' => 'LOGIN_FAILED',
+      'reason' => 'invalid_password',
       'username' => $username,
-      'user_id' => $user_data['id'],
-      'ip' => $_SERVER['REMOTE_ADDR'],
-      'timestamp' => date('Y-m-d H:i:s'),
-      'reason' => 'invalid_password'
-    ]));
+      'user_id' => $user_data['id']
+    ]);
     http_response_code(401);
     echo json_encode([
       'ok' => false,
@@ -180,12 +182,11 @@ if ($method === 'POST' && $path === '/login') {
     'name' => $user_data['name']
   ]);
   
-  error_log('[LOGIN_SUCCESS] Autenticación exitosa: ' . json_encode([
+  LogConfig::jsonLog('auth', [
+    'action' => 'LOGIN_SUCCESS',
     'user_id' => $user_data['id'],
-    'username' => $user_data['username'],
-    'ip' => $_SERVER['REMOTE_ADDR'],
-    'timestamp' => date('Y-m-d H:i:s')
-  ]));
+    'username' => $user_data['username']
+  ]);
   
   echo json_encode([
     'ok' => true,
