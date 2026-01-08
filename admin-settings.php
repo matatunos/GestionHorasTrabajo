@@ -14,7 +14,7 @@ set_exception_handler(function($e){
   $d = ['type'=>'exception','msg'=>$e->getMessage(),'file'=>$e->getFile(),'line'=>$e->getLine(),'trace'=>$e->getTraceAsString(),'post'=>$_POST,'ts'=>date('c')];
   error_log(json_encode($d, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
   if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH']==='XMLHttpRequest') {
-    header('Content-Type: application/json'); http_response_code(500); echo json_encode(['ok'=>false,'error'=>'exception','msg'=>$e->getMessage()]);
+    header('Content-Type: application/json'); http_response_code(500); echo json_encode(['ok'=>false,'error'=>'exception','msg'=>'Error procesando solicitud']);
   }
 });
 register_shutdown_function(function(){
@@ -75,10 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
     header('Location: settings.php?msg=' . urlencode('Recalculación completada')); exit;
   } catch (Throwable $e) {
+    error_log('Recalc error: ' . $e->getMessage());
     if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
-      header('Content-Type: application/json'); http_response_code(500); echo json_encode(['ok'=>false,'error'=>'server_exception','msg'=>$e->getMessage()]); exit;
+      header('Content-Type: application/json'); http_response_code(500); echo json_encode(['ok'=>false,'error'=>'server_exception','msg'=>'Error en recálculo']); exit;
     }
-    header('Location: settings.php?msg=' . urlencode('Error en recálculo: ' . $e->getMessage())); exit;
+    header('Location: settings.php?msg=' . urlencode('Error en recálculo')); exit;
   }
 }
 
@@ -470,8 +471,9 @@ if ($hol_pdo) {
             $stmt = $pdo->prepare('INSERT INTO users (username,password,is_admin) VALUES (?,?,?)');
             $stmt->execute([$u,$hash,$is_admin]);
             echo '<div class="ok">Usuario añadido correctamente.</div>';
-          } catch (Throwable $e) {
-            echo '<div class="error">Error al añadir usuario: ' . htmlspecialchars($e->getMessage()) . '</div>';
+          } catch (Exception $e) {
+            error_log('Add user error: ' . $e->getMessage());
+            echo '<div class="error">Error al añadir usuario</div>';
           }
         }
       }

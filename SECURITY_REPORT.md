@@ -16,6 +16,8 @@
 | Validación Input | ✅ MEJORADO | trim(), length checks, type validation |
 | Error Messages | ✅ SANITIZADO | Detalles BD ocultados en respuestas |
 | Sintaxis PHP | ✅ VÁLIDA | Sin errores de compilación |
+| Admin Panel | ✅ SANITIZADO | Errores ocultados en admin-settings.php |
+| Auto Import | ✅ SANITIZADO | Errores logueados en lugar de mostrados |
 
 ---
 
@@ -221,7 +223,7 @@ Todas las excepciones ahora:
 
 ## 📋 CAMBIOS REALIZADOS
 
-### Archivo: api.php
+### Archivo: api.php (Main API)
 
 | Línea | Tipo | Cambio | Estado |
 |-------|------|--------|--------|
@@ -237,6 +239,20 @@ Todas las excepciones ahora:
 | 479 | Errors | Sanitización de error en /checkout | ✅ Fixed |
 | 646 | Errors | Sanitización de error en POST /entry | ✅ Fixed |
 | 670 | Errors | Sanitización de error en DELETE /entry | ✅ Fixed |
+
+### Archivo: admin-settings.php
+
+| Línea | Tipo | Cambio | Estado |
+|-------|------|--------|--------|
+| 17 | Errors | Sanitización en exception handler | ✅ Fixed |
+| 80 | Errors | Sanitización en recalc error | ✅ Fixed |
+| 476 | Errors | Sanitización en add user error | ✅ Fixed |
+
+### Archivo: auto_import.php
+
+| Línea | Tipo | Cambio | Estado |
+|-------|------|--------|--------|
+| 148 | Errors | Log error en lugar de mostrar | ✅ Fixed |
 
 ---
 

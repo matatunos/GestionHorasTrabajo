@@ -145,7 +145,8 @@ try {
             $insertCount++;
         } catch (PDOException $e) {
             $errorCount++;
-            $errors[] = "Fila $row: " . $e->getMessage();
+            error_log("Auto import row $row error: " . $e->getMessage());
+            $errors[] = "Fila $row: Error procesando datos";
         }
     }
     
