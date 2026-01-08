@@ -24,15 +24,6 @@ class EntriesService {
     timeout: 10000,
   });
 
-  private async getHeaders() {
-    const token = await authService.getToken();
-    return {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'X-Requested-With': 'XMLHttpRequest',
-    };
-  }
-
   async getTodayEntries(): Promise<Entry[]> {
     try {
       const token = await authService.getToken();
@@ -43,7 +34,6 @@ class EntriesService {
       }>('/api.php/entries/today', {
         headers: {
           'X-Requested-With': 'XMLHttpRequest',
-          'Authorization': `Bearer ${token}`,
         },
         data: { token },
       });
@@ -54,7 +44,13 @@ class EntriesService {
 
       return response.data.data || [];
     } catch (error: any) {
-      throw token = await authService.getToken();
+      throw new Error(error.response?.data?.error || error.message);
+    }
+  }
+
+  async getAllEntries(limit = 30, offset = 0): Promise<Entry[]> {
+    try {
+      const token = await authService.getToken();
       const response = await this.client.get<{
         ok: boolean;
         data?: Entry[];
@@ -62,18 +58,23 @@ class EntriesService {
       }>(`/api.php/entries?limit=${limit}&offset=${offset}`, {
         headers: {
           'X-Requested-With': 'XMLHttpRequest',
-          'Authorization': `Bearer ${token}`,
         },
         data: { token },
-     
-      const headers = await this.getHeaders();
-      const response = await this.client.get<{
-        ok: boolean;
-        data?: Entry[];
-        error?: string;
-      }>(`/api.php/entries?limit=${limit}&offset=${offset}`, { headers });
+      });
 
-      if (!rtoken = await authService.getToken();
+      if (!response.data.ok) {
+        throw new Error(response.data.error || 'Error obteniendo historial');
+      }
+
+      return response.data.data || [];
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || error.message);
+    }
+  }
+
+  async checkIn(): Promise<Entry> {
+    try {
+      const token = await authService.getToken();
       const response = await this.client.post<{
         ok: boolean;
         data?: Entry;
@@ -85,12 +86,19 @@ class EntriesService {
             'X-Requested-With': 'XMLHttpRequest',
           },
         }
-      
+      );
+
+      if (!response.data.ok || !response.data.data) {
+        throw new Error(response.data.error || 'Error al registrar entrada');
+      }
+
+      return response.data.data;
+    } catch (error: any) {
       throw new Error(error.response?.data?.error || error.message);
     }
   }
 
-  async checkIn(): Promise<Entry> {
+  async checkOut(): Promise<Entry> {
     try {
       const token = await authService.getToken();
       const response = await this.client.post<{
@@ -104,31 +112,7 @@ class EntriesService {
             'X-Requested-With': 'XMLHttpRequest',
           },
         }
-      ;
-
-      if (!response.data.ok || !response.data.data) {
-        throw new Error(response.data.error || 'Error al registrar entrada');
-      }
-date: string): Promise<void> {
-    try {
-      const token = await authService.getToken();
-      const response = await this.client.delete<{
-        ok: boolean;
-        error?: string;
-      }>(`/api.php/entry/${date}`, {
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        data: { token },
-     
-  async checkOut(): Promise<Entry> {
-    try {
-      const headers = await this.getHeaders();
-      const response = await this.client.post<{
-        ok: boolean;
-        data?: Entry;
-        error?: string;
-      }>('/api.php/entries/checkout', {}, { headers });
+      );
 
       if (!response.data.ok || !response.data.data) {
         throw new Error(response.data.error || 'Error al registrar salida');
@@ -140,13 +124,18 @@ date: string): Promise<void> {
     }
   }
 
-  async deleteEntry(id: number): Promise<void> {
+  async deleteEntry(date: string): Promise<void> {
     try {
-      const headers = await this.getHeaders();
+      const token = await authService.getToken();
       const response = await this.client.delete<{
         ok: boolean;
         error?: string;
-      }>(`/api.php/entries/${id}`, { headers });
+      }>(`/api.php/entry/${date}`, {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        data: { token },
+      });
 
       if (!response.data.ok) {
         throw new Error(response.data.error || 'Error al eliminar fichaje');

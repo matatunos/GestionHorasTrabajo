@@ -142,17 +142,11 @@ export default function App() {
             <Stack.Screen
               name="SignIn"
               component={LoginScreen}
-              options={{
-                animationEnabled: false,
-              }}
             />
           ) : (
             <Stack.Screen
               name="Root"
               component={DashboardNavigator}
-              options={{
-                animationEnabled: false,
-              }}
             />
           )}
         </Stack.Navigator>
