@@ -12,6 +12,9 @@
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": ["**/*"],
+    "plugins": [
+      ["expo-secure-store"]
+    ],
     "ios": {
       "supportsTabletMode": true,
       "infoPlist": {
@@ -26,6 +29,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "sdkVersion": "51.0.0"
   }
 }
