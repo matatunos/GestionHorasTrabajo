@@ -177,6 +177,7 @@ foreach ($holidays as $h) {
           <a class="menu-item" href="import.php">Importar Fichajes</a>
           <a class="menu-item" href="reports.php">Reportes</a>
           <a class="menu-item" href="settings.php">Configuración</a>
+          <a class="menu-item" href="holiday-types.php">🏷️ Tipos de Festivos</a>
           
           <div class="menu-item menu-user" tabindex="0">
             <div class="user-avatar"><?php echo strtoupper(substr($user['username'],0,1)); ?></div>
