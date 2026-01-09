@@ -385,11 +385,6 @@ function parseCalendarText($text, $yearParam) {
         }
       });
 
-      // Click to select
-      uploadArea.addEventListener('click', () => {
-        pdfFile.click();
-      });
-
       pdfFile.addEventListener('change', () => {
         if (pdfFile.files.length > 0) {
           submitBtn.disabled = false;
