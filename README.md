@@ -124,7 +124,7 @@ Se incluye un esquema y script de instalación en `deploy/` que crea la base de 
 cd /opt/GestionHorasTrabajo/deploy
 chmod +x install_db.sh
 # usa las variables DB_USER/DB_PASS si quieres cambiar credenciales
-DB_USER=root DB_PASS=satriani ./install_db.sh
+DB_USER=root DB_PASS=your_mysql_password ./install_db.sh
 ```
 
 Esto crea la base `gestion_horas`, las tablas y un usuario `admin` con contraseña `admin` (cámbiala tras el primer login).
