@@ -201,6 +201,10 @@ function parseCalendarText($text, $yearParam) {
         $yearForLine = !empty($match[3]) ? intval($match[3]) : $yearInLine;
         $labelStr = trim($match[4]);
         
+        // Limpiar la etiqueta: remover años que quedaron pegados
+        $labelStr = preg_replace('/\s+\d{4}\s*$/', '', $labelStr);
+        $labelStr = preg_replace('/^de\s+\d{4}\s+/', '', $labelStr);
+        
         if (isset($monthMap[$monthName])) {
           $monthNum = str_pad($monthMap[$monthName], 2, '0', STR_PAD_LEFT);
           
