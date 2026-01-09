@@ -1008,8 +1008,8 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 
 /* Hours register and dashboard need more horizontal room (wide tables) */
 .page-index .main-content .container,
-.page-dashboard .main-content .container { max-width: none !important; width: 100% !important; }
-.page-dashboard .container { max-width: none !important; width: 100% !important; }
+.page-dashboard .main-content .container { max-width: none !important; width: 75% !important; }
+.page-dashboard .container { max-width: none !important; width: 75% !important; }
 .page-index .table-responsive { overflow: visible; }
 .app-container { display: flex; }
 body { display: flex; flex-direction: column; }
