@@ -40,10 +40,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $text = file_get_contents($tempText);
             unlink($tempText);
             
-            // Extraer año del PDF o usar el año actual
+            // El año se detectará automáticamente dentro de parseCalendarText
+            // Usamos el año del formulario como fallback
             $previewYear = intval($_POST['year'] ?? date('Y'));
             
-            // Buscar la sección de FIESTAS NACIONALES Y AUTONÓMICAS
+            // Extraer fechas (la función detectará automáticamente el año)
             $preview = parseCalendarText($text, $previewYear);
             
             if (empty($preview)) {
@@ -108,89 +109,190 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
-function parseCalendarText($text, $year) {
+function parseCalendarText($text, $yearParam) {
   $preview = [];
   
-  // Buscar sección de FIESTAS NACIONALES Y AUTONÓMICAS
-  if (preg_match('/FIESTAS\s+NACIONALES\s+Y\s+AUTONÓMICAS\s*\n(.*?)(?=TURNOS|FIESTAS\s+LOCALES|DÍAS\s+RECUPERABLES|$)/is', $text, $matches)) {
-    $section = $matches[1];
+  // 1. Detectar año del documento: "PARA EL AÑO 2025"
+  $detectedYear = $yearParam;
+  if (preg_match('/PARA\s+EL\s+AÑO\s+(\d{4})/i', $text, $matches)) {
+    $detectedYear = intval($matches[1]);
+  }
+  
+  $monthMap = [
+    'enero' => 1, 'febrero' => 2, 'marzo' => 3, 'abril' => 4,
+    'mayo' => 5, 'junio' => 6, 'julio' => 7, 'agosto' => 8,
+    'septiembre' => 9, 'octubre' => 10, 'noviembre' => 11, 'diciembre' => 12
+  ];
+  
+  // 2. Extraer todas las líneas de festivos de CUALQUIER sección
+  // Buscar desde FIESTAS NACIONALES hasta el final o la siguiente sección importante
+  if (preg_match('/FIESTAS\s+(?:NACIONALES|LOCALES|ACORDADAS|EMPRESA|CONVENIO|RECUPERABLES).*?(?=JORNADA|DOMINGOS|VACACIONES|TRABAJADORES|$)/is', $text, $matches)) {
+    $section = $matches[0];
     
-    // Patrón: "día de mes, Nombre" o "día de mes Nombre"
-    // Ejemplos: "1 de enero, Año Nuevo", "6 de enero, Día de Reyes"
-    $pattern = '/(\d{1,2})\s+de\s+(\w+),?\s+([^,\n]+)/i';
+    // Dividir en líneas y procesar cada una
+    $lines = array_filter(array_map('trim', preg_split('/\n/', $section)));
     
-    if (preg_match_all($pattern, $section, $matches, PREG_SET_ORDER)) {
-      $monthMap = [
-        'enero' => 1, 'febrero' => 2, 'marzo' => 3, 'abril' => 4,
-        'mayo' => 5, 'junio' => 6, 'julio' => 7, 'agosto' => 8,
-        'septiembre' => 9, 'octubre' => 10, 'noviembre' => 11, 'diciembre' => 12
-      ];
+    foreach ($lines as $line) {
+      // Saltar líneas que son solo títulos de secciones
+      if (preg_match('/^(FIESTAS|DÍAS|TURNOS|FIESTA|JORNADA)/i', $line)) {
+        continue;
+      }
       
-      foreach ($matches as $match) {
-        $day = intval($match[1]);
+      // Saltar líneas vacías o muy cortas
+      if (strlen($line) < 5) {
+        continue;
+      }
+      
+      // Patrón para múltiples fechas: "día[,] día y día de mes[,] [Nombre]"
+      // Ejemplos:
+      // - "1 de enero, Año Nuevo"
+      // - "24 y 31 de diciembre"
+      // - "19, 22, 23 y 26 de diciembre 2025"
+      // - "29 Y 30 de diciembre de 2025, 2 y 5 de enero de 2026"
+      
+      // Primero, detectar si hay un año explícito en la línea
+      $yearInLine = $detectedYear;
+      if (preg_match('/\b(\d{4})\b/', $line, $yearMatch)) {
+        $yearInLine = intval($yearMatch[1]);
+      }
+      
+      // Patrón mejorado para detectar días y mes
+      // Captura: "días de mes" o "días de mes año"
+      // Maneja: "1 de enero", "24 y 31 de diciembre", "2 y 5 de enero de 2026"
+      $pattern = '/(\d{1,2})(?:\s*,?\s*(?:y|&)\s*(\d{1,2}))*\s+(?:y\s+)?(?:de\s+)?(\w+)(?:\s+de\s+)?(\d{4})?/i';
+      
+      if (preg_match_all($pattern, $line, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+          $day1 = intval($match[1]);
+          $month = strtolower(trim($match[3]));
+          $yearForDate = !empty($match[4]) ? intval($match[4]) : $yearInLine;
+          
+          if (isset($monthMap[$month])) {
+            $monthNum = str_pad($monthMap[$month], 2, '0', STR_PAD_LEFT);
+            $dayStr = str_pad($day1, 2, '0', STR_PAD_LEFT);
+            $date = "$yearForDate-$monthNum-$dayStr";
+            
+            if (strtotime($date) !== false) {
+              // Extraer el nombre/descripción (lo que viene después del mes)
+              $label = trim(preg_replace('/\d{1,2}(?:\s*,?\s*(?:y|&)\s*\d{1,2})*\s+(?:y\s+)?(?:de\s+)?(\w+)(?:\s+de\s+)?(\d{4})?/i', '', $line));
+              
+              // Si no hay etiqueta, usar la sección
+              if (empty($label)) {
+                $label = 'Festivo';
+              }
+              
+              $preview[] = [
+                'date' => $date,
+                'label' => $label,
+                'original' => "$day1 de $month - $label"
+              ];
+            }
+          }
+        }
+      }
+      
+      // Caso especial: cuando hay varias fechas separadas por comas y "y"
+      // Patrón: "día, día, ... y día de mes, Nombre"
+      $pattern2 = '/(\d{1,2}(?:\s*,\s*\d{1,2})*(?:\s+y\s+\d{1,2})?)\s+de\s+(\w+)(?:\s+de\s+(\d{4}))?[,]?\s+(.+?)(?:\n|$)/i';
+      
+      if (preg_match($pattern2, $line, $match)) {
+        $daysStr = $match[1];
         $monthName = strtolower(trim($match[2]));
-        $label = trim($match[3]);
+        $yearForLine = !empty($match[3]) ? intval($match[3]) : $yearInLine;
+        $labelStr = trim($match[4]);
         
         if (isset($monthMap[$monthName])) {
-          $month = str_pad($monthMap[$monthName], 2, '0', STR_PAD_LEFT);
-          $dayStr = str_pad($day, 2, '0', STR_PAD_LEFT);
-          $date = "$year-$month-$dayStr";
+          $monthNum = str_pad($monthMap[$monthName], 2, '0', STR_PAD_LEFT);
           
-          // Validar que sea una fecha válida
-          if (strtotime($date) !== false) {
-            $preview[] = [
-              'date' => $date,
-              'label' => $label,
-              'original' => "{$day} de {$monthName}, {$label}"
-            ];
+          // Extraer todos los días (separados por coma o "y")
+          preg_match_all('/\d{1,2}/', $daysStr, $dayMatches);
+          
+          foreach ($dayMatches[0] as $dayStr) {
+            $dayNum = str_pad(intval($dayStr), 2, '0', STR_PAD_LEFT);
+            $date = "$yearForLine-$monthNum-$dayNum";
+            
+            if (strtotime($date) !== false) {
+              // Evitar duplicados
+              $exists = false;
+              foreach ($preview as $p) {
+                if ($p['date'] === $date) {
+                  $exists = true;
+                  break;
+                }
+              }
+              
+              if (!$exists) {
+                $preview[] = [
+                  'date' => $date,
+                  'label' => $labelStr ?: 'Festivo',
+                  'original' => "$dayStr de $monthName - " . ($labelStr ?: 'Festivo')
+                ];
+              }
+            }
           }
         }
       }
     }
   }
   
-  // Buscar también FIESTAS LOCALES
-  if (preg_match('/FIESTAS\s+LOCALES\s*\n(.*?)(?=DÍAS\s+RECUPERABLES|FIESTA\s+EMPRESA|$)/is', $text, $matches)) {
+  // Buscar también TURNOS DE NAVIDAD explícitamente
+  if (preg_match('/TURNOS\s+DE\s+NAVIDAD\s*\n(.+?)(?=\n\n|JORNADA|$)/is', $text, $matches)) {
     $section = $matches[1];
-    $pattern = '/(\d{1,2})\s+de\s+(\w+),?\s+([^,\n]+)/i';
     
-    if (preg_match_all($pattern, $section, $matches, PREG_SET_ORDER)) {
-      $monthMap = [
-        'enero' => 1, 'febrero' => 2, 'marzo' => 3, 'abril' => 4,
-        'mayo' => 5, 'junio' => 6, 'julio' => 7, 'agosto' => 8,
-        'septiembre' => 9, 'octubre' => 10, 'noviembre' => 11, 'diciembre' => 12
-      ];
+    // Patrón: "1º.- días de diciembre año" y "2º.- días de mes de año"
+    // Ejemplo: "1º.- 19, 22, 23 y 26 de diciembre 2025"
+    // Ejemplo: "2º.- 29 Y 30 de diciembre de 2025, 2 y 5 de enero de 2026"
+    
+    // Separar por 1º y 2º
+    $turnos = preg_split('/(?:1º|1\.)/', $section);
+    $turnoNum = 1;
+    
+    foreach ($turnos as $turno) {
+      if (empty(trim($turno))) continue;
       
-      foreach ($matches as $match) {
-        $day = intval($match[1]);
-        $monthName = strtolower(trim($match[2]));
-        $label = trim($match[3]);
-        
-        if (isset($monthMap[$monthName])) {
-          $month = str_pad($monthMap[$monthName], 2, '0', STR_PAD_LEFT);
-          $dayStr = str_pad($day, 2, '0', STR_PAD_LEFT);
-          $date = "$year-$month-$dayStr";
+      // Buscar todas las fechas en este turno
+      $pattern = '/(\d{1,2}(?:\s*,\s*\d{1,2})*(?:\s+(?:y|Y)\s+\d{1,2})?)\s+de\s+(\w+)(?:\s+de\s+)?(\d{4})?/i';
+      
+      if (preg_match_all($pattern, $turno, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+          $daysStr = $match[1];
+          $monthName = strtolower(trim($match[2]));
+          $yearForTurno = !empty($match[3]) ? intval($match[3]) : $detectedYear;
           
-          if (strtotime($date) !== false) {
-            // Evitar duplicados
-            $exists = false;
-            foreach ($preview as $p) {
-              if ($p['date'] === $date) {
-                $exists = true;
-                break;
-              }
-            }
+          if (isset($monthMap[$monthName])) {
+            $monthNum = str_pad($monthMap[$monthName], 2, '0', STR_PAD_LEFT);
             
-            if (!$exists) {
-              $preview[] = [
-                'date' => $date,
-                'label' => $label . ' (Local)',
-                'original' => "{$day} de {$monthName}, {$label}"
-              ];
+            // Extraer todos los días
+            preg_match_all('/\d{1,2}/', $daysStr, $dayMatches);
+            
+            foreach ($dayMatches[0] as $dayStr) {
+              $dayNum = str_pad(intval($dayStr), 2, '0', STR_PAD_LEFT);
+              $date = "$yearForTurno-$monthNum-$dayNum";
+              
+              if (strtotime($date) !== false) {
+                // Evitar duplicados
+                $exists = false;
+                foreach ($preview as $p) {
+                  if ($p['date'] === $date) {
+                    $exists = true;
+                    break;
+                  }
+                }
+                
+                if (!$exists) {
+                  $preview[] = [
+                    'date' => $date,
+                    'label' => "Turno de Navidad ($turnoNum)",
+                    'original' => "$dayStr de $monthName - Turno Navidad"
+                  ];
+                }
+              }
             }
           }
         }
       }
+      
+      $turnoNum++;
     }
   }
   
@@ -199,7 +301,17 @@ function parseCalendarText($text, $year) {
     return strcmp($a['date'], $b['date']);
   });
   
-  return $preview;
+  // Eliminar duplicados por fecha
+  $seen = [];
+  $unique = [];
+  foreach ($preview as $item) {
+    if (!isset($seen[$item['date']])) {
+      $seen[$item['date']] = true;
+      $unique[] = $item;
+    }
+  }
+  
+  return $unique;
 }
 
 ?>
