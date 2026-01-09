@@ -3,6 +3,13 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/lib.php';
 require_login();
+
+// Redirect to password change if needed
+if (needs_password_change()) {
+    header('Location: change_password.php');
+    exit;
+}
+
 $user = current_user();
 $pdo = get_pdo();
 

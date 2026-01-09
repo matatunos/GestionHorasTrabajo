@@ -33,6 +33,12 @@
     const btn = form.querySelector('[type="submit"]');
     const origText = btn.innerText;
 
+    // Debug logging
+    console.log('Submitting holiday type form');
+    for (let [key, value] of formData.entries()) {
+      console.log(`${key}: ${value}`);
+    }
+
     btn.disabled = true;
     btn.innerText = 'Creando...';
 
@@ -42,14 +48,21 @@
       headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(response => {
+      console.log('Response status:', response.status);
+      return response.json();
+    })
+    .then(data => {
+      console.log('Response data:', data);
       btn.disabled = false;
       btn.innerText = origText;
 
-      if (response.ok) {
+      if (data.ok) {
+        console.log('Success! Reloading page...');
         overlay.style.display = 'none';
         location.reload();
       } else {
-        alert('Error al crear el tipo');
+        console.error('Error from server:', data.error);
+        alert(data.error || 'Error al crear el tipo');
       }
     })
     .catch(error => {
