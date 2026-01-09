@@ -584,5 +584,3 @@ foreach ($holidays as $h) {
   </script>
 
   <?php include __DIR__ . '/footer.php'; ?>
-</body>
-</html>
