@@ -133,6 +133,7 @@ $types = $stmt->fetchAll(PDO::FETCH_ASSOC);
     .form-group input, .form-group select { width: 100%; padding: 0.65rem 0.75rem; border: 1.5px solid #dee2e6; border-radius: 4px; font-size: 1rem; box-sizing: border-box; transition: all 0.2s; }
     .form-group input:focus, .form-group select:focus { border-color: #0056b3; outline: none; box-shadow: 0 0 0 4px rgba(0,86,179,0.1); background: white; }
     .form-group input:disabled { background: #f8f9fa; color: #666; }
+    .form-group input:read-only { background: #f8f9fa; color: #333; cursor: default; border-color: #ccc; }
     .color-input-wrapper { display: flex; gap: 0.75rem; align-items: center; }
     .color-input-wrapper input[type="color"] { width: 60px; height: 45px; cursor: pointer; border: 1.5px solid #dee2e6; border-radius: 4px; padding: 3px; }
     .color-input-wrapper input[type="color"]:focus { border-color: #0056b3; outline: none; }
@@ -366,7 +367,7 @@ $types = $stmt->fetchAll(PDO::FETCH_ASSOC);
       document.getElementById('formAction').value = 'edit';
       document.getElementById('formId').value = id;
       document.getElementById('code').value = code;
-      document.getElementById('code').disabled = true; // No editar código
+      document.getElementById('code').readOnly = true; // Solo lectura, permite envío en formulario
       document.getElementById('label').value = label;
       document.getElementById('colorPicker').value = color;
       document.getElementById('colorHex').value = color;
@@ -375,7 +376,7 @@ $types = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     function closeModal() {
-      document.getElementById('code').disabled = false;
+      document.getElementById('code').readOnly = false;
       modal.classList.remove('active');
     }
 
