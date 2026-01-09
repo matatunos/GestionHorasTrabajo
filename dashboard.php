@@ -358,15 +358,14 @@ function svg_sparkline(array $values, $w=120, $h=28){
   return $svg;
 }
 
-?>
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard</title><link rel="icon" type="image/svg+xml" href="images/favicon.svg"><link rel="stylesheet" href="styles.css"></head><body class="page-dashboard">
 <?php include __DIR__ . '/header.php'; ?>
-<div class="container">
-  <div class="card">
-    <div class="dashboard-header">
-      <h1>Dashboard</h1>
-      <form method="get" action="dashboard.php" class="row-form">
+  <div class="container">
+    <div class="card">
+      <div class="dashboard-header">
+        <h1>Dashboard</h1>
+        <form method="get" action="dashboard.php" class="row-form">
         <label class="form-label small">Año
           <select class="form-control" name="year" onchange="this.form.submit()">
             <?php foreach($years as $y): ?>
@@ -602,6 +601,6 @@ function svg_sparkline(array $values, $w=120, $h=28){
       </table>
     </div>
   </div>
-</div>
+  </div> <!-- .container -->
 <?php include __DIR__ . '/footer.php'; ?>
 </body></html>
