@@ -29,7 +29,7 @@ $allowed_origins = [
   'chrome-extension://',  // Cualquier extensión (es básicamente inseguro, pero necesario para extensiones)
   'http://localhost',
   'http://127.0.0.1',
-  'https://calendar.favala.es',
+  'https://example.com',
   'https://localhost'
 ];
 

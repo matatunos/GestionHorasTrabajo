@@ -28,8 +28,8 @@
 La extensión detecta si la página contiene datos de fichajes buscando:
 
 ```javascript
-// Formato TRAGSA
-const tragsaTable = document.getElementById('tabla_fichajes');
+// Formato EXTERNAL
+const externalTable = document.getElementById('tabla_fichajes');
 
 // Formato estándar HTML
 const standardTable = document.querySelector('table[border="1"]');
@@ -47,7 +47,7 @@ Si detecta una página válida, agrega un botón flotante en la esquina inferior
 
 ## 🔍 Paso 2: Extracción de datos
 
-### Formato TRAGSA (formato específico de TRAGSA)
+### Formato EXTERNAL (formato específico de EXTERNAL)
 
 **Estructura HTML esperada:**
 ```html
@@ -81,11 +81,11 @@ Si detecta una página válida, agrega un botón flotante en la esquina inferior
 {
   '2025-12-08': {
     times: ['07:34', '10:50', '11:13', '15:00', ...],
-    format: 'tragsa'
+    format: 'external'
   },
   '2025-12-09': {
     times: ['08:15', '10:30', '11:00', '13:30', ...],
-    format: 'tragsa'
+    format: 'external'
   }
 }
 ```
@@ -130,7 +130,7 @@ Si detecta una página válida, agrega un botón flotante en la esquina inferior
    - "Entrada Comida" → lunch_in
    - "Salida" → end
 
-**Resultado:** Similar al formato TRAGSA pero con mapeamiento directo de columnas.
+**Resultado:** Similar al formato EXTERNAL pero con mapeamiento directo de columnas.
 
 ---
 
@@ -143,7 +143,7 @@ El content.js envía un mensaje al background script:
 chrome.runtime.sendMessage({
   action: 'importFichajes',
   data: data,  // Datos extraídos
-  sourceFormat: 'tragsa'  // o 'standard'
+  sourceFormat: 'external'  // o 'standard'
 }, response => {
   if (response.success) {
     alert(`✅ ${response.count} fichajes importados`);
@@ -170,7 +170,7 @@ const response = await fetch(`${appUrl}/index.php`, {
     coffee_in: '11:13',
     lunch_out: '13:50',
     lunch_in: '15:00',
-    note: 'Importado vía extensión Chrome - tragsa format'
+    note: 'Importado vía extensión Chrome - external format'
   }).toString()
 });
 ```

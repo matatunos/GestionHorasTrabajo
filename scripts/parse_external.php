@@ -1,5 +1,5 @@
 <?php
-// Server-side parser for TRAGSAnet-like HTML fichajes
+// Server-side parser for external system HTML fichajes
 header('Content-Type: application/json; charset=utf-8');
 
 function clean_text($s){

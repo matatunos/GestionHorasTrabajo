@@ -31,7 +31,7 @@ require_once __DIR__ . '/header.php';
       <ul class="feature-list">
         <li>Detección automática de páginas de fichajes</li>
         <li>Importación con un click - sin formularios</li>
-        <li>Soporta múltiples formatos (TRAGSA, HTML estándar)</li>
+        <li>Soporta múltiples formatos (EXTERNAL, HTML estándar)</li>
         <li>Extrae automáticamente horas de entrada/salida y pausas</li>
         <li>Convierte múltiples formatos de fecha</li>
         <li>Seguro - tus datos se envían a tu servidor</li>
@@ -89,7 +89,7 @@ cd GestionHorasTrabajo/chrome-extension</div>
       <div class="step">
         <span class="step-number">1</span>
         <strong>Ve a tu página de fichajes</strong>
-        <p>Abre en el navegador la página donde ves tus datos de fichajes (puede ser TRAGSA, HTML personalizado, etc.)</p>
+        <p>Abre en el navegador la página donde ves tus datos de fichajes (puede ser EXTERNAL, HTML personalizado, etc.)</p>
       </div>
 
       <div class="step">
@@ -244,7 +244,7 @@ https://miapp.com</div>
     <div class="help-section">
       <h3>📋 Formatos soportados</h3>
       
-      <h4>Formato TRAGSA</h4>
+      <h4>Formato EXTERNAL</h4>
       <p>Tablas con id <code>tabla_fichajes</code> que contienen horas en bloques <code>&lt;span&gt;</code>:</p>
       <div class="code-block">&lt;table id="tabla_fichajes"&gt;
   &lt;tr class="horas"&gt;
@@ -307,7 +307,7 @@ https://miapp.com</div>
         <strong>Solución:</strong> La extensión intenta detectar automáticamente las pausas de café y comida. Si no las detecta:
         <ul>
           <li>Verifica que la tabla tenga columnas etiquetadas correctamente</li>
-          <li>Intenta con un formato diferente (HTML estándar vs TRAGSA)</li>
+          <li>Intenta con un formato diferente (HTML estándar vs EXTERNAL)</li>
           <li>Abre un issue en GitHub con tu archivo HTML para mejorar la detección</li>
         </ul>
       </p>

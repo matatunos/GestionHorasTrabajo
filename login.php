@@ -27,6 +27,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'){
       <div class="login-header"><div class="logo"><h1>GestionHoras</h1></div></div>
       <h2>Acceso</h2>
       <?php if($error): ?><div class="alert"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
+      <?php if(!$error): ?>
+      <div class="alert alert-info" style="background-color: #e3f2fd; border-color: #2196f3; color: #0d47a1;">
+        <strong>⚠️ Primer acceso:</strong> Si instalaste la aplicación recientemente, usa:<br>
+        <strong>Usuario:</strong> admin<br>
+        <strong>Contraseña:</strong> admin<br>
+        <em>Deberás cambiar la contraseña después del primer inicio de sesión.</em>
+      </div>
+      <?php endif; ?>
       <form method="post" id="loginForm">
         <div class="form-group"><label class="form-label">Usuario <input class="form-control" name="username" required></label></div>
         <div class="form-group"><label class="form-label">Contraseña <input class="form-control" type="password" name="password" required id="passwordInput"></label></div>

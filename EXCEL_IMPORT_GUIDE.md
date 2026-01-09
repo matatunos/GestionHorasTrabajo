@@ -93,7 +93,7 @@ Posibles causas:
 
 ## Uso en Interfaz Web
 
-1. Ir a `https://calendar.favala.es/import.php`
+1. Ir a `https://example.com/import.php`
 2. Seleccionar "Importar desde archivo Excel (.xlsx)"
 3. Cargar archivo
 4. Revisar previsualización

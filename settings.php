@@ -228,6 +228,8 @@ if (
     && !isset($_POST['save_year_config'])
     && !isset($_POST['delete_year_config'])
     && !(isset($_POST['action']) && $_POST['action'] === 'recalc')
+    && !isset($_POST['holiday_type_action'])
+    && !isset($_POST['holiday_action'])
 ) {
   // Only allow saving the site name from this simplified settings form
   $site_name = trim($_POST['site_name'] ?? 'GestionHoras');
@@ -333,14 +335,19 @@ if ($hol_pdo) {
       $color = preg_match('/^#[0-9a-f]{6}$/i', $_POST['type_color'] ?? '') ? $_POST['type_color'] : '#0f172a';
       
       try {
-        $stmt = $hol_pdo->prepare('INSERT INTO holiday_types (code, label, color, sort_order) VALUES (?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM (SELECT * FROM holiday_types) t))');
-        $stmt->execute([$code, $label, $color]);
+        // Get max sort_order first
+        $maxOrder = $hol_pdo->query("SELECT COALESCE(MAX(sort_order), 0) as max_order FROM holiday_types")->fetch();
+        $nextOrder = intval($maxOrder['max_order']) + 1;
+        
+        $stmt = $hol_pdo->prepare('INSERT INTO holiday_types (code, label, color, sort_order) VALUES (?, ?, ?, ?)');
+        $result = $stmt->execute([$code, $label, $color, $nextOrder]);
+        
         if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest'){
           header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
         }
       } catch (Throwable $e) {
         if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest'){
-          header('Content-Type: application/json'); echo json_encode(['ok'=>false, 'error'=>'Código duplicado']); exit;
+          header('Content-Type: application/json'); echo json_encode(['ok'=>false, 'error'=>'Código duplicado o error: ' . $e->getMessage()]); exit;
         }
       }
     }
@@ -560,6 +567,18 @@ if ($hol_pdo) {
       <div style="margin-bottom:8px;"></div>
       <div class="card">
         <h4>Listado de festivos</h4>
+        <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+          <label for="holiday-year-select" style="font-weight: 600;">Ver festivos del año:</label>
+          <select id="holiday-year-select" onchange="window.location.href='settings.php?holiday_year=' + this.value;" style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; min-width: 100px;">
+            <?php 
+            $currentYear = intval(date('Y'));
+            for ($y = $currentYear - 2; $y <= $currentYear + 5; $y++):
+            ?>
+              <option value="<?php echo $y; ?>" <?php echo $y === $selHolidayYear ? 'selected' : ''; ?>><?php echo $y; ?></option>
+            <?php endfor; ?>
+          </select>
+          <span style="color: #666; font-size: 0.9em;">(Mostrando festivos de <?php echo $selHolidayYear; ?>)</span>
+        </div>
         <div class="table-responsive">
           <table class="table compact">
             <thead><tr><th>Fecha</th><th>Repite</th><th>Tipo</th><th>Descripción</th><th>Global</th><th>Acciones</th></tr></thead>
@@ -1180,7 +1199,7 @@ if ($hol_pdo) {
 
 <script src="js/settings-modals.js"></script>
 <script src="js/settings-user-management.js"></script>
-<script src="js/settings-holiday-types.js"></script>
+<script src="js/settings-holiday-types.js?v=<?php echo time(); ?>"></script>
 <script src="js/holiday-calendar.js"></script>
 <script src="js/settings-holiday-form.js"></script>
 <script src="js/settings-edit-years.js"></script>

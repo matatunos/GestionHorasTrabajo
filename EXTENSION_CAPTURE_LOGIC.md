@@ -4,7 +4,7 @@
 
 La extensión Chrome captura datos de fichajes de dos formatos:
 
-1. **Formato TRAGSA** - Tabla específica con estructura HTML especial (`id="tabla_fichajes"`)
+1. **Formato EXTERNAL** - Tabla específica con estructura HTML especial (`id="tabla_fichajes"`)
 2. **Formato Estándar** - Cualquier tabla HTML con fechas y horarios
 
 ## Detección de Año
@@ -64,9 +64,9 @@ captureData() {
 ```javascript
 chrome.runtime.onMessage.addListener((request) => {
   if (request.action === 'captureFichajes') {
-    const tragsaData = extractTragsaData();      // Intenta TRAGSA
+    const externalData = extractExternalData();      // Intenta EXTERNAL
     const standardData = extractStandardData();  // Intenta estándar
-    const data = tragsaData || standardData;
+    const data = externalData || standardData;
     sendResponse({ success: true, data: data, sourceFormat: ... });
   }
 });
@@ -138,7 +138,7 @@ foreach ($entries as $entry) {
 
 ## Formatos Soportados
 
-### TRAGSA Format
+### EXTERNAL Format
 
 ```html
 <table id="tabla_fichajes">
@@ -190,7 +190,7 @@ foreach ($entries as $entry) {
 ```javascript
 // En DevTools (F12) → Console
 [GestionHoras] Iniciando captura de datos...
-[GestionHoras] Datos TRAGSA: 15 registros
+[GestionHoras] Datos EXTERNAL: 15 registros
 [GestionHoras] ✅ Captura exitosa: 15 registros
 [GestionHoras] ✅ Años ajustados: diciembre movido a año anterior
 ```

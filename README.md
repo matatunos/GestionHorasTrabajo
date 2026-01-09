@@ -40,12 +40,12 @@ php -S localhost:8000
 
 Los datos se guardan ahora en la base de datos MySQL (tabla `entries`).
 
-Configuración local para `calendar.favala.es` (desarrollo)
+Configuración local para `example.com` (desarrollo)
 
- - Añadir entrada en `/etc/hosts` (requerido para probar como calendar.favala.es):
+ - Añadir entrada en `/etc/hosts` (requerido para probar como example.com):
 
 ```bash
-sudo sh -c 'echo "127.0.0.1 calendar.favala.es" >> /etc/hosts'
+sudo sh -c 'echo "127.0.0.1 example.com" >> /etc/hosts'
 # o usar el script incluido:
 ./setup_hosts.sh
 ```
@@ -53,8 +53,8 @@ sudo sh -c 'echo "127.0.0.1 calendar.favala.es" >> /etc/hosts'
  - Instalar el virtualhost en Apache (opcional si usas el servidor embebido PHP):
 
 ```bash
-sudo cp deploy/apache/calendar.favala.conf /etc/apache2/sites-available/
-sudo a2ensite calendar.favala.conf
+sudo cp deploy/apache/example.conf /etc/apache2/sites-available/
+sudo a2ensite example.conf
 sudo systemctl reload apache2
 ```
 
@@ -73,10 +73,10 @@ chmod +x deploy/mk_selfsigned_cert.sh
 chmod +x deploy/apache_enable_ssl.sh
 sudo deploy/apache_enable_ssl.sh
 
-# añadir hosts si no está (necesario para usar calendar.favala.es)
-sudo sh -c 'echo "127.0.0.1 calendar.favala.es" >> /etc/hosts'
+# añadir hosts si no está (necesario para usar example.com)
+sudo sh -c 'echo "127.0.0.1 example.com" >> /etc/hosts'
 
-# luego abrir https://calendar.favala.es/ (acepta excepción del certificado en el navegador)
+# luego abrir https://example.com/ (acepta excepción del certificado en el navegador)
 ```
 
 Si quieres que el navegador confíe automáticamente en el certificado, instala el CRT en tu sistema como certificado de confianza (no recomendado en producción).
@@ -86,7 +86,7 @@ Diagnóstico rápido si obtienes "Forbidden" (403)
 1) Revisar logs de Apache (mira el vhost o el log general):
 
 ```bash
-sudo tail -n 200 /var/log/apache2/calendar.favala.ssl.error.log
+sudo tail -n 200 /var/log/apache2/example.ssl.error.log
 sudo tail -n 200 /var/log/apache2/error.log
 ```
 
@@ -115,7 +115,7 @@ sudo systemctl reload apache2
 sudo apache2ctl configtest
 ```
 
-Si tras esos pasos sigue el 403, pega aquí las últimas líneas de `calendar.favala.ssl.error.log` y el resultado de `apache2ctl -S` y te ayudo a depurarlo.
+Si tras esos pasos sigue el 403, pega aquí las últimas líneas de `example.ssl.error.log` y el resultado de `apache2ctl -S` y te ayudo a depurarlo.
 Instalación de la base de datos MySQL (opcional)
 
 Se incluye un esquema y script de instalación en `deploy/` que crea la base de datos y un usuario admin inicial:
@@ -124,7 +124,7 @@ Se incluye un esquema y script de instalación en `deploy/` que crea la base de 
 cd /opt/GestionHorasTrabajo/deploy
 chmod +x install_db.sh
 # usa las variables DB_USER/DB_PASS si quieres cambiar credenciales
-DB_USER=root DB_PASS=satriani ./install_db.sh
+DB_USER=root DB_PASS=your_mysql_password ./install_db.sh
 ```
 
 Esto crea la base `gestion_horas`, las tablas y un usuario `admin` con contraseña `admin` (cámbiala tras el primer login).

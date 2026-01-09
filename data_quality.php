@@ -150,6 +150,19 @@ foreach ($entries as $entry) {
     $severity = 'danger';
   }
   
+  // Entrada muy temprana (antes de las 6:00)
+  if ($startMin < (6 * 60)) {
+    $issues[] = 'Entrada muy temprana (' . minutesToTime($startMin) . ')';
+    $severity = 'danger';
+  }
+  
+  // Entrada muy tardía (después de las 10:00)
+  if ($startMin > (10 * 60)) {
+    $issues[] = 'Entrada muy tardía (' . minutesToTime($startMin) . ')';
+    if ($severity !== 'danger') $severity = 'warning';
+  }
+  
+  // Salida muy temprana (antes de las 16:00)
   if ($endMin < (16 * 60)) {
     $issues[] = 'Salida muy temprana (' . minutesToTime($endMin) . ')';
     $severity = 'danger';
@@ -158,7 +171,11 @@ foreach ($entries as $entry) {
     $severity = 'danger';
   }
   
-  if ($hoursWorked < $minHoursPerDay) {
+  // Jornada muy corta (menos de 4 horas) - prioridad alta
+  if ($hoursWorked < 4) {
+    $issues[] = sprintf('Jornada muy corta: %.1f h', $hoursWorked);
+    $severity = 'danger';
+  } elseif ($hoursWorked < $minHoursPerDay) {
     $issues[] = sprintf('%.1f h', $hoursWorked);
     if ($severity !== 'danger') $severity = 'warning';
   } elseif ($hoursWorked > $maxHoursPerDay) {
@@ -178,11 +195,12 @@ foreach ($entries as $entry) {
 }
 
 // Contadores por tipo de problema
+$oddCount = count($oddEntries);
 $problemsByType = [
   'danger' => 0,
   'warning' => 0,
   'holiday' => 0,
-  'odd' => count($oddEntries)
+  'odd' => $oddCount
 ];
 
 // Contar problemas por severidad
@@ -264,7 +282,8 @@ foreach ($holidayMap as $dateStr => $holiday) {
 $problemsByType = [
   'danger' => 0,
   'warning' => 0,
-  'holiday' => 0
+  'holiday' => 0,
+  'odd' => $oddCount
 ];
 
 foreach ($issuesByDate as $problem) {
@@ -628,7 +647,7 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
         <div class="stat-label">🔴 Críticos</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value" style="color: #ff9800;"><?php echo $problemsByType['warning']; ?></div>
+        <div class="stat-value"><?php echo $problemsByType['warning']; ?></div>
         <div class="stat-label">🟠 Advertencias</div>
       </div>
       <div class="stat-box">
@@ -668,10 +687,26 @@ $addedDate = isset($_GET['added']) ? $_GET['added'] : null;
           <div style="width: 24px; height: 24px; border-radius: 4px; border: 2px solid #e91e63; background: #f3e5f5; flex-shrink: 0;"></div>
           <span>Fichaje impar (entrada sin salida, o viceversa)</span>
         </div>
-        <div class="legend-item">
-          <div style="width: 24px; height: 24px; border-radius: 4px; border: 2px solid #0056b3; background: #e7f3ff; flex-shrink: 0;"></div>
-          <span>Festivo/Ausencia registrado</span>
-        </div>
+        <?php
+        // Mostrar tipos de festivos/ausencias desde la BD
+        try {
+          $typesStmt = $pdo->query("SELECT code, label, color FROM holiday_types ORDER BY sort_order");
+          while ($type = $typesStmt->fetch(PDO::FETCH_ASSOC)) {
+            $color = $type['color'] ?? '#0056b3';
+            $label = htmlspecialchars($type['label']);
+            echo '<div class="legend-item">';
+            echo '<div style="width: 24px; height: 24px; border-radius: 4px; border: 2px solid ' . $color . '; background: ' . $color . '22; flex-shrink: 0;"></div>';
+            echo '<span>' . $label . '</span>';
+            echo '</div>';
+          }
+        } catch (Exception $e) {
+          // Si no hay tipos, mostrar genérico
+          echo '<div class="legend-item">';
+          echo '<div style="width: 24px; height: 24px; border-radius: 4px; border: 2px solid #0056b3; background: #e7f3ff; flex-shrink: 0;"></div>';
+          echo '<span>Festivo/Ausencia registrado</span>';
+          echo '</div>';
+        }
+        ?>
         <div class="legend-item">
           <div class="legend-dot empty"></div>
           <span>Fin de semana o mes anterior/siguiente</span>

@@ -4,10 +4,10 @@ Extensión de Chrome que permite importar datos de fichajes directamente desde p
 
 ## Características
 
-✅ **Detección automática** de páginas de fichajes (formatos TRAGSA y estándar)
+✅ **Detección automática** de páginas de fichajes (formatos EXTERNAL y estándar)
 ✅ **Un click para importar** - Botón flotante en la esquina inferior derecha
 ✅ **Soporta múltiples formatos**:
-  - Formato TRAGSA (tabla con clase `tabla_fichajes`)
+  - Formato EXTERNAL (tabla con clase `tabla_fichajes`)
   - Formato estándar HTML con tablas de fichajes
 ✅ **Extrae automáticamente**:
   - Horas de entrada/salida
@@ -45,7 +45,7 @@ Extensión de Chrome que permite importar datos de fichajes directamente desde p
 
 ## Formatos soportados
 
-### Formato TRAGSA
+### Formato EXTERNAL
 ```html
 <table id="tabla_fichajes">
   <tr class="horas">
@@ -100,7 +100,7 @@ chrome-extension/
 
 ### 1. Detección
 El `content.js` detecta automáticamente si la página contiene datos de fichajes buscando:
-- Tabla con id `tabla_fichajes` (formato TRAGSA)
+- Tabla con id `tabla_fichajes` (formato EXTERNAL)
 - Tablas con columnas "Entrada", "Salida", "Fecha", etc.
 
 ### 2. Extracción

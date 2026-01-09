@@ -38,15 +38,29 @@ function require_admin(){
 
 function do_login($username, $password){
     $pdo = get_pdo(); if (!$pdo) return false;
-    $stmt = $pdo->prepare('SELECT id, password FROM users WHERE username = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, password, username FROM users WHERE username = ? LIMIT 1');
     $stmt->execute([$username]);
     $u = $stmt->fetch();
     if (!$u) return false;
     if (password_verify($password, $u['password'])){
         $_SESSION['user_id'] = $u['id'];
+        
+        // Check if user 'admin' is using default password 'admin'
+        if ($username === 'admin' && $password === 'admin') {
+            $_SESSION['force_password_change'] = true;
+        }
+        
         return true;
     }
     return false;
+}
+
+function needs_password_change(){
+    return !empty($_SESSION['force_password_change']);
+}
+
+function clear_password_change_flag(){
+    unset($_SESSION['force_password_change']);
 }
 
 function do_logout(){

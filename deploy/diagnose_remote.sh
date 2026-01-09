@@ -31,17 +31,17 @@ echo ""
 echo "2️⃣  Verificando archivos en servidor..."
 echo "=================================================="
 
-if [ -f "/var/www/calendar.favala.es/extension-tokens.php" ]; then
+if [ -f "/var/www/example.com/extension-tokens.php" ]; then
     echo "✅ extension-tokens.php EXISTE"
-    echo "   Tamaño: $(stat -c%s /var/www/calendar.favala.es/extension-tokens.php) bytes"
+    echo "   Tamaño: $(stat -c%s /var/www/example.com/extension-tokens.php) bytes"
 else
     echo "❌ extension-tokens.php NO ENCONTRADO"
 fi
 
-if [ -f "/var/www/calendar.favala.es/lib.php" ]; then
+if [ -f "/var/www/example.com/lib.php" ]; then
     echo "✅ lib.php EXISTE"
     # Verificar que tiene las funciones
-    if grep -q "function get_user_extension_tokens" /var/www/calendar.favala.es/lib.php; then
+    if grep -q "function get_user_extension_tokens" /var/www/example.com/lib.php; then
         echo "   ✅ Función get_user_extension_tokens definida"
     else
         echo "   ❌ Función get_user_extension_tokens NO ENCONTRADA"
@@ -57,18 +57,18 @@ echo ""
 echo "3️⃣  Verificando sintaxis PHP..."
 echo "=================================================="
 
-if php -l /var/www/calendar.favala.es/extension-tokens.php 2>&1 | grep -q "No syntax errors"; then
+if php -l /var/www/example.com/extension-tokens.php 2>&1 | grep -q "No syntax errors"; then
     echo "✅ extension-tokens.php: Sintaxis correcta"
 else
     echo "❌ extension-tokens.php: ERRORES DE SINTAXIS"
-    php -l /var/www/calendar.favala.es/extension-tokens.php
+    php -l /var/www/example.com/extension-tokens.php
 fi
 
-if php -l /var/www/calendar.favala.es/lib.php 2>&1 | grep -q "No syntax errors"; then
+if php -l /var/www/example.com/lib.php 2>&1 | grep -q "No syntax errors"; then
     echo "✅ lib.php: Sintaxis correcta"
 else
     echo "❌ lib.php: ERRORES DE SINTAXIS"
-    php -l /var/www/calendar.favala.es/lib.php
+    php -l /var/www/example.com/lib.php
 fi
 
 echo ""

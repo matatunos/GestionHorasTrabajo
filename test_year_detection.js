@@ -137,10 +137,10 @@ function testImportFichajes() {
   return allCorrect;
 }
 
-// Prueba 3: Extension TRAGSA format
-function testTragsa() {
+// Prueba 3: Extension EXTERNAL format
+function testExternal() {
   console.log("\n" + "=".repeat(60));
-  console.log("TEST: Formato TRAGSA en extensión");
+  console.log("TEST: Formato EXTERNAL en extensión");
   console.log("=".repeat(60));
   
   const data = {
@@ -201,7 +201,7 @@ function testTragsa() {
 if (require.main === module) {
   const test1 = testYearDetection();
   const test2 = testImportFichajes();
-  const test3 = testTragsa();
+  const test3 = testExternal();
   
   console.log("\n" + "=".repeat(60));
   if (test1 && test2 && test3) {
