@@ -104,33 +104,49 @@ $types = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
   <link rel="stylesheet" href="styles.css">
   <style>
-    .type-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-    .type-table th, .type-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #dee2e6; }
-    .type-table th { background: #f8f9fa; font-weight: 600; color: #333; }
-    .type-table tr:hover { background: #f8f9fa; }
-    .color-swatch { width: 30px; height: 30px; border-radius: 4px; border: 1px solid #dee2e6; display: inline-block; vertical-align: middle; }
+    .type-table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; border: 1px solid #dee2e6; border-radius: 6px; overflow: hidden; }
+    .type-table th, .type-table td { padding: 1rem 0.75rem; text-align: left; border-bottom: 1px solid #dee2e6; }
+    .type-table th { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); font-weight: 600; color: #333; }
+    .type-table tbody tr:hover { background: #f8f9fa; }
+    .type-table code { background: #f0f0f0; padding: 0.2rem 0.5rem; border-radius: 3px; font-family: 'Monaco', 'Courier New', monospace; }
+    .color-swatch { width: 40px; height: 40px; border-radius: 6px; border: 2px solid #dee2e6; display: inline-block; vertical-align: middle; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     .action-buttons { display: flex; gap: 0.5rem; }
+    .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 4px; font-size: 0.95rem; cursor: pointer; transition: all 0.25s ease; text-decoration: none; display: inline-block; font-weight: 500; }
+    .btn-primary { background: #0056b3; color: white; box-shadow: 0 2px 4px rgba(0,86,179,0.2); }
+    .btn-primary:hover { background: #004494; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,86,179,0.3); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn-secondary:hover { background: #5a6268; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-danger:hover { background: #c82333; }
     .btn-small { padding: 0.4rem 0.8rem; font-size: 0.85rem; }
-    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
-    .modal.active { display: flex; }
-    .modal-content { background: white; padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
-    .modal-header { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; }
-    .modal-close { float: right; font-size: 1.5rem; cursor: pointer; background: none; border: none; color: #999; }
-    .form-group { margin-bottom: 1rem; }
-    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #333; }
-    .form-group input, .form-group select { width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; font-size: 1rem; }
-    .form-group input:focus { border-color: #0056b3; outline: none; }
-    .color-input-wrapper { display: flex; gap: 0.5rem; align-items: center; }
-    .color-input-wrapper input[type="color"] { width: 50px; height: 40px; cursor: pointer; border: 1px solid #dee2e6; border-radius: 4px; }
-    .color-input-wrapper input[type="text"] { flex: 1; }
-    .alert { padding: 1rem; border-radius: 4px; margin-bottom: 1rem; }
-    .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-    .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
     .btn-add-type { margin-bottom: 1.5rem; }
-    .stats { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; }
-    .stat-item { display: inline-block; margin-right: 2rem; }
-    .stat-number { font-size: 1.5rem; font-weight: bold; color: #0056b3; }
-    .stat-label { font-size: 0.9rem; color: #666; }
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.active { display: flex; }
+    .modal-content { background: white; padding: 2.5rem; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.4); animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; color: #333; }
+    .modal-close { float: right; font-size: 1.8rem; cursor: pointer; background: none; border: none; color: #999; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.2s; }
+    .modal-close:hover { background: #f0f0f0; color: #333; }
+    .form-group { margin-bottom: 1.2rem; }
+    .form-group label { display: block; margin-bottom: 0.6rem; font-weight: 600; color: #333; font-size: 0.95rem; }
+    .form-group input, .form-group select { width: 100%; padding: 0.65rem 0.75rem; border: 1.5px solid #dee2e6; border-radius: 4px; font-size: 1rem; box-sizing: border-box; transition: all 0.2s; }
+    .form-group input:focus, .form-group select:focus { border-color: #0056b3; outline: none; box-shadow: 0 0 0 4px rgba(0,86,179,0.1); background: white; }
+    .form-group input:disabled { background: #f8f9fa; color: #666; }
+    .color-input-wrapper { display: flex; gap: 0.75rem; align-items: center; }
+    .color-input-wrapper input[type="color"] { width: 60px; height: 45px; cursor: pointer; border: 1.5px solid #dee2e6; border-radius: 4px; padding: 3px; }
+    .color-input-wrapper input[type="color"]:focus { border-color: #0056b3; outline: none; }
+    .color-input-wrapper input[type="text"] { flex: 1; font-family: 'Monaco', 'Courier New', monospace; font-size: 0.95rem; }
+    .alert { padding: 1rem 1.2rem; border-radius: 6px; margin-bottom: 1.5rem; border-left: 4px solid; }
+    .alert-success { background: #d4edda; color: #155724; border-left-color: #28a745; }
+    .alert-error { background: #f8d7da; color: #721c24; border-left-color: #dc3545; }
+    .stats { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem 2rem; margin-bottom: 2rem; }
+    .stat-item { display: inline-block; margin-right: 2.5rem; }
+    .stat-number { font-size: 2rem; font-weight: 700; color: #0056b3; }
+    .stat-label { font-size: 0.9rem; color: #666; font-weight: 500; }
+    .card { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem 2rem; margin-bottom: 1.5rem; }
+    .card h1 { margin: 0; color: #333; }
+    .card p { margin: 0; }
   </style>
 </head>
 <body class="page-holiday-types">
@@ -230,7 +246,7 @@ $types = $stmt->fetchAll(PDO::FETCH_ASSOC);
           </div>
         </div>
 
-        <button class="btn btn-add-type" onclick="openAddModal()">➕ Agregar nuevo tipo</button>
+        <button class="btn btn-primary btn-add-type" onclick="openAddModal()">➕ Agregar nuevo tipo</button>
 
         <?php if (empty($types)): ?>
           <div style="text-align: center; padding: 2rem; color: #666;">
