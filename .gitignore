@@ -14,3 +14,12 @@ HORARIO_2024.xlsx
 PDO::*
 parsed_fichajes.csv
 *.xlsx
+# Archivos de test y debug
+test_*.php
+test_*.js
+debug*.php
+import_debug.php
+*_debug.php
+tmp_*.php
+*_tmp.php
+recalc_debug.php
