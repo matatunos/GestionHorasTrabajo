@@ -127,6 +127,18 @@ foreach ($holidays as $h) {
   <title>Festivos y Ausencias</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    console.log('✓ Página de Festivos cargando...');
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('✓ DOM completamente cargado');
+      const container = document.getElementById('holidaysContainer');
+      if (container) {
+        console.log('✓ Contenedor de festivos encontrado:', container.children.length, 'secciones');
+      } else {
+        console.error('✗ Contenedor de festivos NO encontrado');
+      }
+    });
+  </script>
   <style>
     .holidays-header {
       display: flex;
