@@ -39,6 +39,7 @@ $site_name = $site_cfg['site_name'] ?? 'GestionHoras';
               <a class="dropdown-item" href="profile.php">👤 Perfil</a>
               <a class="dropdown-item" href="holidays.php">📅 Festivos y Ausencias</a>
               <a class="dropdown-item" href="#" onclick="openScheduleSuggestions(event)">⚡ Sugerencias de Horario (Beta)</a>
+              <a class="dropdown-item" href="import-calendar-beta.php">📅 Importar Calendario (Beta)</a>
               <a class="dropdown-item" href="data_quality.php">📊 Calidad de Datos</a>
               <a class="dropdown-item" href="chrome-addon-help.php">🧩 Extensión Chrome</a>
               <a class="dropdown-item" href="extension-tokens.php">🔐 Tokens</a>
