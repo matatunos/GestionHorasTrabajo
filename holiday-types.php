@@ -163,6 +163,7 @@ $types = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="menu-section">
           <a class="menu-item" href="dashboard.php">Dashboard</a>
           <a class="menu-item" href="holidays.php">📅 Festivos y Ausencias</a>
+          <a class="menu-item" href="holiday-types.php">🏷️ Tipos de Festivos</a>
           <a class="menu-item" href="index.php">Registro horario</a>
           <a class="menu-item" href="import.php">Importar Fichajes</a>
           <a class="menu-item" href="reports.php">Reportes</a>

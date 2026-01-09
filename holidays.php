@@ -184,7 +184,6 @@ foreach ($holidays as $h) {
             <span class="menu-user-name"><?php echo htmlspecialchars($user['username']); ?></span>
             <div class="menu-user-dropdown" role="menu">
               <a class="dropdown-item" href="profile.php">👤 Perfil</a>
-              <a class="dropdown-item" href="holidays.php">📅 Festivos y Ausencias</a>
               <a class="dropdown-item" href="data_quality.php">📊 Calidad de Datos</a>
               <a class="dropdown-item" href="logout.php">🚪 Salir</a>
             </div>
