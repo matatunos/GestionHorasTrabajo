@@ -6,6 +6,13 @@ require_once __DIR__ . '/db.php';
 $pdo = get_pdo();
 $user = current_user();
 
+// Mensaje de importación exitosa si viene del importador
+$import_message = '';
+if (!empty($_GET['imported'])) {
+  $imported = intval($_GET['imported']);
+  $import_message = "✓ Se importaron $imported festivos correctamente.";
+}
+
 // Asegurar que las tablas de festivos existen
 try {
   $pdo->exec("CREATE TABLE IF NOT EXISTS holidays (
@@ -146,6 +153,11 @@ $pageStyles = '
 
   <div class="container">
     <div class="card">
+      <?php if ($import_message): ?>
+      <div class="alert alert-success" style="background-color: #d4edda; color: #155724; border-left: 4px solid #28a745; padding: 1rem 1.2rem; border-radius: 6px; margin-bottom: 1.5rem;">
+        <?php echo htmlspecialchars($import_message); ?>
+      </div>
+      <?php endif; ?>
       <div class="holidays-header">
         <div><h1>📅 Festivos y Ausencias</h1></div>
         <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">

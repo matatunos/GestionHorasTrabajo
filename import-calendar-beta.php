@@ -95,6 +95,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           if ($duplicates > 0) {
             $message .= " ($duplicates duplicados ignorados)";
           }
+          
+          // Redirigir al calendario después de importar exitosamente
+          header('Location: holidays.php?imported=' . $imported);
+          exit;
         } else {
           if ($duplicates > 0) {
             $error = "Todos los festivos ya existen en el sistema.";
