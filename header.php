@@ -21,6 +21,7 @@ $site_name = $site_cfg['site_name'] ?? 'GestionHoras';
       <div class="menu-section">
         <?php if (!empty($current)): ?>
           <a class="menu-item" href="dashboard.php">Dashboard</a>
+          <a class="menu-item" href="holidays.php">📅 Festivos y Ausencias</a>
         <?php endif; ?>
         <a class="menu-item" href="index.php">Registro horario</a>
         <!-- 'Años' link removed: management consolidated into settings.php -->
@@ -36,6 +37,7 @@ $site_name = $site_cfg['site_name'] ?? 'GestionHoras';
             <span class="menu-user-name"><?php echo htmlspecialchars($current['username']); ?></span>
             <div class="menu-user-dropdown" role="menu">
               <a class="dropdown-item" href="profile.php">👤 Perfil</a>
+              <a class="dropdown-item" href="holidays.php">📅 Festivos y Ausencias</a>
               <a class="dropdown-item" href="#" onclick="openScheduleSuggestions(event)">⚡ Sugerencias de Horario (Beta)</a>
               <a class="dropdown-item" href="data_quality.php">📊 Calidad de Datos</a>
               <a class="dropdown-item" href="chrome-addon-help.php">🧩 Extensión Chrome</a>
