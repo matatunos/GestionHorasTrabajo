@@ -776,7 +776,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
     const fd = new FormData();
     fd.append('file', file);
     fd.append('year', String(year));
-    return fetch('scripts/parse_tragsa.php', { method: 'POST', body: fd })
+    return fetch('scripts/parse_external.php', { method: 'POST', body: fd })
       .then(r => r.json())
       .then(data => {
         if (data && data.ok && Array.isArray(data.records)) {

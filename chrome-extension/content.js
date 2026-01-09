@@ -10,20 +10,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     try {
       console.log('[GestionHoras] Iniciando captura de datos...');
       
-      const tragsaData = extractTragsaData();
-      console.log('[GestionHoras] Datos TRAGSA:', tragsaData ? Object.keys(tragsaData).length + ' registros' : 'no encontrados');
+      const externalData = extractExternalData();
+      console.log('[GestionHoras] Datos EXTERNAL:', externalData ? Object.keys(externalData).length + ' registros' : 'no encontrados');
       
       const standardData = extractStandardData();
       console.log('[GestionHoras] Datos estándar:', standardData ? Object.keys(standardData).length + ' registros' : 'no encontrados');
       
-      const data = tragsaData || standardData;
+      const data = externalData || standardData;
       
       if (!data || Object.keys(data).length === 0) {
         const errorMsg = 'No se encontraron datos de fichajes en esta página';
         console.error('[GestionHoras] ' + errorMsg);
         console.log('[GestionHoras] Debug:', {
-          tragsaDetected: !!tragsaData,
-          tragsaTable: !!document.getElementById('tabla_fichajes'),
+          externalDetected: !!externalData,
+          externalTable: !!document.getElementById('tabla_fichajes'),
           standardDetected: !!standardData,
           standardTable: !!document.querySelector('table[border="1"]'),
           allTables: document.querySelectorAll('table').length,
@@ -33,8 +33,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           success: false, 
           error: errorMsg,
           debug: {
-            tragsaDetected: !!tragsaData,
-            tragsaTable: !!document.getElementById('tabla_fichajes'),
+            externalDetected: !!externalData,
+            externalTable: !!document.getElementById('tabla_fichajes'),
             standardDetected: !!standardData,
             standardTable: !!document.querySelector('table[border="1"]'),
             totalTables: document.querySelectorAll('table').length
@@ -46,7 +46,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ 
           success: true, 
           data: data,
-          sourceFormat: (tragsaData ? 'tragsa' : 'standard'),
+          sourceFormat: (externalData ? 'external' : 'standard'),
           count: Object.keys(data).length
         });
       }
@@ -60,8 +60,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Extraer datos formato TRAGSA
-function extractTragsaData() {
+// Extraer datos formato EXTERNAL
+function extractExternalData() {
   const table = document.getElementById('tabla_fichajes');
   if (!table) return null;
   
@@ -82,7 +82,7 @@ function extractTragsaData() {
     }
     
     if (dates.length === 0) {
-      console.log('[GestionHoras] TRAGSA: No se encontraron fechas en tr.fechas');
+      console.log('[GestionHoras] EXTERNAL: No se encontraron fechas en tr.fechas');
       return null;
     }
     
@@ -105,7 +105,7 @@ function extractTragsaData() {
       if (hasDecOrNov) {
         // Si hay diciembre/noviembre en enero-marzo, el año es anterior
         year = year - 1;
-        console.log('[GestionHoras] TRAGSA: Detectado mes de año anterior, usando año:', year);
+        console.log('[GestionHoras] EXTERNAL: Detectado mes de año anterior, usando año:', year);
       }
     }
     
@@ -117,7 +117,7 @@ function extractTragsaData() {
       // Usa el año más frecuente en la tabla
       const potentialYear = parseInt(yearMatches[0]);
       if (potentialYear > 2000 && potentialYear < 2100) {
-        console.log('[GestionHoras] TRAGSA: Año detectado de tabla:', potentialYear);
+        console.log('[GestionHoras] EXTERNAL: Año detectado de tabla:', potentialYear);
         // Si la tabla tiene un año explícito y es diferente al nuestro, úsalo
         if (potentialYear !== year && !hasDecOrNov) {
           year = potentialYear;
@@ -125,7 +125,7 @@ function extractTragsaData() {
       }
     }
     
-    console.log('[GestionHoras] TRAGSA: Año final a usar:', year);
+    console.log('[GestionHoras] EXTERNAL: Año final a usar:', year);
     
     // Extraer tiempos de la fila de horas
     const hoursRow = table.querySelector('tr.horas');
@@ -172,13 +172,13 @@ function extractTragsaData() {
           if (times.length > 0) {
             data[fullDate] = {
               times: times,
-              format: 'tragsa'
+              format: 'external'
             };
           }
         }
       });
     } else {
-      console.log('[GestionHoras] TRAGSA: No se encontró tr.horas');
+      console.log('[GestionHoras] EXTERNAL: No se encontró tr.horas');
       return null;
     }
     
@@ -187,7 +187,7 @@ function extractTragsaData() {
     
     return Object.keys(data).length > 0 ? data : null;
   } catch (error) {
-    console.error('[GestionHoras] Error en extractTragsaData:', error);
+    console.error('[GestionHoras] Error en extractExternalData:', error);
     return null;
   }
 }

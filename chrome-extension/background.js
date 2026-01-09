@@ -17,8 +17,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Convertir tiempos TRAGSA a formato estándar
-function parseTragsaEntry(times) {
+// Convertir tiempos EXTERNAL a formato estándar
+function parseExternalEntry(times) {
   if (!times || times.length === 0) return null;
   
   // Si tenemos 2 tiempos: entrada y salida
@@ -92,8 +92,8 @@ async function importFichajes(data, sourceFormat, appUrl) {
     try {
       let entryData = {};
       
-      if (sourceFormat === 'tragsa') {
-        entryData = parseTragsaEntry(entry.times);
+      if (sourceFormat === 'external') {
+        entryData = parseExternalEntry(entry.times);
       } else if (sourceFormat === 'standard') {
         entryData = parseStandardEntry(entry, Object.keys(entry));
       }

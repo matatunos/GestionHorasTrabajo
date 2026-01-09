@@ -139,7 +139,7 @@ En `extension-tokens.php`, el usuario puede:
 
 ## Flujo de Usuario NO Logueado
 
-1. Usuario accede a página con datos (TRAGSA, etc)
+1. Usuario accede a página con datos (EXTERNAL, etc)
 2. Hace clic en extensión
 3. Sin token: error "No autorizado, descarga extensión desde profile"
 4. Usuario accede a login y descarga extensión

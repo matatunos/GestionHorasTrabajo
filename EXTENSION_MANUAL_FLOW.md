@@ -8,7 +8,7 @@ La extensión **ya no detecta automáticamente** las páginas de fichajes. En su
 
 1. **Mejor rendimiento**: No procesa todas las páginas que visitas
 2. **Control explícito**: Sabes exactamente cuándo se extraen datos
-3. **Compatible con cualquier sitio**: Funciona en TRAGSA, HTML personalizado, páginas locales, etc.
+3. **Compatible con cualquier sitio**: Funciona en EXTERNAL, HTML personalizado, páginas locales, etc.
 4. **UX más clara**: Botón visible, vista previa, confirmación antes de importar
 
 ---
@@ -81,8 +81,8 @@ importData() {
 // Escucha mensaje del popup
 chrome.runtime.onMessage.addListener((request) => {
   if (request.action === 'captureFichajes') {
-    // Intenta detectar formato TRAGSA primero
-    const tragsaData = extractTragsaData()
+    // Intenta detectar formato EXTERNAL primero
+    const externalData = extractExternalData()
     
     // Si no, intenta formato HTML estándar
     const standardData = extractStandardData()
@@ -92,7 +92,7 @@ chrome.runtime.onMessage.addListener((request) => {
   }
 })
 
-// Formato TRAGSA: busca tabla id="tabla_fichajes"
+// Formato EXTERNAL: busca tabla id="tabla_fichajes"
 // Extrae: fechas de tr.fechas, horas de tr.horas con spans
 
 // Formato estándar: busca table[border="1"]
@@ -107,7 +107,7 @@ chrome.runtime.onMessage.addListener((request) => {
   if (request.action === 'importFichajes') {
     // Procesa cada fecha capturada
     for each entry {
-      // Convierte tiempos (TRAGSA o estándar) a formato estándar
+      // Convierte tiempos (EXTERNAL o estándar) a formato estándar
       // POST a appUrl/index.php con parametros:
       //   date, start, end, coffee_out, coffee_in, lunch_out, lunch_in, note
       // Cuenta los importados exitosamente
@@ -126,7 +126,7 @@ chrome.runtime.onMessage.addListener((request) => {
 
 ## Formatos soportados
 
-### TRAGSA
+### EXTERNAL
 - Tabla con id="tabla_fichajes"
 - Fila con class="fechas" contiene fechas (ej: "01-ene", "02-ene")
 - Fila con class="horas" contiene spans con tiempos (ej: "08:00", "09:00", "13:00")
