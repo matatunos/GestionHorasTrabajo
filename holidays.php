@@ -6,6 +6,48 @@ require_once __DIR__ . '/db.php';
 $pdo = get_pdo();
 $user = current_user();
 
+// Asegurar que las tablas de festivos existen
+try {
+  $pdo->exec("CREATE TABLE IF NOT EXISTS holidays (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT DEFAULT NULL,
+    date DATE NOT NULL,
+    label VARCHAR(255) DEFAULT NULL,
+    type VARCHAR(20) DEFAULT 'holiday',
+    annual TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY user_date_unique (user_id,date)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  
+  $pdo->exec("CREATE TABLE IF NOT EXISTS holiday_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    label VARCHAR(100) NOT NULL,
+    color VARCHAR(7) DEFAULT '#0f172a',
+    sort_order INT DEFAULT 0,
+    is_system TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  
+  // Seed default holiday types if table is empty
+  $typeCheck = $pdo->query("SELECT COUNT(*) as cnt FROM holiday_types")->fetch();
+  if ($typeCheck['cnt'] == 0) {
+    $defaults = [
+      ['holiday', 'Festivo', '#dc2626', 0, 1],
+      ['vacation', 'Vacaciones', '#059669', 1, 1],
+      ['personal', 'Asuntos propios', '#f97316', 2, 1],
+      ['enfermedad', 'Enfermedad', '#3b82f6', 3, 1],
+      ['permiso', 'Permiso', '#8b5cf6', 4, 1],
+    ];
+    $insertStmt = $pdo->prepare('INSERT INTO holiday_types (code, label, color, sort_order, is_system) VALUES (?, ?, ?, ?, ?)');
+    foreach ($defaults as $def) {
+      $insertStmt->execute($def);
+    }
+  }
+} catch (Exception $e) {
+  // Las tablas ya existen o hay un error, continuamos
+}
+
 // Obtener años disponibles
 $yearQuery = 'SELECT DISTINCT YEAR(date) as year FROM holidays ORDER BY year DESC LIMIT 10';
 $yearStmt = $pdo->prepare($yearQuery);
