@@ -904,11 +904,14 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 
 /* ===== Login Page ===== */
 .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; background-image: url('images/background-clocks.svg'); background-attachment: fixed; background-position: center; background-repeat: no-repeat; background-size: cover; background-color: #0f1724; }
-.login-card { background-color: rgba(21,30,46,0.95); border-radius: var(--radius-lg); padding: 2.5rem; width: 100%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
+.login-card { background-color: rgba(255,255,255,0.98); border-radius: var(--radius-lg); padding: 2.5rem; width: 100%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); backdrop-filter: blur(10px); border: 1px solid rgba(0,0,0,0.1); }
+.login-card h2 { color: #1a1a1a; }
+.login-card .form-label { color: #333; }
+.login-card .alert { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
 .login-header { text-align: center; margin-bottom: 2rem; }
 .login-header .logo { justify-content: center; margin-bottom: 1rem; }
-.login-header h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-.login-header p { color: var(--text-muted); }
+.login-header h1 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #1a1a1a; }
+.login-header p { color: #666; }
 
 /* ===== Footer ===== */
 .footer { padding: 1.5rem; border-top: 1px solid var(--border-color); background-color: var(--surface-color); text-align: center; }
