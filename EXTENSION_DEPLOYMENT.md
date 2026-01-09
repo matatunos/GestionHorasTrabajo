@@ -77,7 +77,7 @@ tail -50 /var/log/syslog
 
 ### 6. Probar la página de tokens
 
-Acceder a: `https://calendar.favala.es/extension-tokens.php`
+Acceder a: `https://example.com/extension-tokens.php`
 
 Debe:
 - Solicitar login si no está logueado

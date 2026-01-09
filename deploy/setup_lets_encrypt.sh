@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script para instalar Let's Encrypt (Certbot) y generar certificado válido
-# Para calendar.favala.es
+# Para example.com
 
 set -e
 
@@ -21,10 +21,10 @@ else
 fi
 
 echo ""
-echo "📝 Generando certificado para calendar.favala.es..."
+echo "📝 Generando certificado para example.com..."
 echo ""
 echo "Requisitos:"
-echo "1. El dominio calendar.favala.es debe apuntar a este servidor"
+echo "1. El dominio example.com debe apuntar a este servidor"
 echo "2. El puerto 80 debe estar accesible desde internet"
 echo "3. Apache debe estar corriendo"
 echo ""
@@ -34,18 +34,18 @@ echo
 if [[ $REPLY =~ ^[Ss]$ ]]; then
     sudo certbot certonly \
         --apache \
-        -d calendar.favala.es \
+        -d example.com \
         --non-interactive \
         --agree-tos \
-        -m admin@calendar.favala.es \
+        -m admin@example.com \
         --rsa-key-size 2048
     
     echo ""
     echo "✅ Certificado generado exitosamente"
     echo ""
     echo "Ubicación de los archivos:"
-    echo "  Certificado: /etc/letsencrypt/live/calendar.favala.es/fullchain.pem"
-    echo "  Clave privada: /etc/letsencrypt/live/calendar.favala.es/privkey.pem"
+    echo "  Certificado: /etc/letsencrypt/live/example.com/fullchain.pem"
+    echo "  Clave privada: /etc/letsencrypt/live/example.com/privkey.pem"
     echo ""
     echo "Ahora necesitas actualizar la configuración de Apache."
 else

@@ -13,7 +13,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
 import axios from 'axios';
 
-const API_URL = 'https://calendar.favala.es';
+const API_URL = 'https://example.com';
 
 export default function App() {
   const [username, setUsername] = useState('');

@@ -253,8 +253,8 @@ DELETE /api.php/entry/{date}
 ├─────────────────────────────┤
 │ ┌──────────────────────────┐│
 │ │ Perfil de Usuario        ││
-│ │ Juan García              ││
-│ │ juan@empresa.com         ││
+│ │ Nombre Usuario           ││
+│ │ usuario@ejemplo.com      ││
 │ └──────────────────────────┘│
 │                             │
 │                             │
