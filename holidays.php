@@ -465,6 +465,7 @@ foreach ($holidays as $h) {
     </div>
 
     <!-- Listado de festivos -->
+    <div style="background: red; padding: 1rem; color: white; font-weight: bold; margin: 1rem 0;">DEBUG: Sección de festivos. Total: <?php echo count($holidays); ?> registros</div>
     <div class="holidays-grid" id="holidaysContainer">
       <?php if (empty($holidays)): ?>
         <div class="empty-state">
