@@ -993,8 +993,9 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 /* Keep this block at the end so it overrides upstream rules */
 .main-content .container { padding: 1.5rem; max-width: 1100px; margin: 1rem auto; }
 
-/* Hours register needs more horizontal room (wide table) */
-.page-index .main-content .container { max-width: none; }
+/* Hours register and dashboard need more horizontal room (wide tables) */
+.page-index .main-content .container,
+.page-dashboard .main-content .container { max-width: none; }
 .page-index .table-responsive { overflow: visible; }
 
 /* Align month summary with month toggle indent */
