@@ -303,7 +303,45 @@ foreach ($holidays as $h) {
       font-size: 0.9rem;
       color: #666;
     }
-  </style>
+
+    .month-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .month-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .month-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: #f0f7ff;
+      border-left: 4px solid #3b82f6;
+      margin-bottom: 0.75rem;
+      border-radius: 4px;
+    }
+
+    .month-name {
+      font-weight: 600;
+      color: #1e40af;
+      font-size: 1rem;
+    }
+
+    .month-count {
+      font-size: 0.85rem;
+      color: #666;
+      background: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+    }
+
+    .month-items {
+      border-left: 2px solid #bfdbfe;
+      padding-left: 1rem;
+      margin-left: 0.5rem;
+    }
 </head>
 <body class="page-holidays">
   <?php include __DIR__ . '/header.php'; ?>
@@ -322,6 +360,26 @@ foreach ($holidays as $h) {
             <?php endforeach; ?>
           </select>
         </div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filter-panel">
+      <div class="filter-title">🏷️ Filtrar por tipo</div>
+      <div class="filter-options" id="typeFilters">
+        <div class="filter-checkbox">
+          <input type="checkbox" id="filterAll" value="all" checked>
+          <label for="filterAll">Mostrar todos</label>
+        </div>
+        <?php foreach ($holidayTypes as $type): ?>
+          <div class="filter-checkbox">
+            <input type="checkbox" class="type-filter" value="<?php echo htmlspecialchars($type['code']); ?>" checked>
+            <label>
+              <span class="type-color-dot" style="background-color: <?php echo htmlspecialchars($type['color']); ?>"></span>
+              <?php echo htmlspecialchars($type['label']); ?>
+            </label>
+          </div>
+        <?php endforeach; ?>
       </div>
     </div>
 
@@ -352,26 +410,6 @@ foreach ($holidays as $h) {
       ?>
     </div>
 
-    <!-- Filtros -->
-    <div class="filter-panel">
-      <div class="filter-title">🏷️ Filtrar por tipo</div>
-      <div class="filter-options" id="typeFilters">
-        <div class="filter-checkbox">
-          <input type="checkbox" id="filterAll" value="all" checked>
-          <label for="filterAll">Mostrar todos</label>
-        </div>
-        <?php foreach ($holidayTypes as $type): ?>
-          <div class="filter-checkbox">
-            <input type="checkbox" class="type-filter" value="<?php echo htmlspecialchars($type['code']); ?>" checked>
-            <label>
-              <span class="type-color-dot" style="background-color: <?php echo htmlspecialchars($type['color']); ?>"></span>
-              <?php echo htmlspecialchars($type['label']); ?>
-            </label>
-          </div>
-        <?php endforeach; ?>
-      </div>
-    </div>
-
     <!-- Listado de festivos -->
     <div class="holidays-grid" id="holidaysContainer">
       <?php if (empty($holidays)): ?>
@@ -391,6 +429,21 @@ foreach ($holidays as $h) {
           $type = $typeInfo['code'];
           $typeLabelHolidays = $holidaysByType[$type] ?? [];
           if (empty($typeLabelHolidays)) continue;
+          
+          // Agrupar por mes dentro del tipo
+          $holidaysByMonth = [];
+          $monthNames = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+          
+          foreach ($typeLabelHolidays as $h) {
+            $month = intval(substr($h['date'], 5, 2));
+            if (!isset($holidaysByMonth[$month])) {
+              $holidaysByMonth[$month] = [];
+            }
+            $holidaysByMonth[$month][] = $h;
+          }
+          
+          ksort($holidaysByMonth);
           ?>
           <div class="holiday-type-section" data-type="<?php echo htmlspecialchars($type); ?>">
             <div class="holiday-type-header">
@@ -399,23 +452,33 @@ foreach ($holidays as $h) {
               <span class="holiday-type-count"><?php echo count($typeLabelHolidays); ?> días</span>
             </div>
             <div class="holidays-list">
-              <?php foreach ($typeLabelHolidays as $h): ?>
-                <?php
-                  $date = DateTime::createFromFormat('Y-m-d', $h['date']);
-                  $dayName = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'][$date->format('N') - 1];
-                ?>
-                <div class="holiday-item">
-                  <div class="holiday-date">
-                    <div class="holiday-date-main"><?php echo $date->format('d/m/Y'); ?></div>
-                    <div class="holiday-date-day"><?php echo ucfirst($dayName); ?></div>
+              <?php foreach ($holidaysByMonth as $month => $monthHolidays): ?>
+                <div class="month-section">
+                  <div class="month-header">
+                    <span class="month-name"><?php echo $monthNames[$month] ?? 'Mes ' . $month; ?></span>
+                    <span class="month-count"><?php echo count($monthHolidays); ?> días</span>
                   </div>
-                  <div class="holiday-label"><?php echo htmlspecialchars($h['label'] ?? '—'); ?></div>
-                  <?php if ($h['annual']): ?>
-                    <span class="holiday-badge">📅 Anual</span>
-                  <?php endif; ?>
-                  <?php if ($h['user_id']): ?>
-                    <span class="holiday-badge">👤 Personal</span>
-                  <?php endif; ?>
+                  <div class="month-items">
+                    <?php foreach ($monthHolidays as $h): ?>
+                      <?php
+                        $date = DateTime::createFromFormat('Y-m-d', $h['date']);
+                        $dayName = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'][$date->format('N') - 1];
+                      ?>
+                      <div class="holiday-item">
+                        <div class="holiday-date">
+                          <div class="holiday-date-main"><?php echo $date->format('d/m/Y'); ?></div>
+                          <div class="holiday-date-day"><?php echo ucfirst($dayName); ?></div>
+                        </div>
+                        <div class="holiday-label"><?php echo htmlspecialchars($h['label'] ?? '—'); ?></div>
+                        <?php if ($h['annual']): ?>
+                          <span class="holiday-badge">📅 Anual</span>
+                        <?php endif; ?>
+                        <?php if ($h['user_id']): ?>
+                          <span class="holiday-badge">👤 Personal</span>
+                        <?php endif; ?>
+                      </div>
+                    <?php endforeach; ?>
+                  </div>
                 </div>
               <?php endforeach; ?>
             </div>
