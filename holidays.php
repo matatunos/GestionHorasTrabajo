@@ -231,13 +231,16 @@ foreach ($holidays as $h) {
         <div class="card">
           <div class="holidays-header">
             <div><h1>📅 Festivos y Ausencias</h1></div>
-            <div class="year-selector">
-              <label>Año:</label>
-              <select id="yearFilter">
-                <?php foreach($availableYears as $y): ?>
-                  <option value="<?php echo $y; ?>" <?php if ($y === $selectedYear) echo 'selected'; ?>><?php echo $y; ?></option>
-                <?php endforeach; ?>
-              </select>
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+              <a href="holiday-types.php" class="btn btn-secondary" style="white-space: nowrap;">🏷️ Gestionar Tipos</a>
+              <div class="year-selector">
+                <label>Año:</label>
+                <select id="yearFilter">
+                  <?php foreach($availableYears as $y): ?>
+                    <option value="<?php echo $y; ?>" <?php if ($y === $selectedYear) echo 'selected'; ?>><?php echo $y; ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
             </div>
           </div>
         </div>
