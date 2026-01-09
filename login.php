@@ -1,14 +1,41 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/db.php';
 
 $error = '';
+$show_first_access_warning = false;
+
+// Si el usuario ya tiene sesión activa, redirigir al dashboard
+if (current_user()) {
+    header('Location: dashboard.php');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST'){
     $u = $_POST['username'] ?? '';
     $p = $_POST['password'] ?? '';
     if (do_login($u, $p)){
-      header('Location: dashboard.php'); exit;
+      // Si el login fue exitoso, redirigir al dashboard
+      header('Location: dashboard.php'); 
+      exit;
     } else {
         $error = 'Credenciales inválidas';
+    }
+}
+
+// Mostrar el aviso SOLO en el acceso inicial sin error (es decir, es GET y sin errores)
+if (empty($error) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    // Detectar si es realmente primer acceso: si la contraseña de admin no ha sido cambiada
+    $pdo = get_pdo();
+    if ($pdo) {
+        $stmt = $pdo->prepare('SELECT id, password FROM users WHERE username = ? LIMIT 1');
+        $stmt->execute(['admin']);
+        $admin = $stmt->fetch();
+        
+        // Si existe admin y su contraseña es la default (hash de "admin"), mostrar aviso
+        if ($admin && password_verify('admin', $admin['password'])) {
+            $show_first_access_warning = true;
+        }
     }
 }
 ?>
@@ -27,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'){
       <div class="login-header"><div class="logo"><h1>GestionHoras</h1></div></div>
       <h2>Acceso</h2>
       <?php if($error): ?><div class="alert"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
-      <?php if(!$error): ?>
+      <?php if($show_first_access_warning && !$error): ?>
       <div class="alert alert-info" style="background-color: #e3f2fd; border-color: #2196f3; color: #0d47a1;">
         <strong>⚠️ Primer acceso:</strong> Si instalaste la aplicación recientemente, usa:<br>
         <strong>Usuario:</strong> admin<br>
