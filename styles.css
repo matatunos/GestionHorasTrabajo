@@ -995,7 +995,8 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 
 /* Hours register and dashboard need more horizontal room (wide tables) */
 .page-index .main-content .container,
-.page-dashboard .main-content .container { max-width: none; }
+.page-dashboard .main-content .container { max-width: none !important; }
+.page-dashboard .container { max-width: none !important; }
 .page-index .table-responsive { overflow: visible; }
 
 /* Align month summary with month toggle indent */
