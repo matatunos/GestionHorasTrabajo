@@ -94,21 +94,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $stmt = $pdo->prepare('SELECT * FROM holiday_types ORDER BY sort_order, id');
 $stmt->execute();
 $types = $stmt->fetchAll(PDO::FETCH_ASSOC);
-?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Gestión de Tipos de Festivos</title>
-  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
-  <link rel="stylesheet" href="styles.css">
-  <style>
+
+$pageStyles = '
     .type-table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; border: 1px solid #dee2e6; border-radius: 6px; overflow: hidden; }
     .type-table th, .type-table td { padding: 1rem 0.75rem; text-align: left; border-bottom: 1px solid #dee2e6; }
     .type-table th { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); font-weight: 600; color: #333; }
     .type-table tbody tr:hover { background: #f8f9fa; }
-    .type-table code { background: #f0f0f0; padding: 0.2rem 0.5rem; border-radius: 3px; font-family: 'Monaco', 'Courier New', monospace; }
+    .type-table code { background: #f0f0f0; padding: 0.2rem 0.5rem; border-radius: 3px; font-family: "Monaco", "Courier New", monospace; }
     .color-swatch { width: 40px; height: 40px; border-radius: 6px; border: 2px solid #dee2e6; display: inline-block; vertical-align: middle; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     .action-buttons { display: flex; gap: 0.5rem; }
     .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 4px; font-size: 0.95rem; cursor: pointer; transition: all 0.25s ease; text-decoration: none; display: inline-block; font-weight: 500; }
@@ -137,7 +129,7 @@ $types = $stmt->fetchAll(PDO::FETCH_ASSOC);
     .color-input-wrapper { display: flex; gap: 0.75rem; align-items: center; }
     .color-input-wrapper input[type="color"] { width: 60px; height: 45px; cursor: pointer; border: 1.5px solid #dee2e6; border-radius: 4px; padding: 3px; }
     .color-input-wrapper input[type="color"]:focus { border-color: #0056b3; outline: none; }
-    .color-input-wrapper input[type="text"] { flex: 1; font-family: 'Monaco', 'Courier New', monospace; font-size: 0.95rem; }
+    .color-input-wrapper input[type="text"] { flex: 1; font-family: "Monaco", "Courier New", monospace; font-size: 0.95rem; }
     .alert { padding: 1rem 1.2rem; border-radius: 6px; margin-bottom: 1.5rem; border-left: 4px solid; }
     .alert-success { background: #d4edda; color: #155724; border-left-color: #28a745; }
     .alert-error { background: #f8d7da; color: #721c24; border-left-color: #dc3545; }
@@ -148,152 +140,95 @@ $types = $stmt->fetchAll(PDO::FETCH_ASSOC);
     .card { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem 2rem; margin-bottom: 1.5rem; }
     .card h1 { margin: 0; color: #333; }
     .card p { margin: 0; }
-  </style>
+';
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🏷️ Gestión de Tipos de Festivos</title>
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <style><?php echo $pageStyles; ?></style>
 </head>
 <body class="page-holiday-types">
-  <div class="app-container">
-    <aside class="sidebar" id="mobileSidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-brand-visual">
-          <a class="sidebar-brand-logo logo" href="dashboard.php"><h1>GestionHoras</h1></a>
-        </div>
-        <button class="mobile-menu-toggle" id="mobileMenuClose" aria-label="Cerrar menú">✕</button>
-      </div>
-      <nav class="sidebar-menu">
-        <div class="menu-section">
-          <a class="menu-item" href="dashboard.php">Dashboard</a>
-          <a class="menu-item" href="holidays.php">📅 Festivos y Ausencias</a>
-          <a class="menu-item" href="holiday-types.php">🏷️ Tipos de Festivos</a>
-          <a class="menu-item" href="index.php">Registro horario</a>
-          <a class="menu-item" href="import.php">Importar Fichajes</a>
-          <a class="menu-item" href="reports.php">Reportes</a>
-          <a class="menu-item" href="settings.php">Configuración</a>
-          
-          <div class="menu-item menu-user" tabindex="0">
-            <div class="user-avatar"><?php echo strtoupper(substr($user['username'],0,1)); ?></div>
-            <span class="menu-user-name"><?php echo htmlspecialchars($user['username']); ?></span>
-            <div class="menu-user-dropdown" role="menu">
-              <a class="dropdown-item" href="profile.php">👤 Perfil</a>
-              <a class="dropdown-item" href="data_quality.php">📊 Calidad de Datos</a>
-              <a class="dropdown-item" href="logout.php">🚪 Salir</a>
-            </div>
-          </div>
-        </div>
-      </nav>
-    </aside>
+  <?php include __DIR__ . '/header.php'; ?>
 
-    <div class="main-content">
-      <header class="header">
-        <button class="mobile-menu-toggle" id="mobileMenuOpen" aria-label="Abrir menú">☰</button>
-        <div class="header-brand"><a class="header-brand-logo" href="dashboard.php"></a></div>
-        <div class="header-actions"></div>
-      </header>
-
-      <script>
-        document.addEventListener('DOMContentLoaded', function(){
-          const sidebar = document.getElementById('mobileSidebar');
-          const openBtn = document.getElementById('mobileMenuOpen');
-          const closeBtn = document.getElementById('mobileMenuClose');
-          if (!sidebar || !openBtn) return;
-          openBtn.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); sidebar.classList.add('open'); });
-          if (closeBtn) closeBtn.addEventListener('click', function(e) { e.preventDefault(); sidebar.classList.remove('open'); });
-          const links = sidebar.querySelectorAll('a.menu-item');
-          links.forEach(link => { link.addEventListener('click', function() { setTimeout(() => sidebar.classList.remove('open'), 100); }); });
-          sidebar.addEventListener('click', function(e) { if (e.target === sidebar) sidebar.classList.remove('open'); });
-          document.addEventListener('click', function(e){
-            const mu = document.querySelector('.menu-user');
-            if(!mu) return;
-            if (mu.contains(e.target)) { e.stopPropagation(); mu.classList.toggle('open'); }
-            else { mu.classList.remove('open'); }
-          });
-          document.addEventListener('keydown', function(e){
-            if (e.key === 'Escape') {
-              const mu = document.querySelector('.menu-user');
-              if(mu) mu.classList.remove('open');
-              sidebar.classList.remove('open');
-            }
-          });
-        });
-      </script>
-    
-      <div class="container">
-        <div class="card">
-          <h1>🏷️ Gestión de Tipos de Festivos</h1>
-          <p style="color: #666; margin-top: 0.5rem;">Crea, edita y elimina tipos de festivos del sistema</p>
-        </div>
-
-        <?php if ($message): ?>
-          <div class="alert alert-success"><?php echo htmlspecialchars($message); ?></div>
-        <?php endif; ?>
-
-        <?php if ($error): ?>
-          <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
-
-        <div class="stats">
-          <div class="stat-item">
-            <div class="stat-number"><?php echo count($types); ?></div>
-            <div class="stat-label">Tipos definidos</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-number">
-              <?php 
-                $stmt = $pdo->prepare('SELECT COUNT(*) as cnt FROM holidays');
-                $stmt->execute();
-                $holidays_count = $stmt->fetch()['cnt'];
-                echo $holidays_count;
-              ?>
-            </div>
-            <div class="stat-label">Festivos totales</div>
-          </div>
-        </div>
-
-        <button class="btn btn-primary btn-add-type" onclick="openAddModal()">➕ Agregar nuevo tipo</button>
-
-        <?php if (empty($types)): ?>
-          <div style="text-align: center; padding: 2rem; color: #666;">
-            <p>No hay tipos de festivos definidos. Crea uno para empezar.</p>
-          </div>
-        <?php else: ?>
-          <table class="type-table">
-            <thead>
-              <tr>
-                <th style="width: 50px;">Color</th>
-                <th>Código</th>
-                <th>Nombre</th>
-                <th>Orden</th>
-                <th style="width: 150px;">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach ($types as $type): ?>
-                <tr>
-                  <td>
-                    <span class="color-swatch" style="background-color: <?php echo htmlspecialchars($type['color']); ?>;"></span>
-                  </td>
-                  <td>
-                    <code><?php echo htmlspecialchars($type['code']); ?></code>
-                  </td>
-                  <td><?php echo htmlspecialchars($type['label']); ?></td>
-                  <td><?php echo $type['sort_order']; ?></td>
-                  <td>
-                    <div class="action-buttons">
-                      <button class="btn btn-primary btn-small" onclick="openEditModal(<?php echo $type['id']; ?>, '<?php echo htmlspecialchars($type['code']); ?>', '<?php echo htmlspecialchars($type['label']); ?>', '<?php echo htmlspecialchars($type['color']); ?>', <?php echo $type['sort_order']; ?>)">✏️ Editar</button>
-                      <button class="btn btn-danger btn-small" onclick="deleteType(<?php echo $type['id']; ?>)">🗑️ Eliminar</button>
-                    </div>
-                  </td>
-                </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        <?php endif; ?>
-      </div>
-
-      <footer class="footer">
-        <div class="container small muted">&copy; 2026 <a href="https://github.com/matatunos/GestionHorasTrabajo" target="_blank" rel="noopener noreferrer">GestionHoras</a></div>
-      </footer>
+  <div class="container">
+    <div class="card">
+      <h1>🏷️ Gestión de Tipos de Festivos</h1>
+      <p style="color: #666; margin-top: 0.5rem;">Crea, edita y elimina tipos de festivos del sistema</p>
     </div>
+
+    <?php if ($message): ?>
+      <div class="alert alert-success"><?php echo htmlspecialchars($message); ?></div>
+    <?php endif; ?>
+
+    <?php if ($error): ?>
+      <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
+    <?php endif; ?>
+
+    <div class="stats">
+      <div class="stat-item">
+        <div class="stat-number"><?php echo count($types); ?></div>
+        <div class="stat-label">Tipos definidos</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">
+          <?php 
+            $stmt = $pdo->prepare('SELECT COUNT(*) as cnt FROM holidays');
+            $stmt->execute();
+            $holidays_count = $stmt->fetch()['cnt'];
+            echo $holidays_count;
+          ?>
+        </div>
+        <div class="stat-label">Festivos totales</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-add-type" onclick="openAddModal()">➕ Agregar nuevo tipo</button>
+
+    <?php if (empty($types)): ?>
+      <div style="text-align: center; padding: 2rem; color: #666;">
+        <p>No hay tipos de festivos definidos. Crea uno para empezar.</p>
+      </div>
+    <?php else: ?>
+      <table class="type-table">
+        <thead>
+          <tr>
+            <th style="width: 50px;">Color</th>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Orden</th>
+            <th style="width: 150px;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($types as $type): ?>
+            <tr>
+              <td>
+                <span class="color-swatch" style="background-color: <?php echo htmlspecialchars($type['color']); ?>;"></span>
+              </td>
+              <td>
+                <code><?php echo htmlspecialchars($type['code']); ?></code>
+              </td>
+              <td><?php echo htmlspecialchars($type['label']); ?></td>
+              <td><?php echo $type['sort_order']; ?></td>
+              <td>
+                <div class="action-buttons">
+                  <button class="btn btn-primary btn-small" onclick="openEditModal(<?php echo $type['id']; ?>, '<?php echo htmlspecialchars($type['code']); ?>', '<?php echo htmlspecialchars($type['label']); ?>', '<?php echo htmlspecialchars($type['color']); ?>', <?php echo $type['sort_order']; ?>)">✏️ Editar</button>
+                  <button class="btn btn-danger btn-small" onclick="deleteType(<?php echo $type['id']; ?>)">🗑️ Eliminar</button>
+                </div>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    <?php endif; ?>
   </div>
+
+  <?php include __DIR__ . '/footer.php'; ?>
 
   <!-- Modal para agregar/editar tipo -->
   <div id="typeModal" class="modal">
