@@ -15,20 +15,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
   if ($action === 'add_holiday') {
     try {
       $date = $_POST['date'] ?? '';
+      $dates_bulk = $_POST['dates_bulk'] ?? '';
       $label = $_POST['label'] ?? '';
       $type = $_POST['type'] ?? 'holiday';
       $annual = isset($_POST['annual']) && $_POST['annual'] === 'on' ? 1 : 0;
-      
-      if (empty($date)) {
+
+      // If a bulk field is provided, accept multiple dates (one per line or comma-separated)
+      $dates = [];
+      if (!empty(trim($dates_bulk))) {
+        $lines = preg_split('/[\r\n,;]+/', $dates_bulk);
+        foreach ($lines as $ln) {
+          $d = trim($ln);
+          if ($d === '') continue;
+          // Accept YYYY-MM-DD or DD/MM/YYYY
+          if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $d)) {
+            $dates[] = $d;
+          } elseif (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $d)) {
+            $parts = explode('/', $d);
+            $dates[] = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+          }
+        }
+      } elseif (!empty($date)) {
+        $dates[] = $date;
+      }
+
+      if (empty($dates)) {
         http_response_code(400);
-        echo json_encode(['error' => 'Fecha requerida']);
+        echo json_encode(['error' => 'Fecha(s) requerida(s)']);
         exit;
       }
-      
+
       $stmt = $pdo->prepare('INSERT INTO holidays (user_id, date, label, type, annual) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE label = ?, type = ?, annual = ?');
-      $stmt->execute([$user['id'], $date, $label, $type, $annual, $label, $type, $annual]);
-      
-      echo json_encode(['success' => true, 'message' => 'Festivo agregado']);
+      $count = 0;
+      foreach ($dates as $d) {
+        try {
+          $stmt->execute([$user['id'], $d, $label, $type, $annual, $label, $type, $annual]);
+          $count++;
+        } catch (Exception $e) {
+          // skip invalid/duplicate errors for bulk insert
+        }
+      }
+
+      echo json_encode(['success' => true, 'message' => 'Festivos agregados', 'count' => $count]);
       exit;
     } catch (Exception $e) {
       http_response_code(500);
@@ -82,6 +110,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
       echo json_encode(['error' => $e->getMessage()]);
       exit;
     }
+  }
+}
+
+// AJAX: get holidays and entries for a given month (JSON)
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_month_data') {
+  header('Content-Type: application/json');
+  $year = intval($_GET['year'] ?? date('Y'));
+  $month = intval($_GET['month'] ?? 0);
+  if ($month < 1 || $month > 12) { http_response_code(400); echo json_encode(['error' => 'invalid_month']); exit; }
+  try {
+    $hstmt = $pdo->prepare('SELECT date,label,type,annual,user_id FROM holidays WHERE (user_id IS NULL OR user_id = ?) AND YEAR(date) = ? AND MONTH(date) = ?');
+    $hstmt->execute([$user['id'], $year, $month]);
+    $hols = $hstmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $est = $pdo->prepare('SELECT DISTINCT date FROM entries WHERE user_id = ? AND YEAR(date) = ? AND MONTH(date) = ?');
+    $est->execute([$user['id'], $year, $month]);
+    $ents = array_column($est->fetchAll(PDO::FETCH_ASSOC), 'date');
+
+    echo json_encode(['holidays' => $hols, 'entries' => $ents]);
+    exit;
+  } catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => $e->getMessage()]);
+    exit;
   }
 }
 
@@ -235,6 +287,19 @@ $pageStyles = '
     .modal-footer { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; }
     .modal-footer .btn { margin: 0; }
 ';
+  // Calendar styles for modal
+  $pageStyles .= '
+  .holiday-calendar { margin-top: 8px; }
+  .holiday-calendar .cal-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .holiday-calendar .cal-grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:4px; }
+  .holiday-calendar .cal-cell { padding:8px; background:white; border:1px solid #e6e6e6; text-align:center; cursor:pointer; border-radius:4px; min-height:36px; position:relative; }
+  .holiday-calendar .cal-cell.other-month { opacity:0.35; }
+  .holiday-calendar .cal-cell.holiday { background: rgba(255,230,230,0.9); }
+  .holiday-calendar .cal-cell.entry { box-shadow: inset 0 -3px 0 0 #34d399; }
+  .holiday-calendar .cal-cell.selected { outline: 2px solid #f97316; }
+  .holiday-calendar .cal-weekdays { display:grid; grid-template-columns: repeat(7, 1fr); gap:4px; margin-bottom:6px; }
+  .holiday-calendar .cal-weekdays div { font-size:12px; color:#666; text-align:center; }
+  ';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -259,7 +324,7 @@ $pageStyles = '
       <div class="holidays-header">
         <div><h1>📅 Festivos y Ausencias</h1></div>
         <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-          <button class="btn btn-primary" id="addHolidayBtn" style="white-space: nowrap;">➕ Agregar Festivo</button>
+          <button class="btn btn-primary" id="addHolidayBtn" style="white-space: nowrap;">➕ Agregar Ausencia</button>
           <a href="holiday-types.php" class="btn btn-secondary" style="white-space: nowrap;">🏷️ Gestionar Tipos</a>
           <div class="year-selector">
             <label>Año:</label>
@@ -405,13 +470,14 @@ $pageStyles = '
   <div id="holidayModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 id="modalTitle">Agregar Festivo</h2>
+        <h2 id="modalTitle">Agregar Ausencia</h2>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
       <form id="holidayForm" onsubmit="saveHoliday(event)">
         <div class="form-group">
-          <label for="holidayDate">Fecha:</label>
-          <input type="date" id="holidayDate" name="date" required>
+          <label>Selecciona fecha(s):</label>
+          <div style="margin-top:0.5rem; color:#555; font-size:0.95rem;">Usa el calendario para seleccionar uno o varios días. Navega mes/año desde el calendario.</div>
+          <div id="holidayCalendar" class="holiday-calendar" aria-hidden="false"></div>
         </div>
         <div class="form-group">
           <label for="holidayType">Tipo:</label>
@@ -443,6 +509,9 @@ $pageStyles = '
 
   <script>
     let editingDate = null;
+    let calYear = null;
+    let calMonth = null; // 1-12
+    const availableYears = <?php echo json_encode($availableYears); ?>;
 
     document.addEventListener('DOMContentLoaded', function() {
       const yearFilter = document.getElementById('yearFilter');
@@ -456,10 +525,11 @@ $pageStyles = '
       if (addHolidayBtn) {
         addHolidayBtn.addEventListener('click', function() {
           editingDate = null;
-          document.getElementById('modalTitle').textContent = 'Agregar Festivo';
+          document.getElementById('modalTitle').textContent = 'Agregar Ausencia';
           holidayForm.reset();
-          document.getElementById('holidayDate').valueAsDate = new Date();
+          const now = new Date(); calYear = now.getFullYear(); calMonth = now.getMonth()+1;
           holidayModal.classList.add('show');
+          setTimeout(renderCalendarForModal, 40);
         });
       }
 
@@ -504,7 +574,7 @@ $pageStyles = '
         });
       });
     });
-    
+
     function closeModal() {
       const holidayModal = document.getElementById('holidayModal');
       holidayModal.classList.remove('show');
@@ -515,12 +585,85 @@ $pageStyles = '
       const holidayModal = document.getElementById('holidayModal');
       editingDate = date;
       document.getElementById('modalTitle').textContent = 'Editar Festivo';
-      document.getElementById('holidayDate').value = date;
       document.getElementById('holidayLabel').value = label;
       document.getElementById('holidayType').value = type;
       document.getElementById('holidayAnnual').checked = annual || false;
       holidayModal.classList.add('show');
+      try {
+        const parts = date.split('-');
+        if (parts.length === 3) { calYear = parseInt(parts[0],10); calMonth = parseInt(parts[1],10); }
+      } catch(e){}
+      try { renderCalendarForModal(function(){ setSelectedDates([date]); }); } catch(e){}
     }
+
+    // Calendar helpers for modal: fetch month data and render small month view
+    function fetchMonthData(year, month) {
+      return fetch('holidays.php?action=get_month_data&year=' + encodeURIComponent(year) + '&month=' + encodeURIComponent(month))
+        .then(r => r.json());
+    }
+
+    function renderCalendarForModal(callback){
+      const cal = document.getElementById('holidayCalendar');
+      if (!cal) return;
+      if (!calYear || !calMonth) { const now = new Date(); calYear = now.getFullYear(); calMonth = now.getMonth()+1; }
+      const year = calYear; const month = calMonth;
+      fetchMonthData(year, month).then(data => {
+        const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        cal.innerHTML = '';
+        const hdr = document.createElement('div'); hdr.className = 'cal-header';
+        const prev = document.createElement('button'); prev.className = 'btn btn-sm'; prev.textContent = '◀';
+        const next = document.createElement('button'); next.className = 'btn btn-sm'; next.textContent = '▶';
+        const monthSel = document.createElement('select'); monthSel.className = '';
+        monthNames.forEach((mname, idx) => { const opt = document.createElement('option'); opt.value = idx+1; opt.textContent = mname; if (idx+1===month) opt.selected = true; monthSel.appendChild(opt); });
+        const yearSel = document.createElement('select');
+        const yrs = (availableYears && availableYears.length) ? availableYears : (() => { const r=[]; for(let y=year-3;y<=year+3;y++) r.push(y); return r; })();
+        yrs.forEach(yv => { const opt = document.createElement('option'); opt.value = yv; opt.textContent = yv; if (yv==year) opt.selected = true; yearSel.appendChild(opt); });
+        hdr.appendChild(prev); hdr.appendChild(monthSel); hdr.appendChild(yearSel); hdr.appendChild(next);
+        cal.appendChild(hdr);
+
+        const weekdays = document.createElement('div'); weekdays.className = 'cal-weekdays';
+        ['L','M','X','J','V','S','D'].forEach(w => { const d = document.createElement('div'); d.textContent = w; weekdays.appendChild(d); });
+        cal.appendChild(weekdays);
+
+        const grid = document.createElement('div'); grid.className = 'cal-grid';
+
+        const first = new Date(year, month-1, 1);
+        const startDow = (first.getDay() + 6) % 7;
+        const daysInMonth = new Date(year, month, 0).getDate();
+
+        const holMap = {};
+        (data.holidays || []).forEach(h => { holMap[h.date] = h; });
+        const entSet = new Set(data.entries || []);
+
+        const prevMonthDays = startDow;
+        const totalCells = Math.ceil((prevMonthDays + daysInMonth) / 7) * 7;
+        for (let i=0;i<totalCells;i++){
+          const cell = document.createElement('div'); cell.className = 'cal-cell';
+          const dayNum = i - prevMonthDays + 1;
+          if (dayNum < 1 || dayNum > daysInMonth) { cell.classList.add('other-month'); cell.textContent = ''; }
+          else {
+            const ymd = year + '-' + String(month).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0');
+            cell.textContent = dayNum;
+            cell.dataset.date = ymd;
+            if (holMap[ymd]) cell.classList.add('holiday');
+            if (entSet.has(ymd)) cell.classList.add('entry');
+            cell.addEventListener('click', function(){ if (cell.classList.contains('other-month')) return; cell.classList.toggle('selected'); });
+          }
+          grid.appendChild(cell);
+        }
+        cal.appendChild(grid);
+
+        if (typeof callback === 'function') callback();
+
+        prev.addEventListener('click', function(){ const nd = new Date(year, month-2, 1); calYear = nd.getFullYear(); calMonth = nd.getMonth()+1; renderCalendarForModal(); });
+        next.addEventListener('click', function(){ const nd = new Date(year, month, 1); calYear = nd.getFullYear(); calMonth = nd.getMonth()+1; renderCalendarForModal(); });
+        monthSel.addEventListener('change', function(){ calMonth = parseInt(this.value,10); renderCalendarForModal(); });
+        yearSel.addEventListener('change', function(){ calYear = parseInt(this.value,10); renderCalendarForModal(); });
+      }).catch(err => console.error('calendar fetch error', err));
+    }
+
+    function getSelectedDates(){ const picked=[]; document.querySelectorAll('#holidayCalendar .cal-cell.selected').forEach(c=>{ if (c.dataset && c.dataset.date) picked.push(c.dataset.date); }); return picked; }
+    function setSelectedDates(dates){ const s = new Set(dates||[]); document.querySelectorAll('#holidayCalendar .cal-cell[data-date]').forEach(c=> c.classList.toggle('selected', s.has(c.dataset.date))); }
 
     function deleteHoliday(date) {
       if (confirm('¿Estás seguro de que quieres eliminar este festivo?')) {
@@ -533,27 +676,33 @@ $pageStyles = '
         })
         .then(response => response.json())
         .then(data => {
-          if (data.success) {
-            window.location.reload();
-          } else {
-            alert('Error: ' + (data.error || 'No se pudo eliminar'));
-          }
-        })
+            if (data.success) {
+              refreshHolidays();
+            } else {
+              alert('Error: ' + (data.error || 'No se pudo eliminar'));
+            }
+          })
         .catch(error => console.error('Error:', error));
       }
     }
 
     function saveHoliday(event) {
       event.preventDefault();
-      const date = document.getElementById('holidayDate').value;
       const label = document.getElementById('holidayLabel').value;
       const type = document.getElementById('holidayType').value;
       const annual = document.getElementById('holidayAnnual').checked ? 'on' : '';
-      const action = editingDate ? 'edit_holiday' : 'add_holiday';
 
-      let bodyParams = `action=${action}&date=${encodeURIComponent(date)}&label=${encodeURIComponent(label)}&type=${encodeURIComponent(type)}`;
-      if (annual) {
-        bodyParams += `&annual=${encodeURIComponent(annual)}`;
+      let bodyParams = '';
+      if (editingDate) {
+        // editing a single existing holiday (do not change date here)
+        bodyParams = `action=edit_holiday&date=${encodeURIComponent(editingDate)}&label=${encodeURIComponent(label)}&type=${encodeURIComponent(type)}`;
+        if (annual) bodyParams += `&annual=${encodeURIComponent(annual)}`;
+      } else {
+        const selected = getSelectedDates();
+        if (!selected || selected.length === 0) { alert('Selecciona al menos una fecha en el calendario.'); return; }
+        const datesBulk = selected.join('\n');
+        bodyParams = `action=add_holiday&label=${encodeURIComponent(label)}&type=${encodeURIComponent(type)}&dates_bulk=${encodeURIComponent(datesBulk)}`;
+        if (annual) bodyParams += `&annual=${encodeURIComponent(annual)}`;
       }
 
       fetch('holidays.php', {
@@ -566,7 +715,11 @@ $pageStyles = '
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          window.location.reload();
+          closeModal();
+          refreshHolidays();
+          if (data.count && data.count > 1) {
+            alert('✓ Se añadieron ' + data.count + ' festivos.');
+          }
         } else {
           alert('Error: ' + (data.error || 'No se pudo guardar'));
         }
@@ -592,6 +745,28 @@ $pageStyles = '
           section.classList.add('hidden');
         }
       });
+    }
+
+    // Fetch updated HTML for current year and replace parts of the page
+    function refreshHolidays(){
+      try{
+        const yearFilter = document.getElementById('yearFilter');
+        const year = yearFilter ? yearFilter.value : '';
+        const url = 'holidays.php' + (year ? ('?year=' + encodeURIComponent(year)) : '');
+        fetch(url).then(r => r.text()).then(html => {
+          const tmp = document.createElement('div'); tmp.innerHTML = html;
+          const newStats = tmp.querySelector('.stats-summary');
+          const newContainer = tmp.querySelector('#holidaysContainer');
+          const curStats = document.querySelector('.stats-summary');
+          const curContainer = document.getElementById('holidaysContainer');
+          if (newStats && curStats) curStats.innerHTML = newStats.innerHTML;
+          if (newContainer && curContainer) curContainer.innerHTML = newContainer.innerHTML;
+          // Rebind handlers for edit/delete buttons inside the refreshed container
+          // (they use inline onclick attributes, so they remain bound). 
+          // Re-apply filtering to respect current checkbox state
+          updateDisplay();
+        }).catch(err => { console.error('refreshHolidays error', err); window.location.reload(); });
+      }catch(e){ console.error('refreshHolidays', e); window.location.reload(); }
     }
   </script>
 </body>

@@ -1709,6 +1709,35 @@ tbody.month-group.collapsed tr.weekend td:not(.month) { opacity: 0.95; }
 .sheet tbody tr.holiday td {
     background-color: rgba(255, 230, 230, 0.8); /* light red/pink */
 }
+
+/* Highlight expected workdays with missing data */
+.sheet tbody tr.missing-data td {
+    background-color: rgba(255, 245, 196, 0.98); /* stronger pale yellow */
+    border-left: 4px solid #f97316; /* amber/orange accent */
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02);
+}
+.sheet tbody tr.missing-data td:first-child {
+    position: relative;
+    padding-left: 40px; /* space for icon */
+}
+.sheet tbody tr.missing-data td:first-child::before {
+    content: "!";
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    border-radius: 50%;
+    background: #dc2626; /* red badge */
+    color: #fff;
+    font-weight: 700;
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+    font-size: 12px;
+}
 .sheet tbody tr.holiday td:first-child {
     position: relative;
     padding-left: 28px;

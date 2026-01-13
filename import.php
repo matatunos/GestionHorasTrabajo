@@ -689,7 +689,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
 <div class="container">
   <div class="card">
     <h1>Importar Fichajes</h1>
-    
+    <!-- Admin backup controls moved to profile.php (admin-only) -->
     <?php if ($message): ?>
       <?php
         $alertClass = 'alert-info';
@@ -921,6 +921,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
 
 <script src="importFichajes.js"></script>
 <script>
+(function(){
+// Admin backup controls moved to profile.php (admin-only)
 (function() {
   const fileInput = document.getElementById('html-file');
   const yearInput = document.getElementById('year');

@@ -7,6 +7,15 @@ $user = current_user();
 require_login();
 $pdo = get_pdo();
 
+// Load holiday/absence types for the quick-add modal
+$holidayTypes = [];
+$absenceLabels = [];
+try {
+  $ht = $pdo->query("SELECT code,label FROM holiday_types ORDER BY sort_order, id");
+  $holidayTypes = $ht->fetchAll(PDO::FETCH_ASSOC);
+  foreach ($holidayTypes as $h) $absenceLabels[$h['code']] = $h['label'];
+} catch (Throwable $e) { /* ignore */ }
+
 // Handle CSV export request
 if (!empty($_GET['export_csv'])) {
   $year = intval($_GET['year'] ?? date('Y'));
@@ -89,49 +98,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_date'])) {
 
 // handle POST create/update entry for current user
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['date'])) {
-  $date = $_POST['date'];
-  $data = [
-    'start' => $_POST['start'] ?: null,
-    'coffee_out' => $_POST['coffee_out'] ?: null,
-    'coffee_in' => $_POST['coffee_in'] ?: null,
-    'lunch_out' => $_POST['lunch_out'] ?: null,
-    'lunch_in' => $_POST['lunch_in'] ?: null,
-    'end' => $_POST['end'] ?: null,
-    'note' => $_POST['note'] ?: '',
-    'absence_type' => $_POST['absence_type'] ?: null,
-  ];
-  
-  // Validate time entry consistency
-  $validation = validate_time_entry($data);
-  if (!$validation['valid']) {
-    // Return validation error
+  try {
+    // Log incoming POST briefly for debugging add/save issues
+    if (empty($_SERVER['HTTP_X_REQUESTED_WITH']) || $_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest') {
+      error_log('entry save (non-AJAX) POST keys: ' . json_encode(array_keys($_POST)));
+    } else {
+      error_log('entry save (AJAX) POST keys: ' . json_encode(array_keys($_POST)));
+    }
+    $date = $_POST['date'];
+    $data = [
+      'start' => $_POST['start'] ?: null,
+      'coffee_out' => $_POST['coffee_out'] ?: null,
+      'coffee_in' => $_POST['coffee_in'] ?: null,
+      'lunch_out' => $_POST['lunch_out'] ?: null,
+      'lunch_in' => $_POST['lunch_in'] ?: null,
+      'end' => $_POST['end'] ?: null,
+      'note' => $_POST['note'] ?: '',
+      'absence_type' => $_POST['absence_type'] ?: null,
+    ];
+
+    // Validate time entry consistency
+    $validation = validate_time_entry($data);
+    if (!$validation['valid']) {
+      // Return validation error
+      if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => false, 'error' => 'validation_failed', 'errors' => $validation['errors']]);
+        exit;
+      }
+      // For non-AJAX, redirect with error message
+      header('Location: index.php?year=' . urlencode($year) . '&error=validation'); exit;
+    }
+
+    // upsert by user_id+date
+    $stmt = $pdo->prepare('SELECT id FROM entries WHERE user_id = ? AND date = ? LIMIT 1');
+    $stmt->execute([$user['id'], $date]);
+    $row = $stmt->fetch();
+    if ($row){
+      $stmt = $pdo->prepare('UPDATE entries SET start=?,coffee_out=?,coffee_in=?,lunch_out=?,lunch_in=?,end=?,note=?,absence_type=? WHERE id=?');
+      $stmt->execute([$data['start'],$data['coffee_out'],$data['coffee_in'],$data['lunch_out'],$data['lunch_in'],$data['end'],$data['note'],$data['absence_type'],$row['id']]);
+    } else {
+      $stmt = $pdo->prepare('INSERT INTO entries (user_id,date,start,coffee_out,coffee_in,lunch_out,lunch_in,end,note,absence_type) VALUES (?,?,?,?,?,?,?,?,?,?)');
+      $stmt->execute([$user['id'],$date,$data['start'],$data['coffee_out'],$data['coffee_in'],$data['lunch_out'],$data['lunch_in'],$data['end'],$data['note'],$data['absence_type']]);
+    }
+    // if AJAX request, return JSON success instead of redirect
     if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
       header('Content-Type: application/json');
-      echo json_encode(['ok' => false, 'error' => 'validation_failed', 'errors' => $validation['errors']]);
+      echo json_encode(['ok' => true]);
       exit;
     }
-    // For non-AJAX, redirect with error message (you could implement session flash messages)
-    header('Location: index.php?year=' . urlencode($year) . '&error=validation'); exit;
-  }
-  
-  // upsert by user_id+date
-  $stmt = $pdo->prepare('SELECT id FROM entries WHERE user_id = ? AND date = ? LIMIT 1');
-  $stmt->execute([$user['id'], $date]);
-  $row = $stmt->fetch();
-  if ($row){
-    $stmt = $pdo->prepare('UPDATE entries SET start=?,coffee_out=?,coffee_in=?,lunch_out=?,lunch_in=?,end=?,note=?,absence_type=? WHERE id=?');
-    $stmt->execute([$data['start'],$data['coffee_out'],$data['coffee_in'],$data['lunch_out'],$data['lunch_in'],$data['end'],$data['note'],$data['absence_type'],$row['id']]);
-  } else {
-    $stmt = $pdo->prepare('INSERT INTO entries (user_id,date,start,coffee_out,coffee_in,lunch_out,lunch_in,end,note,absence_type) VALUES (?,?,?,?,?,?,?,?,?,?)');
-    $stmt->execute([$user['id'],$date,$data['start'],$data['coffee_out'],$data['coffee_in'],$data['lunch_out'],$data['lunch_in'],$data['end'],$data['note'],$data['absence_type']]);
-  }
-  // if AJAX request, return JSON success instead of redirect
-  if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => true]);
+    header('Location: index.php?year=' . urlencode($year)); exit;
+  } catch (Throwable $e) {
+    error_log('entry save error: ' . $e->getMessage() . ' POST:' . substr(json_encode($_POST),0,1000));
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+      header('Content-Type: application/json'); http_response_code(500);
+      echo json_encode(['ok' => false, 'error' => 'server_exception', 'message' => $e->getMessage()]);
+      exit;
+    }
+    // Non-AJAX fallback: show a simple error message
+    http_response_code(500);
+    echo 'Server error while saving entry.';
     exit;
   }
-  header('Location: index.php?year=' . urlencode($year)); exit;
 }
 
 // handle POST create/update incident for current user
@@ -287,47 +315,14 @@ $holidayMap = [];
           }
         ?>
       </select></label>
-      <label class="form-check form-label"><input id="global-hide-weekends" type="checkbox" <?php echo $hideWeekends ? 'checked' : ''; ?>><span>Ocultar fines de semana</span></label>
+      
     </div>
 
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
-      <button class="btn btn-primary" type="button" id="openAddEntryBtn">Añadir</button>
       <button class="btn btn-secondary" type="button" id="openIncidentBtn">📋 Gestionar incidencias</button>
     </div>
 
-    <!-- Modal for adding a work entry (mirrors settings.php behavior) -->
-    <div id="entryModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
-      <div id="entryModal" class="modal-dialog entry-modal" role="dialog" aria-modal="true">
-        <div class="modal-header">
-          <h3 class="modal-title">Añadir fichaje</h3>
-        </div>
-        <div class="modal-body">
-        <form id="entry-form" method="post" class="row-form entry-form">
-          <label class="form-label">Fecha <input id="entry-date" class="form-control" type="date" name="date" required value="<?php echo htmlspecialchars($initialDate); ?>"></label>
-          <label class="form-label">Tipo de día <select class="form-control" id="entry-absence-type" name="absence_type" onchange="document.getElementById('entry-times').style.display = this.value ? 'none' : 'block';">
-            <option value="">Día normal (con fichaje)</option>
-            <option value="vacation">Vacaciones</option>
-            <option value="illness">Enfermedad</option>
-            <option value="permit">Permiso</option>
-            <option value="other">Otro (especificar)</option>
-          </select></label>
-          <div id="entry-times">
-            <label class="form-label">Entrada <input class="form-control time-input" type="text" name="start"></label>
-            <label class="form-label">Salida café <input class="form-control time-input" type="text" name="coffee_out"></label>
-            <label class="form-label">Entrada café <input class="form-control time-input" type="text" name="coffee_in"></label>
-            <label class="form-label">Salida comida <input class="form-control time-input" type="text" name="lunch_out"></label>
-            <label class="form-label">Entrada comida <input class="form-control time-input" type="text" name="lunch_in"></label>
-            <label class="form-label">Hora salida <input class="form-control time-input" type="text" name="end"></label>
-          </div>
-          <label class="form-label">Nota <input class="form-control" type="text" name="note"></label>
-          <div class="form-actions modal-actions mt-2">
-            <button class="btn btn-secondary" type="button" id="closeEntryModal">Cancelar</button>
-            <button class="btn btn-primary" type="submit">Guardar</button>
-          </div>
-        </form>
-        </div>
-      </div>
-    </div>
+    <!-- Add-entry modal removed (adding entries is handled elsewhere) -->
 
     <!-- Modal for managing incidents -->
     <div id="incidentModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
@@ -371,9 +366,12 @@ $holidayMap = [];
 
     <form id="filters-form" method="get" class="row-form mt-2">
       <!-- keep server-side checkbox in sync with global control (hidden to avoid duplicate UI) -->
-      <label style="display:none;"><input type="checkbox" name="hide_weekends" value="1" <?php echo $hideWeekends ? 'checked' : ''; ?>> Ocultar fines de semana</label>
-      <label class="form-check"><input type="checkbox" class="auto-filter-trigger" name="hide_holidays" value="1" <?php echo $hideHolidays ? 'checked' : ''; ?>><span>Ocultar festivos</span></label>
-      <label class="form-check"><input type="checkbox" class="auto-filter-trigger" name="hide_vacations" value="1" <?php echo $hideVacations ? 'checked' : ''; ?>><span>Ocultar vacaciones</span></label>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <strong>Ocultar:</strong>
+        <label class="form-check"><input type="checkbox" class="auto-filter-trigger" name="hide_weekends" value="1" <?php echo $hideWeekends ? 'checked' : ''; ?>><span>Fines de semana</span></label>
+        <label class="form-check"><input type="checkbox" class="auto-filter-trigger" name="hide_holidays" value="1" <?php echo $hideHolidays ? 'checked' : ''; ?>><span>Festivos</span></label>
+        <label class="form-check"><input type="checkbox" class="auto-filter-trigger" name="hide_vacations" value="1" <?php echo $hideVacations ? 'checked' : ''; ?>><span>Vacaciones</span></label>
+      </div>
       
       <!-- New advanced filters -->
       <div style="border-left:1px solid #ccc; padding-left:12px; margin-left:12px;">
@@ -563,7 +561,13 @@ $holidayMap = [];
             if ($hideHolidays && $ht === 'holiday') continue;
             if ($hideVacations && $ht === 'vacation') continue;
           }
-              $calc = compute_day($e, $config);
+                      $calc = compute_day($e, $config);
+
+                      // Determine if this is an expected workday that currently has no recorded times
+                      $incidentsForDay = get_incidents_for_date($user['id'], $d, $pdo);
+                      $hasFullDayIncident = false;
+                      foreach ($incidentsForDay as $ii) { if (($ii['incident_type'] ?? '') === 'full_day') { $hasFullDayIncident = true; break; } }
+                      $isExpectedButMissing = (intval($calc['expected_minutes'] ?? 0) > 0) && ($calc['worked_minutes_for_display'] === null) && !$isNonWorkingDay && !$hasFullDayIncident;
 
               // Avoid showing "No café / Sin comida / Sin dietas" labels on non-working days
               // (weekends, holidays, vacations, etc.). If data is missing there, keep it neutral.
@@ -630,7 +634,7 @@ $holidayMap = [];
             $extraClass = $t === 'vacation' ? ' vacation' : ($t === 'personal' ? ' personal' : ($t === 'enfermedad' ? ' illness' : ($t === 'permiso' ? ' permiso' : ' holiday')));
         }
       ?>
-      <tr class="<?php echo $rowClass . $extraClass; ?>">
+      <tr class="<?php echo $rowClass . $extraClass . (isset($isExpectedButMissing) && $isExpectedButMissing ? ' missing-data' : ''); ?>">
         <?php
           $dateLabel = htmlspecialchars($d);
           $isWeekend = ($dow >= 6);
@@ -812,9 +816,9 @@ $holidayMap = [];
   const tableContainerSelector = '.table-responsive';
   const filtersForm = document.getElementById('filters-form');
   const entryForm = document.getElementById('entry-form');
-  const entryModalOverlay = document.getElementById('entryModalOverlay');
-  const openAddEntryBtn = document.getElementById('openAddEntryBtn');
-  const closeEntryModalBtn = document.getElementById('closeEntryModal');
+  const entryModalOverlay = null; // add-entry modal removed
+  const openAddEntryBtn = null;
+  const closeEntryModalBtn = null;
   // Global controls sync: date picker and hide-weekends toggle
   const globalDate = document.getElementById('global-date');
   const entryDateInput = document.getElementById('entry-date') || (entryForm ? entryForm.querySelector('input[name="date"]') : null);
@@ -831,6 +835,11 @@ $holidayMap = [];
     try {
       // keep date synced with global date
       if (globalDate && entryDateInput) entryDateInput.value = globalDate.value;
+      if (entryForm) {
+        try { entryForm.reset(); } catch(e){}
+        // ensure times block visible for default (normal day)
+        try { document.getElementById('entry-times').style.display = 'block'; } catch(e){}
+      }
       const first = entryForm ? (entryForm.querySelector('input[name="start"]') || entryForm.querySelector('input,select,textarea')) : null;
       if (first) first.focus();
     } catch(e){}
@@ -840,9 +849,7 @@ $holidayMap = [];
     entryModalOverlay.style.display = 'none';
     entryModalOverlay.setAttribute('aria-hidden', 'true');
   }
-  if (openAddEntryBtn) openAddEntryBtn.addEventListener('click', openEntryModal);
-  if (closeEntryModalBtn) closeEntryModalBtn.addEventListener('click', closeEntryModal);
-  if (entryModalOverlay) entryModalOverlay.addEventListener('click', function(e){ if (e.target === entryModalOverlay) closeEntryModal(); });
+  // add-entry modal removed; no event listeners needed
 
   // Modal open/close for managing incidents
   const openIncidentBtn = document.getElementById('openIncidentBtn');
@@ -954,7 +961,6 @@ $holidayMap = [];
     } catch (e) {}
   }
 
-  const globalHide = document.getElementById('global-hide-weekends');
   const filtersHideInput = filtersForm ? filtersForm.querySelector('input[name="hide_weekends"]') : null;
   const entryYear = document.getElementById('entry-year');
   function applyHideWeekendsClient(checked){ document.querySelectorAll('tr.weekend').forEach(function(tr){ tr.style.display = checked ? 'none' : ''; }); }
@@ -980,19 +986,19 @@ $holidayMap = [];
       } catch(e){ console.error('year change error', e); }
     });
   }
-  if (globalHide){
-    try{ if (filtersHideInput) filtersHideInput.checked = globalHide.checked; applyHideWeekendsClient(globalHide.checked); }catch(e){}
-    globalHide.addEventListener('change', function(){
-      try{
-        if (filtersHideInput) filtersHideInput.checked = this.checked;
-        applyHideWeekendsClient(this.checked);
-        if (filtersForm){
+  // Initialize visibility from the filters checkbox and keep it in sync
+  try{ if (filtersHideInput) applyHideWeekendsClient(filtersHideInput.checked); } catch(e){}
+  if (filtersHideInput) {
+    try{
+      filtersHideInput.addEventListener('change', function(){
+        try{
+          applyHideWeekendsClient(this.checked);
           fetchTable();
           const qs = buildQueryString();
           history.replaceState(null, '', location.pathname + (qs ? ('?' + qs) : ''));
-        }
-      }catch(e){}
-    });
+        }catch(e){}
+      });
+    }catch(e){}
   }
 
   // Auto-trigger AJAX for all auto-filter-trigger elements (no submit button needed)
@@ -1316,8 +1322,16 @@ $holidayMap = [];
       fd.append('note', getVal(11,'note'));
       if (tr.dataset._absence_type) fd.append('absence_type', tr.dataset._absence_type);
       fetch(location.pathname + location.search, { method: 'POST', body: fd, headers: {'X-Requested-With':'XMLHttpRequest'} })
-        .then(r => r.json()).then(j => { if (j && j.ok){ tr.classList.remove('editing'); fetchTable(); } else { alert('Error guardando'); } })
-        .catch(err => { console.error(err); alert('Error de red'); });
+        .then(r => r.text()).then(text => {
+          try { const j = JSON.parse(text);
+            if (j && j.ok){ tr.classList.remove('editing'); fetchTable(); }
+            else if (j && j.errors && Array.isArray(j.errors)) { alert('Errores en los datos:\n\n' + j.errors.join('\n')); }
+            else { alert('Error guardando: ' + (j && j.error ? j.error : JSON.stringify(j))); }
+          } catch(e) {
+            console.warn('Non-JSON response saving entry:', text);
+            alert('Respuesta inesperada del servidor: ' + (text || '[vacía]'));
+          }
+        }).catch(err => { console.error(err); alert('Error de red'); });
       return;
     }
 

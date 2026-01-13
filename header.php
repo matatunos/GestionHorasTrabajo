@@ -21,11 +21,10 @@ $site_name = $site_cfg['site_name'] ?? 'GestionHoras';
       <div class="menu-section">
         <?php if (!empty($current)): ?>
           <a class="menu-item" href="dashboard.php">Dashboard</a>
+          <a class="menu-item" href="index.php">Registro horario</a>
           <a class="menu-item" href="holidays.php">📅 Festivos y Ausencias</a>
         <?php endif; ?>
-        <a class="menu-item" href="index.php">Registro horario</a>
         <!-- 'Años' link removed: management consolidated into settings.php -->
-        <a class="menu-item" href="import.php">Importar Fichajes</a>
         <?php if (!empty($current) && $current['is_admin']): ?>
           <a class="menu-item" href="reports.php">Reportes</a>
           <a class="menu-item" href="settings.php">Configuración</a>
@@ -37,12 +36,16 @@ $site_name = $site_cfg['site_name'] ?? 'GestionHoras';
             <span class="menu-user-name"><?php echo htmlspecialchars($current['username']); ?></span>
             <div class="menu-user-dropdown" role="menu">
               <a class="dropdown-item" href="profile.php">👤 Perfil</a>
+              <a class="dropdown-item" href="import.php#importexport">🔁 Importar/Exportar</a>
               <a class="dropdown-item" href="holidays.php">📅 Festivos y Ausencias</a>
               <a class="dropdown-item" href="#" onclick="openScheduleSuggestions(event)">⚡ Sugerencias de Horario (Beta)</a>
               <a class="dropdown-item" href="import-calendar-beta.php">📅 Importar Calendario (Beta)</a>
               <a class="dropdown-item" href="data_quality.php">📊 Calidad de Datos</a>
               <a class="dropdown-item" href="chrome-addon-help.php">🧩 Extensión Chrome</a>
               <a class="dropdown-item" href="extension-tokens.php">🔐 Tokens</a>
+              <?php if (!empty($current) && !empty($current['is_admin'])): ?>
+                <a class="dropdown-item" href="admin-backup.php">🗄️ Backup</a>
+              <?php endif; ?>
               <a class="dropdown-item" href="logout.php">🚪 Salir</a>
             </div>
           </div>
@@ -126,6 +129,22 @@ $site_name = $site_cfg['site_name'] ?? 'GestionHoras';
           sidebar.classList.remove('open');
         }
       });
+
+      // Hide empty header on desktop: if header-brand and header-actions are empty, remove visual header to avoid blank bar
+      (function(){
+        try {
+          const hdr = document.querySelector('.header');
+          if (!hdr) return;
+          const brand = hdr.querySelector('.header-brand');
+          const actions = hdr.querySelector('.header-actions');
+          const isDesktop = window.matchMedia && window.matchMedia('(min-width: 768px)').matches;
+          const brandEmpty = brand && brand.innerText.trim() === '';
+          const actionsEmpty = actions && actions.innerText.trim() === '';
+          if (isDesktop && brandEmpty && actionsEmpty) {
+            hdr.style.display = 'none';
+          }
+        } catch (e) { /* ignore */ }
+      })();
     });
     </script>
 

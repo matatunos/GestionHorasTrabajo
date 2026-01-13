@@ -359,7 +359,6 @@ function svg_sparkline(array $values, $w=120, $h=28){
       <?php else: ?>
         <a class="btn btn-secondary" href="index.php?year=<?php echo urlencode($year); ?>">Ver registro</a>
       <?php endif; ?>
-      <a class="btn btn-secondary" href="import.php">Importar fichajes</a>
     </div>
 
     <!-- Alertas -->
