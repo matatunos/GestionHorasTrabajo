@@ -924,18 +924,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
 (function(){
 // Admin backup controls moved to profile.php (admin-only)
 (function() {
-  const fileInput = document.getElementById('html-file');
-  const yearInput = document.getElementById('year');
-  const loadPreviewBtn = document.getElementById('load-preview-btn');
-  const clearBtn = document.getElementById('clear-btn');
-  const previewSection = document.getElementById('preview-section');
-  const previewTbody = document.getElementById('preview-tbody');
-  const recordCount = document.getElementById('record-count');
-  const importDataInput = document.getElementById('import-data');
-  const importYearInput = document.getElementById('import-year');
-  const importSubmitForm = document.getElementById('import-submit-form');
+  // Prefer IDs but fall back to searching by other selectors/text to be resilient
+  const fileInput = document.getElementById('html-file') || document.querySelector('input[type=file][name="html_file"]');
+  const yearInput = document.getElementById('year') || document.querySelector('input[name="year"]');
+  const loadPreviewBtn = document.getElementById('load-preview-btn') || Array.from(document.querySelectorAll('button')).find(b => /cargar\s+y\s+previsualizar/i.test(b.textContent));
+  const clearBtn = document.getElementById('clear-btn') || Array.from(document.querySelectorAll('button')).find(b => /limpiar/i.test(b.textContent));
+  const previewSection = document.getElementById('preview-section') || document.querySelector('.preview-section');
+  const previewTbody = document.getElementById('preview-tbody') || document.querySelector('#preview-table tbody') || document.querySelector('.preview-table tbody');
+  const recordCount = document.getElementById('record-count') || document.querySelector('[id^="record-count"]') || document.querySelector('.record-count');
+  const importDataInput = document.getElementById('import-data') || document.querySelector('input[name="import_data"]');
+  const importYearInput = document.getElementById('import-year') || document.querySelector('input[name="year"][id^="import"]') || document.querySelector('input[name="year"]');
+  const importSubmitForm = document.getElementById('import-submit-form') || document.querySelector('#import-submit-form') || document.querySelector('form[action][method="post"]');
   
   let currentRecords = [];
+
+  // Basic sanity checks: ensure required elements exist
+  if (!fileInput || !yearInput || !loadPreviewBtn || !previewSection || !previewTbody || !importDataInput || !importYearInput || !importSubmitForm) {
+    console.error('Import UI: elementos requeridos no encontrados', {fileInput, yearInput, loadPreviewBtn, previewSection, previewTbody, importDataInput, importYearInput, importSubmitForm});
+    // Show user-friendly message in page if possible
+    try {
+      const notice = document.createElement('div');
+      notice.style.background = '#fff4e5';
+      notice.style.border = '1px solid #ffd89b';
+      notice.style.padding = '10px';
+      notice.style.borderRadius = '6px';
+      notice.style.margin = '10px 0';
+      notice.textContent = 'Advertencia: la interfaz de importación no está completamente disponible en este entorno. Revisa la consola para más detalles.';
+      const container = document.querySelector('.import-form') || document.body;
+      container.insertBefore(notice, container.firstChild);
+    } catch (e) {
+      // ignore
+    }
+    // Do not proceed attaching handlers when elements are missing
+    return;
+  }
 
   function readFileAsText(file) {
     return new Promise((resolve, reject) => {
