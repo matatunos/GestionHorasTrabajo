@@ -161,7 +161,7 @@ $holidays = array_map(function($h) use ($user) {
     'type' => $h['type'] ?? 'holiday',
     'annual' => $h['annual'],
     'user_id' => $h['user_id'],
-    'is_own' => !empty($h['user_id']) && $h['user_id'] == $user['id']  // Mostrar botones solo en festivos del usuario actual
+    'is_own' => ($user['is_admin'] || (!empty($h['user_id']) && $h['user_id'] == $user['id']))  // Mostrar botones si es admin o es festivo del usuario actual
   ];
 }, $holidays);
 
