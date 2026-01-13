@@ -780,7 +780,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
       
       <div style="margin-top: 15px; padding: 10px; background: rgba(33, 150, 243, 0.1); border: 1px solid rgba(33, 150, 243, 0.3); border-radius: 5px;">
         <strong>Ejemplo de formato CSV:</strong>
-        <pre style="font-size: 0.85rem; margin: 10px 0; color: #fff; background: rgba(0, 0, 0, 0.3); padding: 8px; border-radius: 4px;">Fecha,Entrada,Salida,Nota
+        <pre style="font-size: 0.85rem; margin: 10px 0; color: #000; background: rgba(200, 200, 200, 0.3); padding: 8px; border-radius: 4px;">Fecha,Entrada,Salida,Nota
 2026-01-13,09:00,17:30,Día normal
 2026-01-14,09:15,17:45,Llegué tarde
 2026-01-15,09:00,13:00,</pre>
