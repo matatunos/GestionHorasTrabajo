@@ -42,6 +42,7 @@ echo -e "${BLUE}[1/8] Verificando e instalando dependencias del sistema...${NC}"
 REQUIRED_PACKAGES=(
     "apache2"
     "git"
+    "poppler-utils"
 )
 
 PACKAGES_TO_INSTALL=()
