@@ -28,27 +28,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($mimeType !== 'application/pdf') {
           $error = 'El archivo debe ser un PDF válido.';
         } else {
-          // Extraer texto del PDF usando pdftotext
-          $tempText = tempnam(sys_get_temp_dir(), 'pdf_');
-          $cmd = 'pdftotext ' . escapeshellarg($filePath) . ' ' . escapeshellarg($tempText) . ' 2>&1';
-          $output = [];
-          exec($cmd, $output, $returnCode);
-          
-          if ($returnCode !== 0) {
-            $error = 'Error al procesar el PDF: ' . implode(' ', $output);
+          // Verificar que pdftotext está disponible
+          if (!shell_exec('which pdftotext')) {
+            $error = 'El sistema no tiene instalada la herramienta de procesamiento de PDF (pdftotext). Contacta al administrador.';
           } else {
-            $text = file_get_contents($tempText);
-            unlink($tempText);
+            // Extraer texto del PDF usando pdftotext
+            $tempText = tempnam(sys_get_temp_dir(), 'pdf_');
+            $cmd = 'pdftotext ' . escapeshellarg($filePath) . ' ' . escapeshellarg($tempText) . ' 2>&1';
+            $output = [];
+            exec($cmd, $output, $returnCode);
             
-            // El año se detectará automáticamente dentro de parseCalendarText
-            // Usamos el año del formulario como fallback
-            $previewYear = intval($_POST['year'] ?? date('Y'));
-            
-            // Extraer fechas (la función detectará automáticamente el año)
-            $preview = parseCalendarText($text, $previewYear);
-            
-            if (empty($preview)) {
-              $error = 'No se encontraron fechas en el formato esperado (día de mes, Nombre).';
+            if ($returnCode !== 0) {
+              $error = 'Error al procesar el PDF: ' . implode(' ', $output);
+              if (file_exists($tempText)) {
+                unlink($tempText);
+              }
+            } else {
+              $text = file_get_contents($tempText);
+              unlink($tempText);
+              
+              // El año se detectará automáticamente dentro de parseCalendarText
+              // Usamos el año del formulario como fallback
+              $previewYear = intval($_POST['year'] ?? date('Y'));
+              
+              // Extraer fechas (la función detectará automáticamente el año)
+              $preview = parseCalendarText($text, $previewYear);
+              
+              if (empty($preview)) {
+                $error = 'No se encontraron fechas en el formato esperado (día de mes, Nombre).';
+              }
             }
           }
         }
