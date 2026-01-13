@@ -1,0 +1,45 @@
+/* Dashboard theme overrides: compact header, improved typography, neutral cards, grid layout */
+:root {
+  --dash-surface: #ffffff; /* neutral card background */
+  --dash-text: #0f1724;
+  --dash-muted: #475569;
+  --dash-accent: #2563eb;
+}
+
+/* Compact header */
+.header { height: 52px; padding: 0 1rem; }
+.dashboard-header h1 { font-size: 1.25rem; margin: 0; color: var(--dash-text); }
+.dashboard-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:0.6rem 0.8rem; }
+.dashboard-actions { display:flex; gap:0.5rem; align-items:center; }
+
+/* Improve typography for dashboard */
+.page-dashboard { font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+.card { background: var(--dash-surface); color: var(--dash-text); border-radius: 10px; box-shadow: 0 6px 20px rgba(16,24,40,0.06); border: 1px solid #e6eef8; }
+.card h3, .card h1 { color: var(--dash-text); }
+
+/* Dashboard grid */
+.dashboard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; align-items: start; }
+@media (max-width: 1100px) { .dashboard-grid { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 600px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+/* Card body spacing and compact variant */
+.card-body { padding: 1rem; }
+.card.compact .card-body { padding: 0.6rem; }
+.card .value { color: var(--dash-accent); font-size: 1.25rem; }
+
+/* Buttons more neutral */
+.btn-primary { background: var(--dash-accent); color: #fff; border-radius: 8px; padding: 0.5rem 0.8rem; box-shadow: none; }
+.btn-secondary { background: transparent; border: 1px solid #e6eef8; color: var(--dash-muted); }
+
+/* Table and sheets lighter */
+.sheet thead th { background: transparent; color: var(--dash-muted); }
+.sheet td { color: var(--dash-text); }
+
+/* Make sparklines use accent color */
+svg.sparkline-svg polyline { stroke: var(--dash-accent) !important; }
+
+/* Utility: make dashboard more compact overall */
+.page-dashboard .container { padding: 0.75rem 1rem; }
+
+/* Make header actions clearer on small screens */
+@media (max-width:700px){ .dashboard-header { flex-direction: column; align-items: flex-start; gap:0.5rem; } }

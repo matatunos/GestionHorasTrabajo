@@ -185,9 +185,14 @@ if (
           value TEXT NOT NULL,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    // sanitize optional minutes fields from form
+    $cm = isset($_POST['site_coffee_minutes']) ? intval(preg_replace('/[^0-9]/','', $_POST['site_coffee_minutes'])) : null;
+    $lm = isset($_POST['site_lunch_minutes']) ? intval(preg_replace('/[^0-9]/','', $_POST['site_lunch_minutes'])) : null;
+    if ($cm !== null && $cm > 0) $existing['coffee_minutes'] = $cm;
+    if ($lm !== null && $lm > 0) $existing['lunch_minutes'] = $lm;
     $stmt = $pdo->prepare('REPLACE INTO app_settings (name,value) VALUES (?,?)');
     $stmt->execute(['site_config', json_encode($existing, JSON_UNESCAPED_UNICODE)]);
-    $msg = 'Nombre del sitio guardado.';
+    $msg = 'Configuración guardada.';
     if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
       header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
     }
@@ -250,9 +255,33 @@ if ($pdo) {
             <div class="form-help">Nombre que aparece en la cabecera.</div>
           </div>
 
+          <!-- pausas moved to dedicated card below -->
+
         <div class="form-actions mt-2"><button class="btn btn-primary" type="submit">Guardar nombre del sitio</button><button class="btn btn-secondary" type="button" onclick="location.reload();">Cancelar</button></div>
       </div>
     </form>
+    
+  <!-- Pausas: tarjeta separada -->
+  <div class="card">
+    <h3>Pausas</h3>
+    <form method="post">
+      <div class="form-wrapper">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Pausa café (minutos)</label>
+            <input class="form-control" name="site_coffee_minutes" value="<?php echo htmlspecialchars($c['coffee_minutes'] ?? 15); ?>">
+            <div class="form-help">Duración nominal (en minutos) que se considera pausa de café.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pausa comida (minutos)</label>
+            <input class="form-control" name="site_lunch_minutes" value="<?php echo htmlspecialchars($c['lunch_minutes'] ?? 30); ?>">
+            <div class="form-help">Duración nominal (en minutos) que se considera pausa de comida.</div>
+          </div>
+        </div>
+        <div class="form-actions mt-2"><button class="btn btn-primary" type="submit">Guardar pausas</button><button class="btn btn-secondary" type="button" onclick="location.reload();">Cancelar</button></div>
+      </div>
+    </form>
+  </div>
 
   <!-- Users section -->
   <div class="card">
@@ -359,6 +388,52 @@ if ($pdo) {
       </div>
     </div>
   </div>
+    <!-- Pausas: tarjeta separada -->
+    <div class="card">
+      <h3>Configuración por año</h3>
+      <div class="form-help">Crea o edita configuraciones específicas por año. Usa el botón "Añadir año" para crear una nueva fila.</div>
+      <div style="margin-top:12px; margin-bottom:8px;">
+        <button id="openAddYearBtn" class="btn btn-primary" type="button">Añadir configuración de año</button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="sheet" id="year-config-table">
+          <thead>
+            <tr>
+              <th>Año</th>
+              <th>Invierno (Lun-Jue)</th>
+              <th>Viernes</th>
+              <th>Verano (Lun-Jue)</th>
+              <th>Verano (Viernes)</th>
+              <th>Café (min)</th>
+              <th>Comida (min)</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+          <?php foreach($year_configs as $yc): ?>
+            <tr data-year="<?php echo htmlspecialchars($yc['year']); ?>" data-mon_thu="<?php echo htmlspecialchars($yc['mon_thu']); ?>" data-friday="<?php echo htmlspecialchars($yc['friday']); ?>" data-summer_mon_thu="<?php echo htmlspecialchars($yc['summer_mon_thu']); ?>" data-summer_friday="<?php echo htmlspecialchars($yc['summer_friday']); ?>" data-coffee_minutes="<?php echo htmlspecialchars($yc['coffee_minutes']); ?>" data-lunch_minutes="<?php echo htmlspecialchars($yc['lunch_minutes']); ?>">
+              <td class="yc-year"><?php echo htmlspecialchars($yc['year']); ?></td>
+              <td class="yc-mon_thu"><?php echo htmlspecialchars($yc['mon_thu']); ?></td>
+              <td class="yc-friday"><?php echo htmlspecialchars($yc['friday']); ?></td>
+              <td class="yc-summer_mon_thu"><?php echo htmlspecialchars($yc['summer_mon_thu']); ?></td>
+              <td class="yc-summer_friday"><?php echo htmlspecialchars($yc['summer_friday']); ?></td>
+              <td class="yc-coffee_minutes"><?php echo htmlspecialchars($yc['coffee_minutes']); ?></td>
+              <td class="yc-lunch_minutes"><?php echo htmlspecialchars($yc['lunch_minutes']); ?></td>
+              <td>
+                <button class="btn btn-sm icon-btn edit-year-btn" type="button" title="Editar"><i class="fas fa-edit"></i></button>
+                <form method="post" style="display:inline;" onsubmit="return confirm('Eliminar configuración de año?');">
+                  <input type="hidden" name="delete_year_config" value="<?php echo htmlspecialchars($yc['year']); ?>">
+                  <button class="btn btn-sm icon-btn btn-danger" type="submit" title="Eliminar"><i class="fas fa-trash"></i></button>
+                </form>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
 
   <!-- Modal for resetting password -->
   <div id="resetModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">

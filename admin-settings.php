@@ -1,30 +1,7 @@
 <?php
-require_once __DIR__ . '/auth.php';
-require_admin();
-require_once __DIR__ . '/config.php';
-
-$msg = '';
-
-// capture runtime errors to help debug 500 responses
-set_error_handler(function($sev, $msgText, $file, $line){
-  $d = ['type'=>'php_error','sev'=>$sev,'msg'=>$msgText,'file'=>$file,'line'=>$line,'post'=>$_POST,'ts'=>date('c')];
-  error_log(json_encode($d, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
-});
-set_exception_handler(function($e){
-  $d = ['type'=>'exception','msg'=>$e->getMessage(),'file'=>$e->getFile(),'line'=>$e->getLine(),'trace'=>$e->getTraceAsString(),'post'=>$_POST,'ts'=>date('c')];
-  error_log(json_encode($d, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
-  if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH']==='XMLHttpRequest') {
-    header('Content-Type: application/json'); http_response_code(500); echo json_encode(['ok'=>false,'error'=>'exception','msg'=>'Error procesando solicitud']);
-  }
-});
-register_shutdown_function(function(){
-  $err = error_get_last();
-    if ($err) {
-    $d = ['type'=>'shutdown','err'=>$err,'post'=>$_POST,'ts'=>date('c')];
-    error_log(json_encode($d, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
-  }
-});
-
+// admin-settings.php removed per request — redirect to settings.php
+header('Location: settings.php');
+exit;
 // Admin-triggered recalculation (moved from years.php)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'recalc') {
   require_once __DIR__ . '/db.php';
