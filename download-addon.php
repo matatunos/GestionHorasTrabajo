@@ -11,15 +11,13 @@ require_login(); // Solo usuarios autenticados pueden descargar
 
 $user = current_user();
 
-// Validar que sea HTTPS en producción
+// Determinar protocolo; permitir http en entornos locales/offline
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-if ($protocol === 'http' && $_SERVER['HTTP_HOST'] !== 'localhost' && $_SERVER['HTTP_HOST'] !== '127.0.0.1') {
-    http_response_code(403);
-    die('⚠️ Las descargas de la extensión solo son permitidas por HTTPS por seguridad. Usa: https://' . $_SERVER['HTTP_HOST']);
-}
-
 $host = $_SERVER['HTTP_HOST'];
 $appUrl = "$protocol://$host";
+if ($protocol === 'http') {
+    error_log('Aviso: Descarga de extensión sobre HTTP en host: ' . $host);
+}
 
 // Crear token único para esta instalación
 $tokenInfo = create_extension_token($user['id'], 'Chrome Extension - ' . date('Y-m-d H:i'));

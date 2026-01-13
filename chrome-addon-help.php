@@ -51,8 +51,8 @@ require_once __DIR__ . '/header.php';
         <strong>Descargar la extensión</strong>
         <p>Opción A: Descarga el ZIP comprimido arriba (recomendado) y descomprime en tu computadora.</p>
         <p>Opción B: Clona el repositorio desde GitHub:</p>
-        <div class="code-block">git clone -b feature/multiuser-dashboard https://github.com/matatunos/GestionHorasTrabajo.git
-cd GestionHorasTrabajo/chrome-extension</div>
+        <div class="code-block">git clone -b feature/multiuser-dashboard /ruta/local/GestionHorasTrabajo.git
+      cd GestionHorasTrabajo/chrome-extension</div>
       </div>
 
       <div class="step">
@@ -335,14 +335,14 @@ https://miapp.com</div>
       
       <p>Si tienes problemas o sugerencias:</p>
       <ul>
-        <li>📖 Consulta la <a href="https://github.com/matatunos/GestionHorasTrabajo/tree/feature/multiuser-dashboard/chrome-extension" target="_blank">documentación en GitHub</a></li>
-        <li>🐛 Abre un issue en <a href="https://github.com/matatunos/GestionHorasTrabajo/issues" target="_blank">GitHub Issues</a></li>
+        <li>📖 Consulta la documentación local: GestionHorasTrabajo/chrome-extension</li>
+        <li>🐛 Reporta incidencias en tu sistema de seguimiento local</li>
         <li>💬 Sugiere mejoras o nuevos formatos</li>
       </ul>
     </div>
 
     <div style="margin-top: 30px; padding: 20px; background: #f0f0f0; border-radius: 5px; text-align: center;">
-      <p style="margin: 0; font-size: 14px;">¿Necesitas más ayuda? Consulta el <a href="https://github.com/matatunos/GestionHorasTrabajo" target="_blank">repositorio de GitHub</a></p>
+      <p style="margin: 0; font-size: 14px;">¿Necesitas más ayuda? Consulta la documentación incluida en la carpeta <strong>chrome-extension</strong></p>
     </div>
   </div>
 </div>
