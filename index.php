@@ -389,6 +389,7 @@ $holidayMap = [];
       </div>
       <button id="toggle-all-months" class="btn" type="button">Plegar/Mostrar todo</button>
       <button class="btn btn-secondary" id="export-csv-btn" type="button">📥 Descargar CSV</button>
+      <a href="import_csv.php" class="btn btn-secondary">📤 Importar CSV</a>
     </form>
 
     <div class="table-responsive">
