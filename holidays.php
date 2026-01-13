@@ -375,8 +375,10 @@ $pageStyles = '
                           <div class="holiday-date-day"><?php echo ucfirst($dayName); ?></div>
                         </div>
                         <div class="holiday-label"><?php echo htmlspecialchars($h['label'] ?? '—'); ?></div>
-                        <?php if ($h['annual']): ?>
-                          <span class="holiday-badge">📅 Anual</span>
+                        <?php if (!$h['user_id'] && $h['annual']): ?>
+                          <span class="holiday-badge">📅 Anual Sistema</span>
+                        <?php elseif ($h['user_id'] && $h['annual']): ?>
+                          <span class="holiday-badge">📅 Anual Personal</span>
                         <?php endif; ?>
                         <?php if ($h['user_id']): ?>
                           <span class="holiday-badge">👤 Personal</span>
