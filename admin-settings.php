@@ -453,6 +453,30 @@ if ($hol_pdo) {
     <div class="footer small">Config stored in <strong>DB (app_settings.site_config)</strong></div>
   </div>
 
+  <!-- Backup/Restore section -->
+  <div class="card">
+    <h3>Herramientas de Backup y Restauración</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin: 1.5rem 0;">
+      <!-- Export Backup -->
+      <div style="border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem; background: #f8f9fa;">
+        <h4 style="margin-top: 0; color: #0056b3;">📥 Descargar Backup</h4>
+        <p style="color: #666; margin: 0 0 1rem 0;">Crea una copia completa de la base de datos para guardarla de forma segura.</p>
+        <button class="btn btn-primary" onclick="downloadBackup();" style="width: 100%;">
+          Descargar Backup Full
+        </button>
+      </div>
+      <!-- Import Backup -->
+      <div style="border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem; background: #f8f9fa;">
+        <h4 style="margin-top: 0; color: #0056b3;">📤 Restaurar Backup</h4>
+        <p style="color: #666; margin: 0 0 1rem 0;">Restaura la base de datos desde un archivo de backup anterior.</p>
+        <input type="file" id="backupFile" accept=".sql" style="margin-bottom: 1rem; display: block; width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+        <button class="btn btn-warning" onclick="uploadBackup();" style="width: 100%;">
+          Restaurar Backup
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Users section -->
   <div class="card">
     <h3>Gestión de Usuarios</h3>
@@ -1045,6 +1069,71 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 });
 </script>
-</style>
-</body>
-</html>
+
+<script>
+// Backup/Restore functions
+function downloadBackup() {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Descargando...';
+  
+  // Use a simple form to trigger the download
+  const a = document.createElement('a');
+  a.href = 'backup_handler.php?action=export';
+  a.click();
+  
+  // Re-enable button after 2 seconds
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = 'Descargar Backup Full';
+  }, 2000);
+}
+
+function uploadBackup() {
+  const fileInput = document.getElementById('backupFile');
+  const btn = event.target;
+  
+  if (!fileInput.files.length) {
+    alert('Por favor selecciona un archivo de backup');
+    return;
+  }
+  
+  const file = fileInput.files[0];
+  
+  if (!file.name.endsWith('.sql')) {
+    alert('Por favor selecciona un archivo .sql válido');
+    return;
+  }
+  
+  if (!confirm('⚠️ ADVERTENCIA: Esta acción reemplazará TODA la base de datos actual.\n¿Estás seguro de que deseas continuar?')) {
+    return;
+  }
+  
+  btn.disabled = true;
+  btn.textContent = 'Restaurando...';
+  
+  const formData = new FormData();
+  formData.append('backup_file', file);
+  
+  fetch('backup_handler.php?action=import', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('✓ Backup restaurado exitosamente. La página se recargará en 2 segundos.');
+      setTimeout(() => location.reload(), 2000);
+    } else {
+      alert('✗ Error al restaurar: ' + (data.error || 'Error desconocido'));
+      btn.disabled = false;
+      btn.textContent = 'Restaurar Backup';
+    }
+  })
+  .catch(error => {
+    alert('✗ Error de red: ' + error.message);
+    btn.disabled = false;
+    btn.textContent = 'Restaurar Backup';
+  });
+}
+</script>
