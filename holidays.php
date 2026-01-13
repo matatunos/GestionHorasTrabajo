@@ -152,13 +152,14 @@ $holidays = $pdo->query("
 
 $holidayTypes = $pdo->query("SELECT * FROM holiday_types ORDER BY sort_order, id")->fetchAll(PDO::FETCH_ASSOC);
 
-$holidays = array_map(function($h) {
+$holidays = array_map(function($h) use ($user) {
   return [
     'date' => $h['date'],
     'label' => $h['label'],
     'type' => $h['type'] ?? 'holiday',
     'annual' => $h['annual'],
-    'user_id' => $h['user_id']
+    'user_id' => $h['user_id'],
+    'is_own' => $h['user_id'] == $user['id']  // Marcar si es del usuario actual
   ];
 }, $holidays);
 
@@ -378,9 +379,9 @@ $pageStyles = '
                         <?php if ($h['user_id']): ?>
                           <span class="holiday-badge">👤 Personal</span>
                         <?php endif; ?>
-                        <?php if ($h['user_id']): ?>
+                        <?php if ($h['is_own']): ?>
                           <div class="holiday-actions">
-                            <button class="btn btn-sm" style="background: #28a745; color: white; padding: 0.3rem 0.6rem;" onclick="editHoliday('<?php echo htmlspecialchars($h['date']); ?>', '<?php echo htmlspecialchars($h['label']); ?>', '<?php echo htmlspecialchars($h['type']); ?>')">✏️ Editar</button>
+                            <button class="btn btn-sm" style="background: #28a745; color: white; padding: 0.3rem 0.6rem;" onclick="editHoliday('<?php echo htmlspecialchars($h['date']); ?>', '<?php echo htmlspecialchars($h['label'] ?? ''); ?>', '<?php echo htmlspecialchars($h['type']); ?>')">✏️ Editar</button>
                             <button class="btn btn-sm" style="background: #dc3545; color: white; padding: 0.3rem 0.6rem;" onclick="deleteHoliday('<?php echo htmlspecialchars($h['date']); ?>')">🗑️ Eliminar</button>
                           </div>
                         <?php endif; ?>
@@ -513,11 +514,6 @@ $pageStyles = '
         closeModal();
       }
     });
-
-    const yearFilter = document.getElementById('yearFilter');
-    const filterAll = document.getElementById('filterAll');
-    const typeFilters = document.querySelectorAll('.type-filter');
-    const holidaysContainer = document.getElementById('holidaysContainer');
 
     yearFilter?.addEventListener('change', function() {
       const year = this.value;
