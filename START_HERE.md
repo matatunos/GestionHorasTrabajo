@@ -46,7 +46,7 @@ Tu aplicación móvil para **GestionHorasTrabajo** está **100% completada** y l
 ### Paso 1: Configurar URL (30 segundos)
 ```bash
 Abre: mobile-app/src/config.ts
-Cambia: API_URL = 'https://tu-servidor.com'
+Cambia: API_URL = 'http://localhost'  # Para uso offline local
 ```
 
 ### Paso 2: Instalar (1 minuto)

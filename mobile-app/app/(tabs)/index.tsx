@@ -4,7 +4,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 
-const API_URL = 'https://calendar.favala.es';
+const API_URL = 'http://localhost';
 
 export default function DashboardScreen() {
   const router = useRouter();

@@ -12,7 +12,6 @@
   "host_permissions": [
     "http://localhost/*",
     "http://127.0.0.1/*",
-    "https://example.com/*",
     "<all_urls>"
   ],
   "background": {
@@ -23,7 +22,6 @@
       "matches": [
         "http://localhost/*",
         "http://127.0.0.1/*",
-        "https://example.com/*",
         "<all_urls>"
       ],
       "js": ["importFichajes.js", "content.js"],

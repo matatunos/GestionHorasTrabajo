@@ -77,7 +77,7 @@ tail -50 /var/log/syslog
 
 ### 6. Probar la página de tokens
 
-Acceder a: `https://example.com/extension-tokens.php`
+Acceder a: `http://localhost/extension-tokens.php` (o la URL local de tu servidor)
 
 Debe:
 - Solicitar login si no está logueado

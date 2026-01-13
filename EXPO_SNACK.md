@@ -4,7 +4,7 @@ Si la compilación local está lenta, usa **Expo Snack** que es online:
 
 ## Opción 1: Snack Online (5 segundos de carga)
 
-1. Ve a: https://snack.expo.dev
+1. Ve a: (opcional) https://snack.expo.dev  — para desarrollo remoto; en local usa el cliente Expo con `http://localhost`
 
 2. Pega este código en `App.js`:
 
@@ -13,7 +13,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
 import axios from 'axios';
 
-const API_URL = 'https://example.com';
+const API_URL = 'http://localhost';
 
 export default function App() {
   const [username, setUsername] = useState('');
