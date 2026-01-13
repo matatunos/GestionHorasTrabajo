@@ -41,17 +41,6 @@ echo -e "${BLUE}[1/8] Verificando e instalando dependencias del sistema...${NC}"
 # Lista de paquetes necesarios
 REQUIRED_PACKAGES=(
     "apache2"
-    "mysql-server"
-    "php8.3"
-    "php8.3-mysql"
-    "php8.3-xml"
-    "php8.3-mbstring"
-    "php8.3-curl"
-    "php8.3-zip"
-    "php8.3-gd"
-    "php8.3-intl"
-    "libapache2-mod-php8.3"
-    "composer"
     "git"
 )
 
@@ -65,26 +54,69 @@ done
 
 if [ ${#PACKAGES_TO_INSTALL[@]} -gt 0 ]; then
     echo -e "${YELLOW}Instalando paquetes faltantes: ${PACKAGES_TO_INSTALL[*]}${NC}"
-    apt-get update -qq
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${PACKAGES_TO_INSTALL[@]}" > /dev/null 2>&1
-    echo -e "${GREEN}✓ Paquetes instalados${NC}"
+    apt-get update -qq || {
+        echo -e "${RED}Error: No se pudo actualizar lista de paquetes${NC}"
+        exit 1
+    }
+    
+    if DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${PACKAGES_TO_INSTALL[@]}" > /dev/null 2>&1; then
+        echo -e "${GREEN}✓ Paquetes instalados${NC}"
+    else
+        echo -e "${RED}Error: Falló la instalación de paquetes${NC}"
+        exit 1
+    fi
 else
     echo -e "${GREEN}✓ Todas las dependencias ya están instaladas${NC}"
 fi
 
 # Habilitar módulos de Apache
-a2enmod rewrite php8.3 > /dev/null 2>&1 || true
-echo -e "${GREEN}✓ Módulos de Apache habilitados${NC}\n"
+echo -e "${YELLOW}Habilitando módulos de Apache...${NC}"
+if a2enmod rewrite > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ Módulo rewrite habilitado${NC}"
+else
+    echo -e "${YELLOW}⚠ No se pudo habilitar módulo rewrite${NC}"
+fi
+
+# Intentar habilitar módulo PHP (nombre genérico)
+if a2enmod php > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ Módulo PHP habilitado${NC}"
+elif a2enmod php8 > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ Módulo PHP8 habilitado${NC}"
+else
+    echo -e "${YELLOW}⚠ No se pudo habilitar módulo PHP (puede estar preinstalado)${NC}"
+fi
+
+echo ""
 
 # ============================================
 # PASO 2: Configurar MySQL
 # ============================================
-echo -e "${BLUE}[2/8] Configuración de MySQL...${NC}"
+echo -e "${BLUE}[2/8] Configuración de base de datos...${NC}"
 
-# Iniciar MySQL si no está corriendo
-systemctl start mysql 2>/dev/null || true
+# Detectar sistema de base de datos disponible
+DB_SYSTEM=""
+if command -v mysql &> /dev/null; then
+    DB_SYSTEM="mysql"
+    echo -e "${GREEN}✓ MySQL detectado${NC}"
+elif command -v mariadb &> /dev/null; then
+    DB_SYSTEM="mariadb"
+    echo -e "${GREEN}✓ MariaDB detectado${NC}"
+else
+    echo -e "${RED}Error: No se encontró MySQL o MariaDB instalado${NC}"
+    exit 1
+fi
 
-echo -e "${YELLOW}Ingresa la contraseña de MySQL root (presiona Enter si es vacía):${NC}"
+# Iniciar servicio de base de datos
+echo -e "${YELLOW}Iniciando servicio de base de datos...${NC}"
+if systemctl start mysql 2>/dev/null; then
+    echo -e "${GREEN}✓ MySQL iniciado${NC}"
+elif systemctl start mariadb 2>/dev/null; then
+    echo -e "${GREEN}✓ MariaDB iniciado${NC}"
+else
+    echo -e "${YELLOW}⚠ No se pudo iniciar el servicio (puede estar ya activo)${NC}"
+fi
+
+echo -e "${YELLOW}Ingresa la contraseña de base de datos root (presiona Enter si es vacía):${NC}"
 read -s MYSQL_ROOT_PASS
 echo ""
 
@@ -96,10 +128,13 @@ else
 fi
 
 if ! $MYSQL_CMD -e "SELECT 1" &>/dev/null; then
-    echo -e "${RED}Error: No se pudo conectar a MySQL. Verifica la contraseña.${NC}"
+    echo -e "${RED}Error: No se pudo conectar a la base de datos. Verifica:${NC}"
+    echo -e "  - El servicio está corriendo"
+    echo -e "  - La contraseña es correcta"
+    echo -e "  - El usuario root tiene acceso local"
     exit 1
 fi
-echo -e "${GREEN}✓ Conexión a MySQL exitosa${NC}\n"
+echo -e "${GREEN}✓ Conexión a base de datos exitosa${NC}\n"
 
 # ============================================
 # PASO 3: Configurar base de datos
@@ -234,15 +269,30 @@ echo -e "${GREEN}✓ Archivo .env creado${NC}\n"
 # ============================================
 echo -e "${BLUE}[5/8] Instalando dependencias de Composer...${NC}"
 
+# Verificar si composer está instalado
+if ! command -v composer &> /dev/null; then
+    echo -e "${YELLOW}Instalando Composer...${NC}"
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer 2>&1 || {
+        echo -e "${RED}Error: No se pudo instalar Composer${NC}"
+        echo -e "${YELLOW}Intenta instalar Composer manualmente desde https://getcomposer.org${NC}"
+        exit 1
+    }
+fi
+
 if [ ! -f "$SCRIPT_DIR/composer.json" ]; then
     echo -e "${RED}Error: No se encontró composer.json${NC}"
     exit 1
 fi
 
-# Instalar como usuario no-root si es posible
+# Instalar dependencias
+echo -e "${YELLOW}Descargando dependencias de Composer...${NC}"
 cd "$SCRIPT_DIR"
-COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --optimize-autoloader 2>&1 | grep -E "(Installing|Generating)" || true
-echo -e "${GREEN}✓ Dependencias de Composer instaladas${NC}\n"
+if COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --optimize-autoloader 2>&1 | grep -E "(Installing|Generating|loaded)" || true; then
+    echo -e "${GREEN}✓ Dependencias de Composer instaladas${NC}"
+else
+    echo -e "${YELLOW}⚠ Composer completó con advertencias (revisar arriba)${NC}"
+fi
+echo ""
 
 # ============================================
 # PASO 6: Crear usuario admin por defecto
@@ -262,21 +312,39 @@ echo -e "${YELLOW}  Contraseña: admin (cámbiala en el primer inicio de sesión
 echo -e "${BLUE}[7/8] Configurando permisos...${NC}"
 
 # Encontrar el usuario de Apache
-APACHE_USER=$(ps aux | grep -E 'apache|httpd' | grep -v root | head -1 | awk '{print $1}')
+APACHE_USER=$(ps aux | grep -E 'apache2|apache|httpd' | grep -v 'grep\|root' | head -1 | awk '{print $1}')
 if [ -z "$APACHE_USER" ]; then
     APACHE_USER="www-data"
+    echo -e "${YELLOW}⚠ Usando usuario por defecto: www-data${NC}"
 fi
 
-chown -R $APACHE_USER:$APACHE_USER "$SCRIPT_DIR"
-chmod -R 755 "$SCRIPT_DIR"
-chmod 600 "$SCRIPT_DIR/.env"
+# Establecer permisos
+echo -e "${YELLOW}Aplicando permisos para usuario: $APACHE_USER${NC}"
+if chown -R "$APACHE_USER:$APACHE_USER" "$SCRIPT_DIR" 2>/dev/null; then
+    echo -e "${GREEN}✓ Propietario configurado${NC}"
+else
+    echo -e "${RED}✗ Error al configurar propietario${NC}"
+fi
 
-echo -e "${GREEN}✓ Permisos configurados para usuario $APACHE_USER${NC}\n"
+chmod -R 755 "$SCRIPT_DIR" 2>/dev/null || true
+chmod 600 "$SCRIPT_DIR/.env" 2>/dev/null || true
+
+echo -e "${GREEN}✓ Permisos configurados${NC}\n"
 
 # ============================================
 # PASO 8: Configurar Apache VirtualHost
 # ============================================
-echo -e "${BLUE}[8/8] Configurando Apache VirtualHost...${NC}"
+echo -e "${BLUE}[8/8] Configurando servidor web...${NC}"
+
+# Verificar si Apache está instalado
+if ! systemctl is-active --quiet apache2; then
+    echo -e "${YELLOW}Iniciando Apache...${NC}"
+    if systemctl start apache2 2>/dev/null; then
+        echo -e "${GREEN}✓ Apache iniciado${NC}"
+    else
+        echo -e "${RED}✗ No se pudo iniciar Apache${NC}"
+    fi
+fi
 
 VHOST_FILE="/etc/apache2/sites-available/gestion-horas.conf"
 
@@ -296,14 +364,24 @@ cat > "$VHOST_FILE" << EOF
 </VirtualHost>
 EOF
 
-# Habilitar el sitio
-a2ensite gestion-horas.conf > /dev/null 2>&1
+echo -e "${YELLOW}Habilitando sitio...${NC}"
+if a2ensite gestion-horas.conf > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ Sitio habilitado${NC}"
+else
+    echo -e "${RED}✗ Error al habilitar sitio${NC}"
+fi
+
+# Deshabilitar sitio por defecto si existe
 a2dissite 000-default.conf > /dev/null 2>&1 || true
 
 # Reiniciar Apache
-systemctl restart apache2
-
-echo -e "${GREEN}✓ VirtualHost configurado y Apache reiniciado${NC}\n"
+echo -e "${YELLOW}Reiniciando Apache...${NC}"
+if systemctl restart apache2 2>/dev/null; then
+    echo -e "${GREEN}✓ Apache reiniciado exitosamente${NC}"
+else
+    echo -e "${RED}✗ Error al reiniciar Apache${NC}"
+fi
+echo ""
 
 # ============================================
 # RESUMEN FINAL
@@ -331,31 +409,58 @@ echo ""
 
 # Verificar que todo funciona
 echo -e "${YELLOW}Verificando instalación...${NC}"
+
+INSTALLATION_OK=true
+
+# Verificar Apache
 if systemctl is-active --quiet apache2; then
     echo -e "${GREEN}✓ Apache está corriendo${NC}"
+elif systemctl is-active --quiet httpd; then
+    echo -e "${GREEN}✓ Apache (httpd) está corriendo${NC}"
 else
     echo -e "${RED}✗ Apache no está corriendo${NC}"
+    INSTALLATION_OK=false
 fi
 
+# Verificar MySQL/MariaDB
 if systemctl is-active --quiet mysql; then
     echo -e "${GREEN}✓ MySQL está corriendo${NC}"
+elif systemctl is-active --quiet mariadb; then
+    echo -e "${GREEN}✓ MariaDB está corriendo${NC}"
 else
-    echo -e "${RED}✗ MySQL no está corriendo${NC}"
+    echo -e "${YELLOW}⚠ Base de datos no detectada como activa${NC}"
 fi
 
+# Verificar PHP
+if command -v php &> /dev/null; then
+    PHP_VERSION=$(php -v | head -n 1 | grep -oP 'PHP \K[0-9]+\.[0-9]+')
+    echo -e "${GREEN}✓ PHP instalado (versión $PHP_VERSION)${NC}"
+else
+    echo -e "${RED}✗ PHP no encontrado${NC}"
+    INSTALLATION_OK=false
+fi
+
+# Verificar Composer
 if [ -f "$SCRIPT_DIR/vendor/autoload.php" ]; then
     echo -e "${GREEN}✓ Dependencias de Composer instaladas${NC}"
 else
-    echo -e "${RED}✗ Faltan dependencias de Composer${NC}"
+    echo -e "${YELLOW}⚠ Faltan dependencias de Composer (revisar paso 5)${NC}"
 fi
 
+# Verificar base de datos
 if $MYSQL_CMD -e "USE $DB_NAME; SELECT COUNT(*) FROM users;" &>/dev/null; then
-    USER_COUNT=$($MYSQL_CMD -N -e "USE $DB_NAME; SELECT COUNT(*) FROM users;")
+    USER_COUNT=$($MYSQL_CMD -N -e "USE $DB_NAME; SELECT COUNT(*) FROM users;" 2>/dev/null)
     echo -e "${GREEN}✓ Base de datos accesible ($USER_COUNT usuario(s))${NC}"
 else
     echo -e "${RED}✗ No se puede acceder a la base de datos${NC}"
+    INSTALLATION_OK=false
 fi
 
 echo ""
-echo -e "${GREEN}¡Todo listo! Abre tu navegador y accede a la aplicación.${NC}"
-echo ""
+
+if [ "$INSTALLATION_OK" = true ]; then
+    echo -e "${GREEN}¡Instalación completada exitosamente!${NC}"
+else
+    echo -e "${YELLOW}⚠ La instalación se completó con algunos problemas.${NC}"
+    echo -e "  Revisa los mensajes de error arriba."
+fi
