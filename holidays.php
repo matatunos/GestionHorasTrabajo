@@ -159,7 +159,7 @@ $holidays = array_map(function($h) use ($user) {
     'type' => $h['type'] ?? 'holiday',
     'annual' => $h['annual'],
     'user_id' => $h['user_id'],
-    'is_own' => $h['user_id'] == $user['id']  // Marcar si es del usuario actual
+    'is_own' => !$h['annual']  // Mostrar botones en festivos no-anuales (personalizables)
   ];
 }, $holidays);
 
