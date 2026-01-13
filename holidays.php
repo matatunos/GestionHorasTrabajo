@@ -6,6 +6,83 @@ require_once __DIR__ . '/db.php';
 $pdo = get_pdo();
 $user = current_user();
 
+// Handle AJAX requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
+  header('Content-Type: application/json');
+  
+  $action = $_POST['action'];
+  
+  if ($action === 'add_holiday') {
+    try {
+      $date = $_POST['date'] ?? '';
+      $label = $_POST['label'] ?? '';
+      $type = $_POST['type'] ?? 'holiday';
+      
+      if (empty($date)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Fecha requerida']);
+        exit;
+      }
+      
+      $stmt = $pdo->prepare('INSERT INTO holidays (user_id, date, label, type, annual) VALUES (?, ?, ?, ?, 0) ON DUPLICATE KEY UPDATE label = ?, type = ?');
+      $stmt->execute([$user['id'], $date, $label, $type, $label, $type]);
+      
+      echo json_encode(['success' => true, 'message' => 'Festivo agregado']);
+      exit;
+    } catch (Exception $e) {
+      http_response_code(500);
+      echo json_encode(['error' => $e->getMessage()]);
+      exit;
+    }
+  }
+  
+  if ($action === 'edit_holiday') {
+    try {
+      $date = $_POST['date'] ?? '';
+      $label = $_POST['label'] ?? '';
+      $type = $_POST['type'] ?? 'holiday';
+      
+      if (empty($date)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Fecha requerida']);
+        exit;
+      }
+      
+      $stmt = $pdo->prepare('UPDATE holidays SET label = ?, type = ? WHERE user_id = ? AND date = ?');
+      $stmt->execute([$label, $type, $user['id'], $date]);
+      
+      echo json_encode(['success' => true, 'message' => 'Festivo actualizado']);
+      exit;
+    } catch (Exception $e) {
+      http_response_code(500);
+      echo json_encode(['error' => $e->getMessage()]);
+      exit;
+    }
+  }
+  
+  if ($action === 'delete_holiday') {
+    try {
+      $date = $_POST['date'] ?? '';
+      
+      if (empty($date)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Fecha requerida']);
+        exit;
+      }
+      
+      $stmt = $pdo->prepare('DELETE FROM holidays WHERE user_id = ? AND date = ?');
+      $stmt->execute([$user['id'], $date]);
+      
+      echo json_encode(['success' => true, 'message' => 'Festivo eliminado']);
+      exit;
+    } catch (Exception $e) {
+      http_response_code(500);
+      echo json_encode(['error' => $e->getMessage()]);
+      exit;
+    }
+  }
+}
+
 // Mensaje de importación exitosa si viene del importador
 $import_message = '';
 if (!empty($_GET['imported'])) {
@@ -136,6 +213,24 @@ $pageStyles = '
     .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 4px; font-size: 0.95rem; cursor: pointer; transition: all 0.25s ease; text-decoration: none; display: inline-block; font-weight: 500; }
     .btn-secondary { background: #6c757d; color: white; }
     .btn-secondary:hover { background: #5a6268; }
+    .btn-primary { background: #0056b3; color: white; }
+    .btn-primary:hover { background: #004085; }
+    .btn-sm { padding: 0.4rem 0.7rem; font-size: 0.8rem; }
+    .holiday-actions { display: flex; gap: 0.5rem; }
+    .holiday-actions .btn-sm { margin-left: auto; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.4); }
+    .modal.show { display: flex; align-items: center; justify-content: center; }
+    .modal-content { background-color: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .modal-header h2 { margin: 0; }
+    .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; }
+    .modal-close:hover { color: #000; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+    .form-group input, .form-group select { width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; font-size: 0.95rem; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: #0056b3; box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1); }
+    .modal-footer { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; }
+    .modal-footer .btn { margin: 0; }
 ';
 ?>
 <!DOCTYPE html>
@@ -161,6 +256,7 @@ $pageStyles = '
       <div class="holidays-header">
         <div><h1>📅 Festivos y Ausencias</h1></div>
         <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-primary" id="addHolidayBtn" style="white-space: nowrap;">➕ Agregar Festivo</button>
           <a href="holiday-types.php" class="btn btn-secondary" style="white-space: nowrap;">🏷️ Gestionar Tipos</a>
           <div class="year-selector">
             <label>Año:</label>
@@ -282,6 +378,12 @@ $pageStyles = '
                         <?php if ($h['user_id']): ?>
                           <span class="holiday-badge">👤 Personal</span>
                         <?php endif; ?>
+                        <?php if ($h['user_id']): ?>
+                          <div class="holiday-actions">
+                            <button class="btn btn-sm" style="background: #28a745; color: white; padding: 0.3rem 0.6rem;" onclick="editHoliday('<?php echo htmlspecialchars($h['date']); ?>', '<?php echo htmlspecialchars($h['label']); ?>', '<?php echo htmlspecialchars($h['type']); ?>')">✏️ Editar</button>
+                            <button class="btn btn-sm" style="background: #dc3545; color: white; padding: 0.3rem 0.6rem;" onclick="deleteHoliday('<?php echo htmlspecialchars($h['date']); ?>')">🗑️ Eliminar</button>
+                          </div>
+                        <?php endif; ?>
                       </div>
                     <?php endforeach; ?>
                   </div>
@@ -294,9 +396,124 @@ $pageStyles = '
     </div>
   </div>
 
+  <!-- Modal para agregar/editar festivos -->
+  <div id="holidayModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Agregar Festivo</h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="holidayForm" onsubmit="saveHoliday(event)">
+        <div class="form-group">
+          <label for="holidayDate">Fecha:</label>
+          <input type="date" id="holidayDate" name="date" required>
+        </div>
+        <div class="form-group">
+          <label for="holidayType">Tipo:</label>
+          <select id="holidayType" name="type" required>
+            <?php foreach ($holidayTypes as $type): ?>
+              <option value="<?php echo htmlspecialchars($type['code']); ?>"><?php echo htmlspecialchars($type['label']); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="holidayLabel">Descripción (opcional):</label>
+          <input type="text" id="holidayLabel" name="label" placeholder="Ej: Día festivo especial">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <?php include __DIR__ . '/footer.php'; ?>
 
   <script>
+    let editingDate = null;
+    const yearFilter = document.getElementById('yearFilter');
+    const filterAll = document.getElementById('filterAll');
+    const typeFilters = document.querySelectorAll('.type-filter');
+    const holidaysContainer = document.getElementById('holidaysContainer');
+    const holidayModal = document.getElementById('holidayModal');
+    const addHolidayBtn = document.getElementById('addHolidayBtn');
+    
+    addHolidayBtn?.addEventListener('click', function() {
+      editingDate = null;
+      document.getElementById('modalTitle').textContent = 'Agregar Festivo';
+      document.getElementById('holidayForm').reset();
+      document.getElementById('holidayDate').valueAsDate = new Date();
+      holidayModal.classList.add('show');
+    });
+
+    function closeModal() {
+      holidayModal.classList.remove('show');
+      editingDate = null;
+    }
+
+    function editHoliday(date, label, type) {
+      editingDate = date;
+      document.getElementById('modalTitle').textContent = 'Editar Festivo';
+      document.getElementById('holidayDate').value = date;
+      document.getElementById('holidayLabel').value = label;
+      document.getElementById('holidayType').value = type;
+      holidayModal.classList.add('show');
+    }
+
+    function deleteHoliday(date) {
+      if (confirm('¿Estás seguro de que quieres eliminar este festivo?')) {
+        fetch('holidays.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'action=delete_holiday&date=' + encodeURIComponent(date)
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            window.location.reload();
+          } else {
+            alert('Error: ' + (data.error || 'No se pudo eliminar'));
+          }
+        })
+        .catch(error => console.error('Error:', error));
+      }
+    }
+
+    function saveHoliday(event) {
+      event.preventDefault();
+      const date = document.getElementById('holidayDate').value;
+      const label = document.getElementById('holidayLabel').value;
+      const type = document.getElementById('holidayType').value;
+      const action = editingDate ? 'edit_holiday' : 'add_holiday';
+
+      fetch('holidays.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `action=${action}&date=${encodeURIComponent(date)}&label=${encodeURIComponent(label)}&type=${encodeURIComponent(type)}`
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          window.location.reload();
+        } else {
+          alert('Error: ' + (data.error || 'No se pudo guardar'));
+        }
+      })
+      .catch(error => console.error('Error:', error));
+    }
+
+    // Cerrar modal al hacer clic fuera
+    holidayModal?.addEventListener('click', function(event) {
+      if (event.target === this) {
+        closeModal();
+      }
+    });
+
     const yearFilter = document.getElementById('yearFilter');
     const filterAll = document.getElementById('filterAll');
     const typeFilters = document.querySelectorAll('.type-filter');
