@@ -161,7 +161,7 @@ $holidays = array_map(function($h) use ($user) {
     'type' => $h['type'] ?? 'holiday',
     'annual' => $h['annual'],
     'user_id' => $h['user_id'],
-    'is_own' => !$h['annual']  // Mostrar botones en festivos no-anuales (personalizables)
+    'is_own' => !empty($h['user_id']) && $h['user_id'] == $user['id']  // Mostrar botones solo en festivos del usuario actual
   ];
 }, $holidays);
 
@@ -193,14 +193,14 @@ $pageStyles = '
     .holiday-type-header .color-dot { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; }
     .holiday-type-count { margin-left: auto; font-size: 0.9rem; color: #666; background: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-weight: normal; }
     .holidays-list { padding: 1rem; }
-    .holiday-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-bottom: 1px solid #eee; transition: background-color 0.2s; }
+    .holiday-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-bottom: 1px solid #eee; transition: background-color 0.2s; gap: 0.75rem; flex-wrap: wrap; }
     .holiday-item:last-child { border-bottom: none; }
     .holiday-item:hover { background-color: #f8f9fa; }
-    .holiday-date { display: flex; flex-direction: column; gap: 0.25rem; flex: 1; }
+    .holiday-date { display: flex; flex-direction: column; gap: 0.25rem; flex-shrink: 0; }
     .holiday-date-main { font-weight: 600; color: #333; font-size: 1rem; }
     .holiday-date-day { font-size: 0.85rem; color: #666; }
-    .holiday-label { flex: 2; padding: 0 1rem; color: #333; }
-    .holiday-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; color: #666; background: #e9ecef; }
+    .holiday-label { flex: 1; min-width: 150px; color: #333; }
+    .holiday-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; color: #666; background: #e9ecef; white-space: nowrap; }
     .empty-state { text-align: center; padding: 3rem; color: #666; }
     .empty-state-icon { font-size: 3rem; margin-bottom: 1rem; }
     .stats-summary { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
