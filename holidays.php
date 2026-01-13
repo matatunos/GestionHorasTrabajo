@@ -441,27 +441,76 @@ $pageStyles = '
 
   <script>
     let editingDate = null;
-    const yearFilter = document.getElementById('yearFilter');
-    const filterAll = document.getElementById('filterAll');
-    const typeFilters = document.querySelectorAll('.type-filter');
-    const holidaysContainer = document.getElementById('holidaysContainer');
-    const holidayModal = document.getElementById('holidayModal');
-    const addHolidayBtn = document.getElementById('addHolidayBtn');
-    
-    addHolidayBtn?.addEventListener('click', function() {
-      editingDate = null;
-      document.getElementById('modalTitle').textContent = 'Agregar Festivo';
-      document.getElementById('holidayForm').reset();
-      document.getElementById('holidayDate').valueAsDate = new Date();
-      holidayModal.classList.add('show');
-    });
 
+    document.addEventListener('DOMContentLoaded', function() {
+      const yearFilter = document.getElementById('yearFilter');
+      const filterAll = document.getElementById('filterAll');
+      const typeFilters = document.querySelectorAll('.type-filter');
+      const holidaysContainer = document.getElementById('holidaysContainer');
+      const holidayModal = document.getElementById('holidayModal');
+      const addHolidayBtn = document.getElementById('addHolidayBtn');
+      const holidayForm = document.getElementById('holidayForm');
+      
+      if (addHolidayBtn) {
+        addHolidayBtn.addEventListener('click', function() {
+          editingDate = null;
+          document.getElementById('modalTitle').textContent = 'Agregar Festivo';
+          holidayForm.reset();
+          document.getElementById('holidayDate').valueAsDate = new Date();
+          holidayModal.classList.add('show');
+        });
+      }
+
+      if (holidayForm) {
+        holidayForm.addEventListener('submit', saveHoliday);
+      }
+
+      if (holidayModal) {
+        holidayModal.addEventListener('click', function(event) {
+          if (event.target === this) {
+            closeModal();
+          }
+        });
+      }
+
+      if (yearFilter) {
+        yearFilter.addEventListener('change', function() {
+          const year = this.value;
+          window.location.href = `holidays.php?year=${year}`;
+        });
+      }
+
+      if (filterAll) {
+        filterAll.addEventListener('change', function() {
+          if (this.checked) {
+            typeFilters.forEach(cb => cb.checked = true);
+          }
+          updateDisplay();
+        });
+      }
+
+      typeFilters.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          if (!this.checked) {
+            filterAll.checked = false;
+          }
+          const allChecked = Array.from(typeFilters).every(cb => cb.checked);
+          if (allChecked) {
+            filterAll.checked = true;
+          }
+          updateDisplay();
+        });
+      });
+    });
+    
     function closeModal() {
+      const holidayModal = document.getElementById('holidayModal');
       holidayModal.classList.remove('show');
       editingDate = null;
     }
 
     function editHoliday(date, label, type, annual) {
+      const holidayModal = document.getElementById('holidayModal');
       editingDate = date;
       document.getElementById('modalTitle').textContent = 'Editar Festivo';
       document.getElementById('holidayDate').value = date;
@@ -523,39 +572,8 @@ $pageStyles = '
       .catch(error => console.error('Error:', error));
     }
 
-    // Cerrar modal al hacer clic fuera
-    holidayModal?.addEventListener('click', function(event) {
-      if (event.target === this) {
-        closeModal();
-      }
-    });
-
-    yearFilter?.addEventListener('change', function() {
-      const year = this.value;
-      window.location.href = `holidays.php?year=${year}`;
-    });
-
-    filterAll.addEventListener('change', function() {
-      if (this.checked) {
-        typeFilters.forEach(cb => cb.checked = true);
-      }
-      updateDisplay();
-    });
-
-    typeFilters.forEach(checkbox => {
-      checkbox.addEventListener('change', function() {
-        if (!this.checked) {
-          filterAll.checked = false;
-        }
-        const allChecked = Array.from(typeFilters).every(cb => cb.checked);
-        if (allChecked) {
-          filterAll.checked = true;
-        }
-        updateDisplay();
-      });
-    });
-
     function updateDisplay() {
+      const typeFilters = document.querySelectorAll('.type-filter');
       const selectedTypes = new Set();
       typeFilters.forEach(cb => {
         if (cb.checked) {
