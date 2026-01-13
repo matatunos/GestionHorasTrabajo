@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
       $date = $_POST['date'] ?? '';
       $label = $_POST['label'] ?? '';
       $type = $_POST['type'] ?? 'holiday';
+      $annual = isset($_POST['annual']) && $_POST['annual'] === 'on' ? 1 : 0;
       
       if (empty($date)) {
         http_response_code(400);
@@ -24,8 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
         exit;
       }
       
-      $stmt = $pdo->prepare('INSERT INTO holidays (user_id, date, label, type, annual) VALUES (?, ?, ?, ?, 0) ON DUPLICATE KEY UPDATE label = ?, type = ?');
-      $stmt->execute([$user['id'], $date, $label, $type, $label, $type]);
+      $stmt = $pdo->prepare('INSERT INTO holidays (user_id, date, label, type, annual) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE label = ?, type = ?, annual = ?');
+      $stmt->execute([$user['id'], $date, $label, $type, $annual, $label, $type, $annual]);
       
       echo json_encode(['success' => true, 'message' => 'Festivo agregado']);
       exit;
@@ -41,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
       $date = $_POST['date'] ?? '';
       $label = $_POST['label'] ?? '';
       $type = $_POST['type'] ?? 'holiday';
+      $annual = isset($_POST['annual']) && $_POST['annual'] === 'on' ? 1 : 0;
       
       if (empty($date)) {
         http_response_code(400);
@@ -48,8 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
         exit;
       }
       
-      $stmt = $pdo->prepare('UPDATE holidays SET label = ?, type = ? WHERE user_id = ? AND date = ?');
-      $stmt->execute([$label, $type, $user['id'], $date]);
+      $stmt = $pdo->prepare('UPDATE holidays SET label = ?, type = ?, annual = ? WHERE user_id = ? AND date = ?');
+      $stmt->execute([$label, $type, $annual, $user['id'], $date]);
       
       echo json_encode(['success' => true, 'message' => 'Festivo actualizado']);
       exit;
@@ -381,7 +383,7 @@ $pageStyles = '
                         <?php endif; ?>
                         <?php if ($h['is_own']): ?>
                           <div class="holiday-actions">
-                            <button class="btn btn-sm" style="background: #28a745; color: white; padding: 0.3rem 0.6rem;" onclick="editHoliday('<?php echo htmlspecialchars($h['date']); ?>', '<?php echo htmlspecialchars($h['label'] ?? ''); ?>', '<?php echo htmlspecialchars($h['type']); ?>')">✏️ Editar</button>
+                            <button class="btn btn-sm" style="background: #28a745; color: white; padding: 0.3rem 0.6rem;" onclick="editHoliday('<?php echo htmlspecialchars($h['date']); ?>', '<?php echo htmlspecialchars($h['label'] ?? ''); ?>', '<?php echo htmlspecialchars($h['type']); ?>', <?php echo $h['annual'] ? 'true' : 'false'; ?>)">✏️ Editar</button>
                             <button class="btn btn-sm" style="background: #dc3545; color: white; padding: 0.3rem 0.6rem;" onclick="deleteHoliday('<?php echo htmlspecialchars($h['date']); ?>')">🗑️ Eliminar</button>
                           </div>
                         <?php endif; ?>
@@ -421,6 +423,12 @@ $pageStyles = '
           <label for="holidayLabel">Descripción (opcional):</label>
           <input type="text" id="holidayLabel" name="label" placeholder="Ej: Día festivo especial">
         </div>
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" id="holidayAnnual" name="annual">
+            <span>Repetir cada año (festivo anual)</span>
+          </label>
+        </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
           <button type="submit" class="btn btn-primary">Guardar</button>
@@ -453,12 +461,13 @@ $pageStyles = '
       editingDate = null;
     }
 
-    function editHoliday(date, label, type) {
+    function editHoliday(date, label, type, annual) {
       editingDate = date;
       document.getElementById('modalTitle').textContent = 'Editar Festivo';
       document.getElementById('holidayDate').value = date;
       document.getElementById('holidayLabel').value = label;
       document.getElementById('holidayType').value = type;
+      document.getElementById('holidayAnnual').checked = annual || false;
       holidayModal.classList.add('show');
     }
 
@@ -488,14 +497,20 @@ $pageStyles = '
       const date = document.getElementById('holidayDate').value;
       const label = document.getElementById('holidayLabel').value;
       const type = document.getElementById('holidayType').value;
+      const annual = document.getElementById('holidayAnnual').checked ? 'on' : '';
       const action = editingDate ? 'edit_holiday' : 'add_holiday';
+
+      let bodyParams = `action=${action}&date=${encodeURIComponent(date)}&label=${encodeURIComponent(label)}&type=${encodeURIComponent(type)}`;
+      if (annual) {
+        bodyParams += `&annual=${encodeURIComponent(annual)}`;
+      }
 
       fetch('holidays.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `action=${action}&date=${encodeURIComponent(date)}&label=${encodeURIComponent(label)}&type=${encodeURIComponent(type)}`
+        body: bodyParams
       })
       .then(response => response.json())
       .then(data => {
