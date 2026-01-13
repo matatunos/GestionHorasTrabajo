@@ -921,7 +921,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
 
 <script src="importFichajes.js"></script>
 <script>
-(function(){
 // Admin backup controls moved to profile.php (admin-only)
 (function() {
   // Prefer IDs but fall back to searching by other selectors/text to be resilient
