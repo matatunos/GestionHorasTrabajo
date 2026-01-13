@@ -280,6 +280,147 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['xlsx_file'])) {
   }
 }
 
+// Handle CSV file upload
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
+  $file = $_FILES['csv_file'];
+  
+  if ($file['error'] === UPLOAD_ERR_OK) {
+    if ($file['size'] > MAX_UPLOAD_SIZE) {
+      $message = 'El archivo es demasiado grande (máximo 10MB)';
+      $messageType = 'error';
+    } else {
+      try {
+        $content = file_get_contents($file['tmp_name']);
+        $lines = array_filter(array_map('trim', explode("\n", $content)), 'strlen');
+        
+        if (count($lines) < 2) {
+          $message = 'El archivo CSV está vacío o tiene un formato inválido.';
+          $messageType = 'error';
+        } else {
+          // Parse header
+          $header = str_getcsv($lines[0]);
+          $header = array_map('trim', $header);
+          
+          // Map columns
+          $col_map = [];
+          $expected_patterns = [
+            'fecha' => 'date',
+            'date' => 'date',
+            'entry' => 'start',
+            'entrada' => 'start',
+            'start' => 'start',
+            'hora_entrada' => 'start',
+            'exit' => 'end',
+            'salida' => 'end',
+            'end' => 'end',
+            'hora_salida' => 'end',
+            'nota' => 'note',
+            'note' => 'note',
+            'notas' => 'note'
+          ];
+          
+          foreach ($header as $col) {
+            $col_lower = strtolower($col);
+            foreach ($expected_patterns as $pattern => $field) {
+              if (strpos($col_lower, $pattern) !== false) {
+                $col_map[$col] = $field;
+                break;
+              }
+            }
+          }
+          
+          // Check for date column
+          $has_date = false;
+          foreach ($col_map as $field) {
+            if ($field === 'date') {
+              $has_date = true;
+              break;
+            }
+          }
+          
+          if (!$has_date) {
+            $message = 'No se encontró columna de "Fecha". Encabezados encontrados: ' . implode(', ', $header);
+            $messageType = 'error';
+          } else {
+            // Parse CSV data
+            $csvData = [];
+            $year = intval($_POST['csv_year'] ?? date('Y'));
+            
+            for ($i = 1; $i < count($lines); $i++) {
+              try {
+                $row = str_getcsv($lines[$i]);
+                if (count($row) < count($header)) {
+                  $row = array_pad($row, count($header), '');
+                }
+                
+                $data = [];
+                foreach ($header as $j => $col) {
+                  $value = isset($row[$j]) ? trim($row[$j]) : '';
+                  if (isset($col_map[$col])) {
+                    $data[$col_map[$col]] = $value;
+                  }
+                }
+                
+                // Skip empty rows
+                if (empty($data['date'])) {
+                  continue;
+                }
+                
+                // Parse date
+                $date_obj = DateTime::createFromFormat('Y-m-d', $data['date']);
+                if ($date_obj === false) {
+                  $date_obj = DateTime::createFromFormat('d/m/Y', $data['date']) ?: DateTime::createFromFormat('d-m-Y', $data['date']);
+                }
+                
+                if ($date_obj === false) {
+                  continue;
+                }
+                
+                $fechaISO = $date_obj->format('Y-m-d');
+                
+                // Extract times
+                $horas = [];
+                if (!empty($data['start'])) {
+                  $horas[] = $data['start'];
+                }
+                if (!empty($data['end'])) {
+                  $horas[] = $data['end'];
+                }
+                
+                $csvData[] = [
+                  'fechaISO' => $fechaISO,
+                  'horas' => $horas,
+                  'horas_slots' => mapTimesToSlots($horas),
+                  'dia' => $fechaISO,
+                  'fecha' => $fechaISO
+                ];
+                
+              } catch (Exception $e) {
+                // Skip problem rows
+              }
+            }
+            
+            if (empty($csvData)) {
+              $message = 'No se encontraron registros válidos en el archivo CSV.';
+              $messageType = 'error';
+            } else {
+              $message = "✓ Se encontraron " . count($csvData) . " registros en el archivo CSV.";
+              $messageType = 'success';
+              $excelImportData = $csvData;
+            }
+          }
+        }
+      } catch (Exception $e) {
+        $message = 'Error cargando archivo CSV: ' . $e->getMessage();
+        $messageType = 'error';
+      }
+    }
+  } elseif (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] !== UPLOAD_ERR_NO_FILE) {
+    $message = 'Error cargando archivo: ' . $_FILES['csv_file']['error'];
+    $messageType = 'error';
+  }
+}
+
 // Handle image upload with OCR
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image_file'])) {
   $file = $_FILES['image_file'];
@@ -613,6 +754,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_data'])) {
           </form>
         </div>
       <?php endif; ?>
+    </div>
+    
+    <hr style="margin: 30px 0; border: 1px solid rgba(255,255,255,0.1);">
+    
+    <!-- CSV Import Section -->
+    <div style="margin-bottom: 30px;">
+      <h2>Importar desde archivo CSV</h2>
+      <p class="muted">Carga un archivo CSV con formato simple: Fecha, Entrada, Salida (y opcionalmente Nota).</p>
+      
+      <form method="post" enctype="multipart/form-data" class="import-form form-wrapper">
+        <div class="form-group">
+          <label for="csv_file">Archivo CSV (.csv):</label>
+          <input type="file" id="csv_file" name="csv_file" accept=".csv,.txt" class="form-control">
+          <div class="muted">Máximo 10MB. Formatos de fecha soportados: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY</div>
+        </div>
+        
+        <div class="form-group">
+          <label for="csv_year">Año (para fechas sin año):</label>
+          <input type="number" id="csv_year" name="csv_year" min="2020" max="2030" value="<?php echo date('Y'); ?>" class="form-control">
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Procesar archivo CSV</button>
+      </form>
+      
+      <div style="margin-top: 15px; padding: 10px; background: rgba(100,100,100,0.2); border-radius: 5px;">
+        <strong>Ejemplo de formato CSV:</strong>
+        <pre style="font-size: 0.85rem; margin: 10px 0; color: #ccc;">Fecha,Entrada,Salida,Nota
+2026-01-13,09:00,17:30,Día normal
+2026-01-14,09:15,17:45,Llegué tarde
+2026-01-15,09:00,13:00,</pre>
+      </div>
     </div>
     
     <hr style="margin: 30px 0; border: 1px solid rgba(255,255,255,0.1);">
