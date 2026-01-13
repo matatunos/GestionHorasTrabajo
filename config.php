@@ -22,6 +22,8 @@ function get_config(){
             'pass' => getenv('DB_PASS') ?: 'app_pass',
             'charset' => 'utf8mb4',
         ],
+        // Application URL used for building absolute links and CORS defaults
+        'app_url' => 'http://localhost',
     ];
 
     // Try to read configuration from DB (single JSON blob stored under 'site_config').
@@ -52,6 +54,23 @@ function get_config(){
     }
 
     return $defaults;
+}
+
+/**
+ * Return the configured application URL.
+ * Falls back to the current request's host/protocol when running in web context.
+ */
+function get_app_url(): string {
+    $conf = get_config();
+    if (!empty($conf['app_url'])) return rtrim($conf['app_url'], '/');
+
+    // Try to derive from server variables
+    if (!empty($_SERVER['HTTP_HOST'])) {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        return $scheme . '://' . $_SERVER['HTTP_HOST'];
+    }
+
+    return 'http://localhost';
 }
 
 /**

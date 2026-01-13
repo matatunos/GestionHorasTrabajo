@@ -11,6 +11,7 @@
 
 require_once __DIR__ . '/JWTHelper.php';
 require_once __DIR__ . '/LogConfig.php';
+require_once __DIR__ . '/config.php';
 
 // Inicializar logging
 LogConfig::init();
@@ -24,24 +25,25 @@ require_once __DIR__ . '/lib.php';
 // Necesitamos permitir el origin específico del cliente (en este caso la extensión de Chrome)
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
-// Permitir extensión Chrome y localhost
+// Build allowed origins from configuration (app URL) and common local hosts
+$appUrl = get_app_url();
+$parsed = parse_url($appUrl);
+$appOrigin = isset($parsed['scheme']) && isset($parsed['host']) ? $parsed['scheme'] . '://' . $parsed['host'] : $appUrl;
+
 $allowed_origins = [
-  'chrome-extension://',  // Cualquier extensión (es básicamente inseguro, pero necesario para extensiones)
+  'chrome-extension://',
   'http://localhost',
   'http://127.0.0.1',
-  'https://example.com',
-  'https://localhost'
+  $appOrigin,
 ];
 
 $should_allow = false;
 foreach ($allowed_origins as $allowed) {
-  if (strpos($origin, $allowed) === 0) {
-    $should_allow = true;
-    break;
-  }
+  if ($allowed === 'chrome-extension://' && strpos($origin, 'chrome-extension://') === 0) { $should_allow = true; break; }
+  if (!empty($origin) && strpos($origin, $allowed) === 0) { $should_allow = true; break; }
 }
 
-if ($should_allow) {
+if ($should_allow && $origin) {
   header('Access-Control-Allow-Origin: ' . $origin);
   header('Access-Control-Allow-Credentials: true');
 }
@@ -80,13 +82,18 @@ if (!$is_ajax && !$is_mobile && !$is_login) {
   exit;
 }
 
-// Validar HTTPS en producción
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-if ($protocol === 'http' && $_SERVER['HTTP_HOST'] !== 'localhost' && $_SERVER['HTTP_HOST'] !== '127.0.0.1') {
-  http_response_code(403);
-  header('Content-Type: application/json');
-  echo json_encode(['ok' => false, 'error' => 'insecure', 'message' => 'API solo disponible por HTTPS']);
-  exit;
+// Validar HTTPS en producción: si la app está configurada con https en APP URL, exigir HTTPS
+$confApp = get_app_url();
+$confParsed = parse_url($confApp);
+$confScheme = $confParsed['scheme'] ?? null;
+if ($confScheme === 'https') {
+  $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+  if ($protocol !== 'https' && $_SERVER['HTTP_HOST'] !== 'localhost' && $_SERVER['HTTP_HOST'] !== '127.0.0.1') {
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => false, 'error' => 'insecure', 'message' => 'API solo disponible por HTTPS']);
+    exit;
+  }
 }
 
 // ⚠️ IMPORTANTE: Leer php://input UNA SOLA VEZ al inicio (no se puede leer dos veces)
