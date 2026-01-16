@@ -90,15 +90,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_date'])) {
 // handle POST create/update entry for current user
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['date'])) {
   $date = $_POST['date'];
+  function nullIfEmpty($v) {
+    return (isset($v) && trim($v) !== '') ? $v : null;
+  }
   $data = [
-    'start' => $_POST['start'] ?: null,
-    'coffee_out' => $_POST['coffee_out'] ?: null,
-    'coffee_in' => $_POST['coffee_in'] ?: null,
-    'lunch_out' => $_POST['lunch_out'] ?: null,
-    'lunch_in' => $_POST['lunch_in'] ?: null,
-    'end' => $_POST['end'] ?: null,
-    'note' => $_POST['note'] ?: '',
-    'absence_type' => $_POST['absence_type'] ?: null,
+    'start' => nullIfEmpty($_POST['start'] ?? null),
+    'coffee_out' => nullIfEmpty($_POST['coffee_out'] ?? null),
+    'coffee_in' => nullIfEmpty($_POST['coffee_in'] ?? null),
+    'lunch_out' => nullIfEmpty($_POST['lunch_out'] ?? null),
+    'lunch_in' => nullIfEmpty($_POST['lunch_in'] ?? null),
+    'end' => nullIfEmpty($_POST['end'] ?? null),
+    'note' => $_POST['note'] ?? '',
+    'absence_type' => $_POST['absence_type'] ?? null,
   ];
   
   // Validate time entry consistency
@@ -267,32 +270,31 @@ $holidayMap = [];
   <div class="card">
     <!-- Controles globales: selector de fecha, selector de año y ocultador de fines de semana -->
     <div id="global-controls" style="display:flex;gap:12px;align-items:center;margin-bottom:10px;">
-      <label class="form-label">Fecha global <input id="global-date" class="form-control" type="date" value="<?php echo htmlspecialchars($initialDate); ?>"></label>
-      <label class="form-label">Año <select id="entry-year" class="form-control">
-        <?php
-          // Años disponibles para este usuario (solo entries)
-          $years = [];
-          try {
-            $ystmt = $pdo->prepare('SELECT DISTINCT YEAR(date) AS y FROM entries WHERE user_id = ? AND date IS NOT NULL ORDER BY y DESC');
-            $ystmt->execute([$user['id']]);
-            foreach ($ystmt->fetchAll() as $r) { if (!empty($r['y'])) $years[] = intval($r['y']); }
-          } catch (Throwable $e) { /* ignore */ }
-          $years = array_values(array_unique(array_filter($years)));
-          rsort($years);
-          if (empty($years)) $years = [intval(date('Y'))];
-          if (!in_array(intval($year), $years, true)) array_unshift($years, intval($year));
-          foreach ($years as $y){
-            $sel = ($y === intval($year)) ? ' selected' : '';
-            echo "<option value=\"$y\"$sel>$y</option>";
-          }
-        ?>
-      </select></label>
-      <label class="form-check form-label"><input id="global-hide-weekends" type="checkbox" <?php echo $hideWeekends ? 'checked' : ''; ?>><span>Ocultar fines de semana</span></label>
+      <div style="margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+        <!-- Selector de fecha global eliminado por petición -->
+        <button id="add-entry-btn" class="btn btn-primary" style="margin-top:4px;" type="button">Añadir registro</button>
+      </div>
+      <div class="form-group" style="display: flex; gap: 0; align-items: center; justify-content: center; background: #f8f9fa; border-radius: 6px; padding: 4px 0; border: 1px solid #e0e0e0; margin-left: 8px; min-width: 0; flex: 1;">
+        <div style="display: flex; flex-direction: row; gap: 0; width: 100%; justify-content: center; align-items: center;">
+          <label class="form-check" style="margin-bottom:0; display: flex; align-items: center; min-width: 180px; justify-content: center; padding: 0 12px;">
+            <input id="global-hide-weekends" type="checkbox" <?php echo $hideWeekends ? 'checked' : ''; ?>>
+            <span style="margin-left:6px;">Ocultar fines de semana</span>
+          </label>
+          <label class="form-check" style="margin-bottom:0; display: flex; align-items: center; min-width: 150px; justify-content: center; padding: 0 12px;">
+            <input type="checkbox" class="auto-filter-trigger" name="hide_holidays" value="1" <?php echo $hideHolidays ? 'checked' : ''; ?>>
+            <span style="margin-left:6px;">Ocultar festivos</span>
+          </label>
+          <label class="form-check" style="margin-bottom:0; display: flex; align-items: center; min-width: 150px; justify-content: center; padding: 0 12px;">
+            <input type="checkbox" class="auto-filter-trigger" name="hide_vacations" value="1" <?php echo $hideVacations ? 'checked' : ''; ?>>
+            <span style="margin-left:6px;">Ocultar vacaciones</span>
+          </label>
+        </div>
+      </div>
     </div>
 
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
-      <button class="btn btn-primary" type="button" id="openAddEntryBtn">Añadir</button>
-      <button class="btn btn-secondary" type="button" id="openIncidentBtn">📋 Gestionar incidencias</button>
+      <!-- Botón 'Añadir' eliminado, funcionalidad movida a 'Añadir registro' -->
+      <!-- Botón 'Gestionar incidencias' eliminado por petición -->
     </div>
 
     <!-- Modal for adding a work entry (mirrors settings.php behavior) -->
@@ -355,28 +357,39 @@ $holidayMap = [];
           </form>
 
           <!-- List of incidents for selected date -->
-          <div id="incidents-list" style="margin-top:20px; padding-top:20px; border-top:1px solid #ccc; display:none;">
-            <h4>Incidencias para <strong id="incidents-list-date"></strong></h4>
-            <table class="sheet compact" style="width:100%;">
-              <thead>
-                <tr><th>Tipo</th><th>Detalles</th><th>Razón</th><th>Acciones</th></tr>
-              </thead>
-              <tbody id="incidents-tbody">
-              </tbody>
-            </table>
-          </div>
+          <!-- Incidencias: sección eliminada por petición -->
         </div>
       </div>
     </div>
 
-    <form id="filters-form" method="get" class="row-form mt-2">
+    <form id="filters-form" method="get" class="row-form mt-2" style="display:flex;align-items:center;gap:12px;">
       <!-- keep server-side checkbox in sync with global control (hidden to avoid duplicate UI) -->
       <label style="display:none;"><input type="checkbox" name="hide_weekends" value="1" <?php echo $hideWeekends ? 'checked' : ''; ?>> Ocultar fines de semana</label>
-      <label class="form-check"><input type="checkbox" class="auto-filter-trigger" name="hide_holidays" value="1" <?php echo $hideHolidays ? 'checked' : ''; ?>><span>Ocultar festivos</span></label>
-      <label class="form-check"><input type="checkbox" class="auto-filter-trigger" name="hide_vacations" value="1" <?php echo $hideVacations ? 'checked' : ''; ?>><span>Ocultar vacaciones</span></label>
+      <!-- Los checkboxes de ocultar festivos y vacaciones ahora están agrupados arriba -->
       
       <!-- New advanced filters -->
-      <div style="border-left:1px solid #ccc; padding-left:12px; margin-left:12px;">
+      <div style="border-left:1px solid #ccc; padding-left:12px; margin-left:12px; display:flex; align-items:center; gap:12px;">
+        <label class="form-label" style="margin-bottom:0;">Año
+          <select id="entry-year" name="year" class="form-control auto-filter-trigger" aria-label="Año" style="width:90px;display:inline-block;">
+            <?php
+              // Años disponibles para este usuario (solo entries)
+              $years = [];
+              try {
+                $ystmt = $pdo->prepare('SELECT DISTINCT YEAR(date) AS y FROM entries WHERE user_id = ? AND date IS NOT NULL ORDER BY y DESC');
+                $ystmt->execute([$user['id']]);
+                foreach ($ystmt->fetchAll() as $r) { if (!empty($r['y'])) $years[] = intval($r['y']); }
+              } catch (Throwable $e) { /* ignore */ }
+              $years = array_values(array_unique(array_filter($years)));
+              rsort($years);
+              if (empty($years)) $years = [intval(date('Y'))];
+              if (!in_array(intval($year), $years, true)) array_unshift($years, intval($year));
+              foreach ($years as $y){
+                $sel = ($y === intval($year)) ? ' selected' : '';
+                echo "<option value=\"$y\"$sel>$y</option>";
+              }
+            ?>
+          </select>
+        </label>
         <label class="form-label">Desde <input class="form-control auto-filter-trigger" type="date" name="filter_date_from" value="<?php echo htmlspecialchars($_GET['filter_date_from'] ?? ''); ?>" style="width:150px;"></label>
         <label class="form-label">Hasta <input class="form-control auto-filter-trigger" type="date" name="filter_date_to" value="<?php echo htmlspecialchars($_GET['filter_date_to'] ?? ''); ?>" style="width:150px;"></label>
         <label class="form-label">Estado <select class="form-control auto-filter-trigger" name="filter_status" style="width:150px;">
@@ -840,7 +853,9 @@ $holidayMap = [];
     entryModalOverlay.style.display = 'none';
     entryModalOverlay.setAttribute('aria-hidden', 'true');
   }
-  if (openAddEntryBtn) openAddEntryBtn.addEventListener('click', openEntryModal);
+  // Botón 'Añadir registro' (nuevo principal)
+  const addEntryBtn = document.getElementById('add-entry-btn');
+  if (addEntryBtn) addEntryBtn.addEventListener('click', openEntryModal);
   if (closeEntryModalBtn) closeEntryModalBtn.addEventListener('click', closeEntryModal);
   if (entryModalOverlay) entryModalOverlay.addEventListener('click', function(e){ if (e.target === entryModalOverlay) closeEntryModal(); });
 

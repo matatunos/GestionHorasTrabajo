@@ -21,14 +21,13 @@ $site_name = $site_cfg['site_name'] ?? 'GestionHoras';
 		<nav class="sidebar-menu">
 			<div class="menu-section">
 				<?php if (!empty($current)): ?>
-					<a class="menu-item" href="dashboard.php">Dashboard</a>
-					<a class="menu-item" href="index.php">Registro horario</a>
+					<a class="menu-item" href="dashboard.php">🏠 Dashboard</a>
+					<a class="menu-item" href="index.php">🕒 Registro horario</a>
 					<a class="menu-item" href="holidays.php">📅 Festivos y Ausencias</a>
 				<?php endif; ?>
 				<!-- 'Años' link removed: management consolidated into settings.php -->
 				<?php if (!empty($current) && $current['is_admin']): ?>
-					<a class="menu-item" href="reports.php">Reportes</a>
-					<a class="menu-item" href="settings.php">Configuración</a>
+					<a class="menu-item" href="settings.php">⚙️ Configuración</a>
 				<?php endif; ?>
 
 				<?php if (!empty($current)): ?>
@@ -45,6 +44,7 @@ $site_name = $site_cfg['site_name'] ?? 'GestionHoras';
 							<a class="dropdown-item" href="chrome-addon-help.php">🧩 Extensión Chrome</a>
 							<a class="dropdown-item" href="extension-tokens.php">🔐 Tokens</a>
 							<?php if (!empty($current) && !empty($current['is_admin'])): ?>
+								<a class="dropdown-item" href="reports.php">📊 Reportes</a>
 								<a class="dropdown-item" href="admin-backup.php">🗄️ Backup</a>
 							<?php endif; ?>
 							<a class="dropdown-item" href="logout.php">🚪 Salir</a>

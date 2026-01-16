@@ -786,7 +786,11 @@ function svg_sparkline(array $values, $w=120, $h=28){
             $w = $months[$mm]['worked']; $eexp = $months[$mm]['expected']; $bal = $w - $eexp; $ex = $bal>0 ? $bal : 0; $def = $bal<0 ? -$bal : 0;
         ?>
           <tr>
-            <td><?php echo strftime('%B', mktime(0,0,0,$mm,1,$year)); ?></td>
+            <td><?php
+              $fmt = new IntlDateFormatter('es_ES', IntlDateFormatter::NONE, IntlDateFormatter::NONE, null, null, 'LLLL');
+              $dateObj = DateTime::createFromFormat('!m', $mm);
+              echo ucfirst($fmt->format($dateObj));
+            ?></td>
             <td><?php echo fmt($w); ?></td>
             <td><?php echo fmt($eexp); ?></td>
             <td><?php echo fmt($bal); ?></td>

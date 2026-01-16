@@ -6,7 +6,7 @@ require_admin();
 $pdo = get_pdo();
 
 // Shared function to generate stats for all users for a given year/month
-function generate_user_stats(PDO $pdo, int $year, int $month): array {
+function generate_user_stats(PDO $pdo, int $year): array {
   $users = $pdo->query('SELECT id, username, is_admin FROM users ORDER BY username')->fetchAll(PDO::FETCH_ASSOC);
   $stats = [];
   foreach ($users as $user) {
@@ -18,15 +18,29 @@ function generate_user_stats(PDO $pdo, int $year, int $month): array {
     foreach ($stmt->fetchAll() as $r) { $entries[$r['date']] = $r; }
 
     $daysWithEntries = count($entries);
-
-    $monthStart = sprintf('%04d-%02d-01', $year, $month);
-    $monthEnd = date('Y-m-t', strtotime($monthStart));
-
-    $totalWorked = 0; $totalExpected = 0; $daysInMonth = 0; $lastEntry = null;
+    $totalWorked = 0; $totalExpected = 0; $lastEntry = null;
     $config = get_year_config($year, $userId);
 
-    for ($d = new DateTimeImmutable($monthStart); $d <= new DateTimeImmutable($monthEnd); $d = $d->modify('+1 day')) {
+    // Obtener festivos para el año (incluye anuales)
+    $holidays = [];
+    $hstmt = $pdo->prepare('SELECT date, annual FROM holidays WHERE (YEAR(date)=? OR annual=1)');
+    $hstmt->execute([$year]);
+    foreach ($hstmt->fetchAll() as $h) {
+      $hd = $h['date'];
+      if (!empty($h['annual'])) {
+        $hd = sprintf('%04d-%s', $year, substr($h['date'],5));
+      }
+      $holidays[$hd] = true;
+    }
+
+    // Recorrer todos los días del año
+    $start = new DateTimeImmutable("$year-01-01");
+    $end = new DateTimeImmutable("$year-12-31");
+    for ($d = $start; $d <= $end; $d = $d->modify('+1 day')) {
       $dateStr = $d->format('Y-m-d');
+      $dow = intval($d->format('N')); // 6=sábado, 7=domingo
+      if ($dow >= 6) continue; // Excluir fines de semana
+      if (isset($holidays[$dateStr])) continue; // Excluir festivos
       $entry = $entries[$dateStr] ?? ['date' => $dateStr];
       $calc = compute_day($entry, $config);
       $worked_display = $calc['worked_minutes_for_display'] ?? null;
@@ -36,7 +50,6 @@ function generate_user_stats(PDO $pdo, int $year, int $month): array {
       }
       if ($worked_display !== null) {
         $totalWorked += intval($worked_display);
-        $daysInMonth++;
         $lastEntry = $dateStr;
       }
     }
@@ -44,7 +57,6 @@ function generate_user_stats(PDO $pdo, int $year, int $month): array {
     $stats[] = [
       'user' => $user,
       'days_with_entries' => $daysWithEntries,
-      'days_this_month' => $daysInMonth,
       'worked_hours' => round($totalWorked / 60, 2),
       'expected_hours' => round($totalExpected / 60, 2),
       'balance_hours' => round(($totalWorked - $totalExpected) / 60, 2),
@@ -57,8 +69,7 @@ function generate_user_stats(PDO $pdo, int $year, int $month): array {
 // Handle AJAX requests (return tbody HTML)
 if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
   $year = intval($_GET['year'] ?? date('Y'));
-  $month = intval($_GET['month'] ?? date('n'));
-  $stats = generate_user_stats($pdo, $year, $month);
+  $stats = generate_user_stats($pdo, $year);
   foreach ($stats as $s) {
     $balance = $s['balance_hours'];
     $balanceClass = $balance > 0 ? '--good' : ($balance < 0 ? '--bad' : '--ok');
@@ -66,7 +77,6 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH
     echo '<td>' . htmlspecialchars($s['user']['username']) . '</td>';
     echo '<td>' . ($s['user']['is_admin'] ? '✓' : '') . '</td>';
     echo '<td>' . $s['days_with_entries'] . '</td>';
-    echo '<td>' . $s['days_this_month'] . '</td>';
     echo '<td>' . $s['worked_hours'] . 'h</td>';
     echo '<td>' . $s['expected_hours'] . 'h</td>';
     echo '<td><span class="pill ' . $balanceClass . '">' . ($balance > 0 ? '↑' : ($balance < 0 ? '↓' : '•')) . ' ' . abs($s['balance_hours']) . 'h</span></td>';
@@ -77,18 +87,17 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH
 }
 
 $year = intval($_GET['year'] ?? date('Y'));
-$month = intval($_GET['month'] ?? date('n'));
 
 // Export CSV if requested
 if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
-  $stats = generate_user_stats($pdo, $year, $month);
+  $stats = generate_user_stats($pdo, $year);
   header('Content-Type: text/csv; charset=UTF-8');
-  header('Content-Disposition: attachment; filename="report_' . $year . '_' . $month . '.csv"');
+  header('Content-Disposition: attachment; filename="report_' . $year . '.csv"');
   $out = fopen('php://output', 'w');
-  fputcsv($out, ['username','is_admin','days_with_entries','days_this_month','worked_hours','expected_hours','balance_hours','last_entry']);
+  fputcsv($out, ['username','is_admin','days_with_entries','worked_hours','expected_hours','balance_hours','last_entry']);
   foreach ($stats as $s) {
     fputcsv($out, [
-      $s['user']['username'], $s['user']['is_admin'] ? 1 : 0, $s['days_with_entries'], $s['days_this_month'], $s['worked_hours'], $s['expected_hours'], $s['balance_hours'], $s['last_entry'] ?? ''
+      $s['user']['username'], $s['user']['is_admin'] ? 1 : 0, $s['days_with_entries'], $s['worked_hours'], $s['expected_hours'], $s['balance_hours'], $s['last_entry'] ?? ''
     ]);
   }
   fclose($out);
@@ -96,7 +105,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
 }
 
 // Generate stats for initial page render
-$stats = generate_user_stats($pdo, $year, $month);
+$stats = generate_user_stats($pdo, $year);
 ?>
 <!doctype html>
 <html lang="es">
@@ -114,11 +123,6 @@ $stats = generate_user_stats($pdo, $year, $month);
     <h2>Reportes de Usuarios</h2>
     
     <form class="row-form" style="margin-bottom: 1.5rem;" id="filters-form">
-      <label class="form-label">Mes <select class="form-control" id="month-select" name="month">
-        <?php for ($m = 1; $m <= 12; $m++): ?>
-          <option value="<?php echo $m; ?>" <?php echo $m === $month ? 'selected' : ''; ?>><?php echo strftime('%B', mktime(0,0,0,$m,1)); ?></option>
-        <?php endfor; ?>
-      </select></label>
       <label class="form-label">Año <input class="form-control" id="year-input" type="number" name="year" value="<?php echo $year; ?>" min="2000" max="2099"></label>
     </form>
     <div style="margin-bottom:1rem;">
@@ -131,11 +135,10 @@ $stats = generate_user_stats($pdo, $year, $month);
           <tr>
             <th>Usuario</th>
             <th>Admin</th>
-            <th>Días con fichaje (año)</th>
-            <th>Días este mes</th>
+            <th>Días con fichaje</th>
             <th>Horas trabajadas</th>
             <th>Horas esperadas</th>
-            <th>Balance</th>
+            <th>Balance anual</th>
             <th>Última entrada</th>
           </tr>
         </thead>
@@ -145,7 +148,6 @@ $stats = generate_user_stats($pdo, $year, $month);
               <td><?php echo htmlspecialchars($s['user']['username']); ?></td>
               <td><?php echo $s['user']['is_admin'] ? '✓ Sí' : ''; ?></td>
               <td><?php echo $s['days_with_entries']; ?></td>
-              <td><?php echo $s['days_this_month']; ?></td>
               <td><?php echo $s['worked_hours']; ?></td>
               <td><?php echo $s['expected_hours']; ?></td>
               <td class="<?php echo $s['balance_hours'] >= 0 ? 'balance--good' : 'balance--bad'; ?>">
@@ -161,15 +163,12 @@ $stats = generate_user_stats($pdo, $year, $month);
 </div>
 <?php include __DIR__ . '/footer.php'; ?>
 <script>
-  const monthSelect = document.getElementById('month-select');
   const yearInput = document.getElementById('year-input');
   const tbody = document.querySelector('table.sheet tbody');
   
   function loadStats() {
-    const month = monthSelect.value;
     const year = yearInput.value;
-    
-    fetch(`?month=${month}&year=${year}`, {
+    fetch(`?year=${year}`, {
       headers: {'X-Requested-With': 'XMLHttpRequest'}
     })
     .then(r => r.text())
@@ -179,15 +178,12 @@ $stats = generate_user_stats($pdo, $year, $month);
     .catch(err => console.error('Error loading stats:', err));
   }
   
-  monthSelect.addEventListener('change', loadStats);
   yearInput.addEventListener('change', loadStats);
   const exportBtn = document.getElementById('export-csv-btn');
   if (exportBtn) {
     exportBtn.addEventListener('click', function(){
-      const month = monthSelect.value;
       const year = yearInput.value;
-      // Navigate to CSV export endpoint
-      window.location.href = `?export=csv&year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`;
+      window.location.href = `?export=csv&year=${encodeURIComponent(year)}`;
     });
   }
 </script>
