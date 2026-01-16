@@ -32,6 +32,10 @@ function render_checkbox(string $name, $checked = null, string $label = 'Repite 
 
 function is_summer_date(string $date, array $config): bool {
     $y = date('Y', strtotime($date));
+    if (!isset($config['summer_start']) || !isset($config['summer_end'])) {
+        error_log('Falta summer_start o summer_end en $config: ' . var_export($config, true));
+        return false;
+    }
     $start = strtotime("$y-" . $config['summer_start']);
     $end = strtotime("$y-" . $config['summer_end']);
     $t = strtotime($date);
@@ -75,9 +79,15 @@ function compute_day(array $entry, array $config = null): array {
     if ($weekday >= 6 || $isHolidayFlag || $isVacation || $isPersonal) {
         $expected_hours = 0.0;
     } else {
-        $expected_hours = ($weekday === 5) ? $config['work_hours'][$season]['friday'] : $config['work_hours'][$season]['mon_thu'];
+        // En PHP date('N'), 5 es viernes
+        if ($weekday == 5) {
+            $expected_hours = $config['work_hours'][$season]['friday'];
+        } else {
+            $expected_hours = $config['work_hours'][$season]['mon_thu'];
+        }
     }
-    $expected_minutes = intval(round($expected_hours * 60));
+    // Usar precisión completa para minutos teóricos
+    $expected_minutes = round($expected_hours * 60, 0);
 
     $start = time_to_minutes($entry['start'] ?? null);
     $coffee_out = time_to_minutes($entry['coffee_out'] ?? null);

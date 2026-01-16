@@ -1,4 +1,9 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+ini_set('log_errors', 1);
+error_reporting(E_ALL);
+error_log('config.php: INICIO');
 function get_config(){
     $defaults = [
         // site display name
@@ -61,7 +66,7 @@ function get_config(){
  * Falls back to the current request's host/protocol when running in web context.
  */
 function get_app_url(): string {
-    $conf = get_config();
+    $conf = [];
     if (!empty($conf['app_url'])) return rtrim($conf['app_url'], '/');
 
     // Try to derive from server variables
@@ -135,24 +140,46 @@ function get_year_config(int $year, int $user_id = null){
                 $row = $stmt->fetch();
             }
             if ($row) {
-                // merge numeric overrides for winter
-                if ($row['mon_thu'] !== null) $conf['work_hours']['winter']['mon_thu'] = floatval($row['mon_thu']);
-                if ($row['friday'] !== null) $conf['work_hours']['winter']['friday'] = floatval($row['friday']);
-                // merge numeric overrides for summer (if provided)
-                if (array_key_exists('summer_mon_thu', $row) && $row['summer_mon_thu'] !== null) {
-                    $conf['work_hours']['summer']['mon_thu'] = floatval($row['summer_mon_thu']);
+                if (!empty($row['config'])) {
+                    $json = json_decode($row['config'], true);
+                    if (is_array($json)) {
+                        $conf = $json;
+                    }
                 }
-                if (array_key_exists('summer_friday', $row) && $row['summer_friday'] !== null) {
-                    $conf['work_hours']['summer']['friday'] = floatval($row['summer_friday']);
+                // Si no hay JSON, usar los campos individuales como fallback
+                if ($conf === null) {
+                    $conf = get_config();
+                    if ($row['mon_thu'] !== null) $conf['work_hours']['winter']['mon_thu'] = floatval($row['mon_thu']);
+                    if ($row['friday'] !== null) $conf['work_hours']['winter']['friday'] = floatval($row['friday']);
+                    if (array_key_exists('summer_mon_thu', $row) && $row['summer_mon_thu'] !== null) {
+                        $conf['work_hours']['summer']['mon_thu'] = floatval($row['summer_mon_thu']);
+                    }
+                    if (array_key_exists('summer_friday', $row) && $row['summer_friday'] !== null) {
+                        $conf['work_hours']['summer']['friday'] = floatval($row['summer_friday']);
+                    }
+                    if ($row['coffee_minutes'] !== null) $conf['coffee_minutes'] = intval($row['coffee_minutes']);
+                    if ($row['lunch_minutes'] !== null) $conf['lunch_minutes'] = intval($row['lunch_minutes']);
                 }
-                if ($row['coffee_minutes'] !== null) $conf['coffee_minutes'] = intval($row['coffee_minutes']);
-                if ($row['lunch_minutes'] !== null) $conf['lunch_minutes'] = intval($row['lunch_minutes']);
             }
         }
     } catch (Throwable $e) {
         // ignore DB errors and return defaults
+        if (empty($conf)) {
+            $conf = get_config();
+        }
     }
 
+    if (empty($conf)) {
+        $conf = get_config();
+    }
+    // Asegurar que summer_start y summer_end siempre estén presentes
+    $defaults = get_config();
+    if (empty($conf['summer_start']) && !empty($defaults['summer_start'])) {
+        $conf['summer_start'] = $defaults['summer_start'];
+    }
+    if (empty($conf['summer_end']) && !empty($defaults['summer_end'])) {
+        $conf['summer_end'] = $defaults['summer_end'];
+    }
     return $conf;
 }
 

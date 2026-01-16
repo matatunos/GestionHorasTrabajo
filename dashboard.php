@@ -429,7 +429,9 @@ function svg_sparkline(array $values, $w=120, $h=28){
       <?php
         // Calcular saldo semanal SIEMPRE relativo a hoy (semana actual y la anterior),
         // independientemente del año seleccionado. Esto puede cruzar de año; cargamos mapas por año.
-        $refEnd = new DateTimeImmutable('today');
+        // Use selected year and reference date for weekly summary
+        $refDate = isset($_GET['refdate']) ? $_GET['refdate'] : sprintf('%04d-01-15', $year); // Default: mid-Jan of selected year
+        $refEnd = new DateTimeImmutable($refDate);
         $curWeekStart = $refEnd->modify('Monday this week');
         $prevWeekStart = $curWeekStart->modify('-7 days');
 
@@ -455,21 +457,46 @@ function svg_sparkline(array $values, $w=120, $h=28){
           return $sum;
         };
 
+        $sum_week_expected = function(DateTimeImmutable $start) use ($getMapsForDate){
+          $sum = 0;
+          for ($i = 0; $i < 7; $i++){
+            $d = $start->modify("+$i days")->format('Y-m-d');
+            [$entriesY, $holidayMapY, $cfgY] = $getMapsForDate($d);
+            $e = $entriesY[$d] ?? ['date' => $d];
+            $weekday = date('N', strtotime($d));
+            if ($weekday > 5) continue; // solo lunes a viernes
+            if (isset($holidayMapY[$d])) { $e['is_holiday'] = true; $e['special_type'] = $holidayMapY[$d]['type'] ?? 'holiday'; }
+            $calc = compute_day($e, $cfgY);
+            $sum += intval($calc['expected_minutes'] ?? 0);
+          }
+          return $sum;
+        };
+
         $prevWeekMinutes = $sum_week_balance($prevWeekStart);
         $curWeekMinutes = $sum_week_balance($curWeekStart);
+        $prevWeekExpected = $sum_week_expected($prevWeekStart);
+        $curWeekExpected = $sum_week_expected($curWeekStart);
       ?>
-      <div class="card card--wide">
-        <h4>Exceso/Defecto de horas</h4>
+      <div class="admin-stat-card card--wide">
+        <div class="admin-stat-icon"><i class="fas fa-clock"></i></div>
+        <h4>Resumen semanal</h4>
         <div class="week-cards">
           <?php $prevClass = $prevWeekMinutes >= 0 ? 'week-card positive' : 'week-card negative'; ?>
           <?php $curClass = $curWeekMinutes >= 0 ? 'week-card positive' : 'week-card negative'; ?>
-          <div class="card dashboard-mini-card <?php echo $prevClass; ?>">Semana anterior<br><span class="muted"><?php echo htmlspecialchars(fmt_week_range($prevWeekStart)); ?></span><br><strong><?php echo minutes_to_hours_formatted($prevWeekMinutes); ?></strong></div>
-          <div class="card dashboard-mini-card <?php echo $curClass; ?>">Semana actual<br><span class="muted"><?php echo htmlspecialchars(fmt_week_range($curWeekStart)); ?></span><br><strong><?php echo minutes_to_hours_formatted($curWeekMinutes); ?></strong></div>
+          <div class="card dashboard-mini-card <?php echo $prevClass; ?>">Semana anterior<br><span class="muted"><?php echo htmlspecialchars(fmt_week_range($prevWeekStart)); ?></span><br>
+            <strong>Teóricas: <?php echo minutes_to_hours_formatted($prevWeekExpected); ?></strong><br>
+            <strong>Saldo: <?php echo minutes_to_hours_formatted($prevWeekMinutes); ?></strong>
+          </div>
+          <div class="card dashboard-mini-card <?php echo $curClass; ?>">Semana actual<br><span class="muted"><?php echo htmlspecialchars(fmt_week_range($curWeekStart)); ?></span><br>
+            <strong>Teóricas: <?php echo minutes_to_hours_formatted($curWeekExpected); ?></strong><br>
+            <strong>Saldo: <?php echo minutes_to_hours_formatted($curWeekMinutes); ?></strong>
+          </div>
         </div>
       </div>
 
       <?php if ($todayInYear && $todayCalc): ?>
-      <div class="card">
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon"><i class="fas fa-calendar-day"></i></div>
         <h4>Hoy</h4>
         <div class="dashboard-value dashboard-value--sm"><?php echo htmlspecialchars($today); ?></div>
         <div class="muted">Trabajadas: <strong><?php echo $todayCalc['worked_hours_formatted'] !== '' ? htmlspecialchars($todayCalc['worked_hours_formatted']) : '—'; ?></strong></div>
@@ -478,7 +505,8 @@ function svg_sparkline(array $values, $w=120, $h=28){
       </div>
       <?php endif; ?>
 
-      <div class="card">
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon"><i class="fas fa-database"></i></div>
         <h4>Calidad de datos</h4>
         <div class="muted">Laborables sin fichaje: <strong><?php echo intval($missingDays); ?></strong></div>
         <div class="muted">Días incompletos: <strong><?php echo intval($incompleteDays); ?></strong></div>
@@ -486,7 +514,8 @@ function svg_sparkline(array $values, $w=120, $h=28){
         <div class="mt-2"><a class="btn btn-secondary" href="index.php?year=<?php echo urlencode($year); ?>">Revisar</a></div>
       </div>
 
-      <div class="card">
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon"><i class="fas fa-check-circle"></i></div>
         <h4>Tendencia (30 laborables)</h4>
         <div class="muted">Saldo diario</div>
         <div class="sparkline"><?php echo svg_sparkline($dailyBalances, 220, 34); ?></div>
@@ -494,13 +523,15 @@ function svg_sparkline(array $values, $w=120, $h=28){
         <div class="sparkline"><?php echo svg_sparkline($cumulativeBalances, 220, 34); ?></div>
       </div>
 
-      <div class="card">
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon"><i class="fas fa-chart-line"></i></div>
         <h4>Distribución</h4>
         <div class="muted">Hora media salida (20 laborables): <strong><?php echo htmlspecialchars(fmt_clock($avgEnd)); ?></strong></div>
         <div class="muted">% jornada partida (20 laborables): <strong><?php echo intval($splitPct); ?>%</strong></div>
       </div>
 
-      <div class="card">
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon"><i class="fas fa-random"></i></div>
         <h4>Alertas</h4>
         <?php if ($alertLowBalance): ?>
           <div class="muted">Saldo anual bajo: <strong><?php echo fmt($yearBalance); ?></strong></div>
@@ -535,7 +566,8 @@ function svg_sparkline(array $values, $w=120, $h=28){
         }
         $prevAfternoons = count_afternoons_worked_in_month($yPrev, $mPrev, $prevEntries, $prevHolidayMap, $prevCfg, false);
       ?>
-      <div class="card">
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
         <h4>Tardes trabajadas</h4>
         <div class="dashboard-split-cards">
           <div class="card dashboard-mini-card dashboard-mini-card--half">
@@ -550,19 +582,22 @@ function svg_sparkline(array $values, $w=120, $h=28){
 
       
 
-      <div class="card">
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon"><i class="fas fa-mug-hot"></i></div>
         <h4>Acumulado año</h4>
         <div class="dashboard-value"><?php echo fmt($ytd_worked); ?></div>
         <div class="muted">Esperadas (YTD): <?php echo fmt($ytd_expected); ?></div>
       </div>
 
-      <div class="card">
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon"><i class="fas fa-balance-scale"></i></div>
         <h4>Saldo acumulado año</h4>
         <div class="dashboard-value"><?php echo fmt($ytd_worked - $ytd_expected); ?></div>
         <div class="muted">Incluye meses hasta la fecha</div>
       </div>
 
-      <div class="card">
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon"><i class="fas fa-hourglass-half"></i></div>
         <h4>Media horas por día laboral</h4>
         <?php
           $days = 0; $totalWork = 0;
@@ -589,7 +624,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
     <h3 class="dashboard-section-title">🔐 Análisis de Seguridad</h3>
     <div class="dashboard-cards">
       <!-- Login Statistics Card -->
-      <div class="card">
+      <div class="admin-stat-card">
         <h4>Intentos de login (30 días)</h4>
         <div class="dashboard-value"><?php echo $logStats['total']; ?></div>
         <div class="muted">

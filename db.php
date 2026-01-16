@@ -1,4 +1,9 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+ini_set('log_errors', 1);
+error_reporting(E_ALL);
+error_log('db.php: INICIO');
 require_once __DIR__ . '/config.php';
 
 function get_pdo(){
@@ -26,8 +31,10 @@ function get_pdo(){
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]);
+        error_log("Database connection successful."); // Log success
         return $pdo;
     } catch (PDOException $e) {
+        error_log("Database connection failed: " . $e->getMessage()); // Log failure
         return null;
     }
 }

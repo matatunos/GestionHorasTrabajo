@@ -117,34 +117,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_year_config']) 
       };
       $yy = intval($_POST['yearcfg_year'] ?? 0);
       if ($yy > 0) {
-        $mt = $parse_hours($_POST['yearcfg_mon_thu'] ?? null, 8.0);
-        $fr = $parse_hours($_POST['yearcfg_friday'] ?? null, 6.0);
-        $smt = $parse_hours($_POST['yearcfg_summer_mon_thu'] ?? null, 7.5);
-        $sfr = $parse_hours($_POST['yearcfg_summer_friday'] ?? null, 6.0);
-        $cm = $parse_minutes($_POST['yearcfg_coffee_minutes'] ?? null, 15);
-        $lm = $parse_minutes($_POST['yearcfg_lunch_minutes'] ?? null, 30);
-        $pdo->exec("CREATE TABLE IF NOT EXISTS year_configs (
-          year INT PRIMARY KEY,
-          mon_thu DOUBLE DEFAULT NULL,
-          friday DOUBLE DEFAULT NULL,
-          summer_mon_thu DOUBLE DEFAULT NULL,
-          summer_friday DOUBLE DEFAULT NULL,
-          coffee_minutes INT DEFAULT NULL,
-          lunch_minutes INT DEFAULT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-        try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS mon_thu DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN mon_thu DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
-        try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS friday DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN friday DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
-        try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS summer_mon_thu DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN summer_mon_thu DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
-        try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS summer_friday DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN summer_friday DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
-        try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS coffee_minutes INT DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN coffee_minutes INT DEFAULT NULL"); }catch(Throwable $e2){} }
-        try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS lunch_minutes INT DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN lunch_minutes INT DEFAULT NULL"); }catch(Throwable $e2){} }
-        $stmt = $pdo->prepare('REPLACE INTO year_configs (year, mon_thu, friday, summer_mon_thu, summer_friday, coffee_minutes, lunch_minutes) VALUES (?,?,?,?,?,?,?)');
-        $stmt->execute([$yy, $mt, $fr, $smt, $sfr, $cm, $lm]);
-          $msg = 'Configuración del año guardada.';
+        try {
+          $mt = $parse_hours($_POST['yearcfg_mon_thu'] ?? null, 8.0);
+          $fr = $parse_hours($_POST['yearcfg_friday'] ?? null, 6.0);
+          $smt = $parse_hours($_POST['yearcfg_summer_mon_thu'] ?? null, 7.5);
+          $sfr = $parse_hours($_POST['yearcfg_summer_friday'] ?? null, 6.0);
+          $cm = $parse_minutes($_POST['yearcfg_coffee_minutes'] ?? null, 15);
+          $lm = $parse_minutes($_POST['yearcfg_lunch_minutes'] ?? null, 30);
+          $pdo->exec("CREATE TABLE IF NOT EXISTS year_configs (
+            year INT PRIMARY KEY,
+            mon_thu DOUBLE DEFAULT NULL,
+            friday DOUBLE DEFAULT NULL,
+            summer_mon_thu DOUBLE DEFAULT NULL,
+            summer_friday DOUBLE DEFAULT NULL,
+            coffee_minutes INT DEFAULT NULL,
+            lunch_minutes INT DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+          try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS mon_thu DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN mon_thu DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
+          try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS friday DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN friday DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
+          try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS summer_mon_thu DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN summer_mon_thu DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
+          try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS summer_friday DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN summer_friday DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
+          try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS coffee_minutes INT DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN coffee_minutes INT DEFAULT NULL"); }catch(Throwable $e2){} }
+          try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS lunch_minutes INT DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN lunch_minutes INT DEFAULT NULL"); }catch(Throwable $e2){} }
+          
+          // Build config JSON
+          $config = json_encode([
+            'work_hours' => [
+              'winter' => ['mon_thu' => $mt, 'friday' => $fr],
+              'summer' => ['mon_thu' => $smt, 'friday' => $sfr]
+            ],
+            'coffee_minutes' => $cm,
+            'lunch_minutes' => $lm
+          ]);
+          
+          $stmt = $pdo->prepare('REPLACE INTO year_configs (year, config, mon_thu, friday, summer_mon_thu, summer_friday, coffee_minutes, lunch_minutes) VALUES (?,?,?,?,?,?,?,?)');
+          $stmt->execute([$yy, $config, $mt, $fr, $smt, $sfr, $cm, $lm]);
+            $msg = 'Configuración del año guardada.';
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+              header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
+            }
+        } catch (Exception $e) {
+          error_log('Error creando configuración de año: ' . $e->getMessage());
+          $msg = 'Error al crear la configuración del año: ' . $e->getMessage();
           if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
-            header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
+            header('Content-Type: application/json'); echo json_encode(['error' => $e->getMessage()]); exit;
           }
+        }
       } else {
         $msg = 'Año inválido.';
       }
@@ -153,11 +172,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_year_config']) 
       error_log('DELETE_YEAR_CONFIG POST: ' . json_encode($_POST));
       $yy = intval($_POST['delete_year_config']);
       if ($yy > 0) {
-        $stmt = $pdo->prepare('DELETE FROM year_configs WHERE year = ?');
-        $stmt->execute([$yy]);
-        $msg = 'Configuración del año eliminada.';
-        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
-          header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
+        try {
+          $stmt = $pdo->prepare('DELETE FROM year_configs WHERE year = ?');
+          $stmt->execute([$yy]);
+          $msg = 'Configuración del año eliminada.';
+          if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+            header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
+          }
+        } catch (Exception $e) {
+          error_log('Error eliminando configuración de año: ' . $e->getMessage());
+          $msg = 'Error al eliminar la configuración del año: ' . $e->getMessage();
+          if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+            header('Content-Type: application/json'); echo json_encode(['error' => $e->getMessage()]); exit;
+          }
         }
       }
     }
@@ -401,12 +428,12 @@ if ($pdo) {
           <thead>
             <tr>
               <th>Año</th>
-              <th>Invierno (Lun-Jue)</th>
-              <th>Viernes</th>
+              <th>Invierno (Lun-Jueves)</th>
+              <th>Invierno (Viernes)</th>
               <th>Verano (Lun-Jue)</th>
               <th>Verano (Viernes)</th>
-              <th>Café (min)</th>
-              <th>Comida (min)</th>
+              <th>Café</th>
+              <th>Comida</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -414,12 +441,12 @@ if ($pdo) {
           <?php foreach($year_configs as $yc): ?>
             <tr data-year="<?php echo htmlspecialchars($yc['year']); ?>" data-mon_thu="<?php echo htmlspecialchars($yc['mon_thu']); ?>" data-friday="<?php echo htmlspecialchars($yc['friday']); ?>" data-summer_mon_thu="<?php echo htmlspecialchars($yc['summer_mon_thu']); ?>" data-summer_friday="<?php echo htmlspecialchars($yc['summer_friday']); ?>" data-coffee_minutes="<?php echo htmlspecialchars($yc['coffee_minutes']); ?>" data-lunch_minutes="<?php echo htmlspecialchars($yc['lunch_minutes']); ?>">
               <td class="yc-year"><?php echo htmlspecialchars($yc['year']); ?></td>
-              <td class="yc-mon_thu"><?php echo htmlspecialchars($yc['mon_thu']); ?></td>
-              <td class="yc-friday"><?php echo htmlspecialchars($yc['friday']); ?></td>
-              <td class="yc-summer_mon_thu"><?php echo htmlspecialchars($yc['summer_mon_thu']); ?></td>
-              <td class="yc-summer_friday"><?php echo htmlspecialchars($yc['summer_friday']); ?></td>
-              <td class="yc-coffee_minutes"><?php echo htmlspecialchars($yc['coffee_minutes']); ?></td>
-              <td class="yc-lunch_minutes"><?php echo htmlspecialchars($yc['lunch_minutes']); ?></td>
+              <td class="yc-mon_thu"><?php echo sprintf('%02d:%02d', floor($yc['mon_thu']), round(($yc['mon_thu']-floor($yc['mon_thu']))*60)); ?></td>
+              <td class="yc-friday"><?php echo sprintf('%02d:%02d', floor($yc['friday']), round(($yc['friday']-floor($yc['friday']))*60)); ?></td>
+              <td class="yc-summer_mon_thu"><?php echo sprintf('%02d:%02d', floor($yc['summer_mon_thu']), round(($yc['summer_mon_thu']-floor($yc['summer_mon_thu']))*60)); ?></td>
+              <td class="yc-summer_friday"><?php echo sprintf('%02d:%02d', floor($yc['summer_friday']), round(($yc['summer_friday']-floor($yc['summer_friday']))*60)); ?></td>
+              <td class="yc-coffee_minutes"><?php echo sprintf('%02d:%02d', floor($yc['coffee_minutes']/60), $yc['coffee_minutes']%60); ?></td>
+              <td class="yc-lunch_minutes"><?php echo sprintf('%02d:%02d', floor($yc['lunch_minutes']/60), $yc['lunch_minutes']%60); ?></td>
               <td>
                 <button class="btn btn-sm icon-btn edit-year-btn" type="button" title="Editar"><i class="fas fa-edit"></i></button>
                 <form method="post" style="display:inline;" onsubmit="return confirm('Eliminar configuración de año?');">

@@ -400,7 +400,9 @@ function svg_sparkline(array $values, $w=120, $h=28){
       <?php
         // Calcular saldo semanal SIEMPRE relativo a hoy (semana actual y la anterior),
         // independientemente del año seleccionado. Esto puede cruzar de año; cargamos mapas por año.
-        $refEnd = new DateTimeImmutable('today');
+        // Use selected year and reference date for weekly summary
+        $refDate = isset($_GET['refdate']) ? $_GET['refdate'] : sprintf('%04d-01-15', $year); // Default: mid-Jan of selected year
+        $refEnd = new DateTimeImmutable($refDate);
         $curWeekStart = $refEnd->modify('Monday this week');
         $prevWeekStart = $curWeekStart->modify('-7 days');
 
@@ -523,13 +525,13 @@ function svg_sparkline(array $values, $w=120, $h=28){
 
       <div class="card">
         <h4>Acumulado año</h4>
-        <div class="dashboard-value"><?php echo fmt($ytd_worked); ?></div>
-        <div class="muted">Esperadas (YTD): <?php echo fmt($ytd_expected); ?></div>
+        <div class="dashboard-value"><?php echo fmt_clock($ytd_worked); ?></div>
+        <div class="muted">Esperadas (YTD): <?php echo fmt_clock($ytd_expected); ?></div>
       </div>
 
       <div class="card">
         <h4>Saldo acumulado año</h4>
-        <div class="dashboard-value"><?php echo fmt($ytd_worked - $ytd_expected); ?></div>
+        <div class="dashboard-value"><?php echo fmt_clock($ytd_worked - $ytd_expected); ?></div>
         <div class="muted">Incluye meses hasta la fecha</div>
       </div>
 
@@ -545,7 +547,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
           }
           $avg = $days>0 ? intval(round($totalWork / $days)) : 0;
         ?>
-        <div class="dashboard-value dashboard-value--sm"><?php echo fmt($avg); ?></div>
+        <div class="dashboard-value dashboard-value--sm"><?php echo fmt_clock($avg); ?></div>
         <div class="muted">Basado en días procesados (incluye fines de semana filtrados)</div>
       </div>
     </div>
@@ -561,10 +563,10 @@ function svg_sparkline(array $values, $w=120, $h=28){
         ?>
           <tr>
             <td><?php echo strftime('%B', mktime(0,0,0,$mm,1,$year)); ?></td>
-            <td><?php echo fmt($w); ?></td>
-            <td><?php echo fmt($eexp); ?></td>
-            <td><?php echo fmt($bal); ?></td>
-            <td><?php echo fmt($ex); ?></td>
+            <td><?php echo fmt_clock($w); ?></td>
+            <td><?php echo fmt_clock($eexp); ?></td>
+            <td><?php echo fmt_clock($bal); ?></td>
+            <td><?php echo fmt_clock($ex); ?></td>
             <td><div class="sparkline"><?php echo svg_sparkline(array_slice($month_values, max(1,$mm-5), min(6, $mm)),160,32); ?></div></td>
           </tr>
         <?php endfor; ?>
