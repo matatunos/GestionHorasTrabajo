@@ -362,20 +362,31 @@ function svg_sparkline(array $values, $w=120, $h=28){
 ?>
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard</title><link rel="icon" type="image/svg+xml" href="images/favicon.svg"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="css/dashboard-theme.css"></head><body class="page-dashboard">
-<?php $hidePageHeader = true; include __DIR__ . '/header.php'; ?>
+<?php include __DIR__ . '/header.php'; ?>
   <div class="container">
     <div class="card">
       <div class="dashboard-header">
         <h1>Dashboard</h1>
         <form method="get" action="dashboard.php" class="row-form">
         <label class="form-label small">Año
-          <select class="form-control" name="year" onchange="this.form.submit()">
+          <select class="form-control" name="year" id="yearSelector">
             <?php foreach($years as $y): ?>
               <option value="<?php echo $y; ?>" <?php if ($y === intval($year)) echo 'selected'; ?>><?php echo $y; ?></option>
             <?php endforeach; ?>
           </select>
         </label>
+        <noscript><input type="submit" value="Cambiar año" class="btn btn-primary"></noscript>
       </form>
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          var yearSelector = document.getElementById('yearSelector');
+          if (yearSelector) {
+            yearSelector.addEventListener('change', function() {
+              this.form.submit();
+            });
+          }
+        });
+      </script>
     </div>
 
     <div class="dashboard-actions mt-2">
@@ -425,58 +436,90 @@ function svg_sparkline(array $values, $w=120, $h=28){
       </div>
     <?php endif; ?>
 
+
+    <!-- UNIFIED DASHBOARD CARDS CONTAINER -->
     <div class="dashboard-cards">
       <?php
-        // Calcular saldo semanal SIEMPRE relativo a hoy (semana actual y la anterior),
-        // independientemente del año seleccionado. Esto puede cruzar de año; cargamos mapas por año.
-        // Use selected year and reference date for weekly summary
-        $refDate = isset($_GET['refdate']) ? $_GET['refdate'] : sprintf('%04d-01-15', $year); // Default: mid-Jan of selected year
-        $refEnd = new DateTimeImmutable($refDate);
-        $curWeekStart = $refEnd->modify('Monday this week');
-        $prevWeekStart = $curWeekStart->modify('-7 days');
+      // --- Variables de resumen semanal ---
+      $refDate = isset($_GET['refdate']) ? $_GET['refdate'] : sprintf('%04d-01-15', $year); // Default: mid-Jan of selected year
+      $refEnd = new DateTimeImmutable($refDate);
+      $curWeekStart = $refEnd->modify('Monday this week');
+      $prevWeekStart = $curWeekStart->modify('-7 days');
 
-        $yearMapsCache = [];
-        $getMapsForDate = function(string $isoDate) use (&$yearMapsCache, $pdo, $user) {
-          $y = intval(substr($isoDate, 0, 4));
-          if (!isset($yearMapsCache[$y])) {
-            $yearMapsCache[$y] = load_year_maps($pdo, intval($user['id']), $y);
-          }
-          return $yearMapsCache[$y];
-        };
+      $yearMapsCache = [];
+      $getMapsForDate = function(string $isoDate) use (&$yearMapsCache, $pdo, $user) {
+        $y = intval(substr($isoDate, 0, 4));
+        if (!isset($yearMapsCache[$y])) {
+          $yearMapsCache[$y] = load_year_maps($pdo, intval($user['id']), $y);
+        }
+        return $yearMapsCache[$y];
+      };
 
-        $sum_week_balance = function(DateTimeImmutable $start) use ($getMapsForDate){
-          $sum = 0;
-          for ($i = 0; $i < 7; $i++){
-            $d = $start->modify("+$i days")->format('Y-m-d');
-            [$entriesY, $holidayMapY, $cfgY] = $getMapsForDate($d);
-            $e = $entriesY[$d] ?? ['date' => $d];
-            if (isset($holidayMapY[$d])) { $e['is_holiday'] = true; $e['special_type'] = $holidayMapY[$d]['type'] ?? 'holiday'; }
-            $calc = compute_day($e, $cfgY);
-            $sum += intval($calc['day_balance'] ?? 0);
-          }
-          return $sum;
-        };
+      $sum_week_balance = function(DateTimeImmutable $start) use ($getMapsForDate){
+        $sum = 0;
+        for ($i = 0; $i < 7; $i++){
+          $d = $start->modify("+$i days")->format('Y-m-d');
+          [$entriesY, $holidayMapY, $cfgY] = $getMapsForDate($d);
+          $e = $entriesY[$d] ?? ['date' => $d];
+          if (isset($holidayMapY[$d])) { $e['is_holiday'] = true; $e['special_type'] = $holidayMapY[$d]['type'] ?? 'holiday'; }
+          $calc = compute_day($e, $cfgY);
+          $sum += intval($calc['day_balance'] ?? 0);
+        }
+        return $sum;
+      };
 
-        $sum_week_expected = function(DateTimeImmutable $start) use ($getMapsForDate){
-          $sum = 0;
-          for ($i = 0; $i < 7; $i++){
-            $d = $start->modify("+$i days")->format('Y-m-d');
-            [$entriesY, $holidayMapY, $cfgY] = $getMapsForDate($d);
-            $e = $entriesY[$d] ?? ['date' => $d];
-            $weekday = date('N', strtotime($d));
-            if ($weekday > 5) continue; // solo lunes a viernes
-            if (isset($holidayMapY[$d])) { $e['is_holiday'] = true; $e['special_type'] = $holidayMapY[$d]['type'] ?? 'holiday'; }
-            $calc = compute_day($e, $cfgY);
-            $sum += intval($calc['expected_minutes'] ?? 0);
-          }
-          return $sum;
-        };
+      $sum_week_expected = function(DateTimeImmutable $start) use ($getMapsForDate){
+        $sum = 0;
+        for ($i = 0; $i < 7; $i++){
+          $d = $start->modify("+$i days")->format('Y-m-d');
+          [$entriesY, $holidayMapY, $cfgY] = $getMapsForDate($d);
+          $e = $entriesY[$d] ?? ['date' => $d];
+          $weekday = date('N', strtotime($d));
+          if ($weekday > 5) continue; // solo lunes a viernes
+          if (isset($holidayMapY[$d])) { $e['is_holiday'] = true; $e['special_type'] = $holidayMapY[$d]['type'] ?? 'holiday'; }
+          $calc = compute_day($e, $cfgY);
+          $sum += intval($calc['expected_minutes'] ?? 0);
+        }
+        return $sum;
+      };
 
-        $prevWeekMinutes = $sum_week_balance($prevWeekStart);
-        $curWeekMinutes = $sum_week_balance($curWeekStart);
-        $prevWeekExpected = $sum_week_expected($prevWeekStart);
-        $curWeekExpected = $sum_week_expected($curWeekStart);
+      $prevWeekMinutes = $sum_week_balance($prevWeekStart);
+      $curWeekMinutes = $sum_week_balance($curWeekStart);
+      $prevWeekExpected = $sum_week_expected($prevWeekStart);
+      $curWeekExpected = $sum_week_expected($curWeekStart);
+
+      // Usar siempre los datos del año seleccionado
+      [$entriesYear, $holidayMapYear, $cfgYear] = load_year_maps($pdo, intval($user['id']), $year);
+      $vacaciones_disfrutados = 0;
+      $libre_disposicion_disfrutados = 0;
+      foreach ($entriesYear as $d => $e) {
+        // Solo contar días donde el usuario tiene un registro de ausencia
+        $tipo = null;
+        if (!empty($e['absence_type'])) {
+          $tipo = $e['absence_type'];
+        } elseif (!empty($e['special_type'])) {
+          $tipo = $e['special_type'];
+        }
+        $tipoNorm = strtolower(str_replace([' ', '_', '-'], '', $tipo ?? ''));
+        if ($tipoNorm === 'vacaciones' || $tipoNorm === 'vacation') {
+          $vacaciones_disfrutados++;
+        }
+        if ($tipoNorm === 'libredisposicion' || $tipoNorm === 'librededisposicion' || $tipoNorm === 'libre' || $tipoNorm === 'personal') {
+          $libre_disposicion_disfrutados++;
+        }
+      }
+      $total_vacaciones = isset($cfgYear['vacaciones_total']) ? intval($cfgYear['vacaciones_total']) : 23;
+      $total_libre_disposicion = isset($cfgYear['libre_disposicion_total']) ? intval($cfgYear['libre_disposicion_total']) : 3;
+      $vacaciones_restantes = max(0, $total_vacaciones - $vacaciones_disfrutados);
+      $libre_disposicion_restantes = max(0, $total_libre_disposicion - $libre_disposicion_disfrutados);
       ?>
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon"><i class="fas fa-umbrella-beach"></i></div>
+        <h4>Vacaciones</h4>
+        <div class="dashboard-value">Has consumido <strong><?php echo $vacaciones_disfrutados; ?></strong> de <strong><?php echo $total_vacaciones; ?></strong> días</div>
+        <div class="muted">Te quedan <strong><?php echo $vacaciones_restantes; ?></strong> días libres este año</div>
+      </div>
+
       <div class="admin-stat-card card--wide">
         <div class="admin-stat-icon"><i class="fas fa-clock"></i></div>
         <h4>Resumen semanal</h4>
@@ -512,15 +555,6 @@ function svg_sparkline(array $values, $w=120, $h=28){
         <div class="muted">Días incompletos: <strong><?php echo intval($incompleteDays); ?></strong></div>
         <div class="muted">Racha incompletos: <strong><?php echo intval($incompleteStreak); ?></strong></div>
         <div class="mt-2"><a class="btn btn-secondary" href="index.php?year=<?php echo urlencode($year); ?>">Revisar</a></div>
-      </div>
-
-      <div class="admin-stat-card">
-        <div class="admin-stat-icon"><i class="fas fa-check-circle"></i></div>
-        <h4>Tendencia (30 laborables)</h4>
-        <div class="muted">Saldo diario</div>
-        <div class="sparkline"><?php echo svg_sparkline($dailyBalances, 220, 34); ?></div>
-        <div class="muted dashboard-note">Saldo acumulado</div>
-        <div class="sparkline"><?php echo svg_sparkline($cumulativeBalances, 220, 34); ?></div>
       </div>
 
       <div class="admin-stat-card">
@@ -579,8 +613,6 @@ function svg_sparkline(array $values, $w=120, $h=28){
         </div>
         <div class="muted dashboard-note">Saldo comida ≥ 1:00</div>
       </div>
-
-      
 
       <div class="admin-stat-card">
         <div class="admin-stat-icon"><i class="fas fa-mug-hot"></i></div>

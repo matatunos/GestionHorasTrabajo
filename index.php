@@ -1,7 +1,11 @@
 <?php
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/lib.php';
+
 require_once __DIR__ . '/db.php';
+// Cargar loader de plugins y obtener lista
+require_once __DIR__ . '/plugins/plugin_loader.php';
+$plugins = get_plugins_list(__DIR__ . '/plugins');
 
 $user = current_user();
 require_login();
@@ -265,7 +269,7 @@ $holidayMap = [];
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="page-index">
-<?php $hidePageHeader = true; include __DIR__ . '/header.php'; ?>
+<?php include __DIR__ . '/header.php'; ?>
 <div class="container">
   <div class="card">
     <!-- Controles globales: selector de fecha, selector de año y ocultador de fines de semana -->
@@ -292,10 +296,27 @@ $holidayMap = [];
       </div>
     </div>
 
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
-      <!-- Botón 'Añadir' eliminado, funcionalidad movida a 'Añadir registro' -->
-      <!-- Botón 'Gestionar incidencias' eliminado por petición -->
+
+    <!-- Menú de plugins -->
+    <?php if (!empty($plugins)) : ?>
+    <div class="card" style="margin-bottom:16px;">
+      <h3 style="margin:12px 0 8px 12px;">Plugins</h3>
+      <ul style="list-style:none;padding:0 0 12px 12px;margin:0;">
+        <?php foreach ($plugins as $plugin): ?>
+          <li style="margin-bottom:10px;">
+            <a href="plugins/<?php echo htmlspecialchars($plugin['dir']); ?>/index.php" target="_blank" style="text-decoration:underline; color:#2a4d7a; font-weight:bold;">
+              <?php echo htmlspecialchars($plugin['name']); ?>
+            </a>
+            <?php if (!empty($plugin['description'])): ?>
+              <div style="font-size:0.95em; color:#555; margin-left:4px; margin-top:2px;">
+                <?php echo htmlspecialchars($plugin['description']); ?>
+              </div>
+            <?php endif; ?>
+          </li>
+        <?php endforeach; ?>
+      </ul>
     </div>
+    <?php endif; ?>
 
     <!-- Modal for adding a work entry (mirrors settings.php behavior) -->
     <div id="entryModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">

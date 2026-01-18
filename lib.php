@@ -58,7 +58,7 @@ function minutes_to_hours_formatted(?int $min): string {
     return $sign . sprintf('%d:%02d', $h, $r);
 }
 
-function compute_day(array $entry, array $config = null): array {
+function compute_day(array $entry, ?array $config = null): array {
     // expected minutes
     // if no config provided, fetch by year
     if ($config === null) {

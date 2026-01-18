@@ -896,8 +896,11 @@ if ($hol_pdo) {
   </div>
 </div>
 <script>
-// Inline edit for holiday rows
+// Inline edit for holiday rows: convert cells to inputs, save via AJAX, cancel restores
 (function(){
+  function el(sel, ctx){ return (ctx||document).querySelector(sel); }
+  function els(sel, ctx){ return Array.from((ctx||document).querySelectorAll(sel)); }
+
   document.addEventListener('click', function(e){
     const btn = e.target.closest('.edit-holiday-btn'); if (!btn) return;
     const tr = btn.closest('tr'); if (!tr || tr.dataset.editing==='1') return;

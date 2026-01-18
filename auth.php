@@ -1,4 +1,21 @@
 <?php
+function log_auth_event($action, $username, $user_id = null, $reason = null) {
+    $logDir = __DIR__ . '/logs';
+    if (!is_dir($logDir)) mkdir($logDir, 0777, true);
+    $authLog = $logDir . '/auth.log';
+    $entry = [
+        'timestamp' => date('Y-m-d H:i:s'),
+        'unix_timestamp' => time(),
+        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+        'data' => [
+            'action' => $action,
+            'username' => $username,
+            'user_id' => $user_id,
+            'reason' => $reason
+        ]
+    ];
+    file_put_contents($authLog, json_encode($entry, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
+}
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 ini_set('log_errors', 1);
@@ -46,18 +63,30 @@ function do_login($username, $password){
     $stmt = $pdo->prepare('SELECT id, password, username FROM users WHERE username = ? LIMIT 1');
     $stmt->execute([$username]);
     $u = $stmt->fetch();
-    if (!$u) return false;
+    if (!$u) {
+        log_auth_event('LOGIN_FAILED', $username, null, 'user_not_found');
+        return false;
+    }
     if (password_verify($password, $u['password'])){
         $_SESSION['user_id'] = $u['id'];
-        
         // Check if user 'admin' is using default password 'admin'
         if ($username === 'admin' && $password === 'admin') {
             $_SESSION['force_password_change'] = true;
         }
-        
+        log_auth_event('LOGIN_SUCCESS', $username, $u['id']);
         return true;
+    } else {
+        log_auth_event('LOGIN_FAILED', $username, $u['id'], 'invalid_password');
+        return false;
     }
-    return false;
+}
+
+function do_logout() {
+    $user = current_user();
+    if ($user) {
+        log_auth_event('LOGOUT', $user['username'], $user['id']);
+    }
+    session_destroy();
 }
 
 function needs_password_change(){
@@ -68,6 +97,3 @@ function clear_password_change_flag(){
     unset($_SESSION['force_password_change']);
 }
 
-function do_logout(){
-    session_unset(); session_destroy();
-}

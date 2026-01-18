@@ -713,7 +713,7 @@ $pageStyles = '
         body: bodyParams
       })
       .then(response => response.json())
-      .then(data => {
+      .then data => {
         if (data.success) {
           closeModal();
           refreshHolidays();
