@@ -272,14 +272,37 @@ $holidayMap = [];
 <?php include __DIR__ . '/header.php'; ?>
 <div class="container">
   <div class="card">
-    <!-- Controles globales: selector de fecha, selector de año y ocultador de fines de semana -->
-    <div id="global-controls" style="display:flex;gap:12px;align-items:center;margin-bottom:10px;">
-      <div style="margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-        <!-- Selector de fecha global eliminado por petición -->
-        <button id="add-entry-btn" class="btn btn-primary" style="margin-top:4px;" type="button">Añadir registro</button>
-      </div>
-      <div class="form-group" style="display: flex; gap: 0; align-items: center; justify-content: center; background: #f8f9fa; border-radius: 6px; padding: 4px 0; border: 1px solid #e0e0e0; margin-left: 8px; min-width: 0; flex: 1;">
-        <div style="display: flex; flex-direction: row; gap: 0; width: 100%; justify-content: center; align-items: center;">
+
+    <!-- Barra de filtros y botón añadir registro alineados en una sola línea -->
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;justify-content:space-between;">
+      <form id="filter-form" method="get" style="display:flex;align-items:center;gap:12px;flex:1;">
+        <label class="form-label">Año
+          <select class="form-control auto-filter-trigger" name="year" style="width:100px;">
+            <?php
+              $years = [];
+              try {
+                $ystmt = $pdo->prepare('SELECT DISTINCT YEAR(date) AS y FROM entries WHERE user_id = ? AND date IS NOT NULL ORDER BY y DESC');
+                $ystmt->execute([$user['id']]);
+                foreach ($ystmt->fetchAll() as $r) { if (!empty($r['y'])) $years[] = intval($r['y']); }
+              } catch (Throwable $e) { /* ignore */ }
+              $years = array_values(array_unique(array_filter($years)));
+              rsort($years);
+              if (empty($years)) $years = [intval(date('Y'))];
+              if (!in_array(intval($year), $years, true)) array_unshift($years, intval($year));
+              foreach ($years as $y){
+                $sel = ($y === intval($year)) ? ' selected' : '';
+                echo "<option value=\"$y\"$sel>$y</option>";
+              }
+            ?>
+          </select>
+        </label>
+        <label class="form-label">Estado <select class="form-control auto-filter-trigger" name="filter_status" style="width:150px;">
+          <option value="">Todos</option>
+          <option value="complete" <?php echo ($_GET['filter_status'] ?? '') === 'complete' ? 'selected' : ''; ?>>Completo</option>
+          <option value="incomplete" <?php echo ($_GET['filter_status'] ?? '') === 'incomplete' ? 'selected' : ''; ?>>Incompleto</option>
+          <option value="absence" <?php echo ($_GET['filter_status'] ?? '') === 'absence' ? 'selected' : ''; ?>>Con ausencia</option>
+        </select></label>
+        <div style="display: flex; flex-direction: row; gap: 0; justify-content: center; align-items: center; margin-left: 16px;">
           <label class="form-check" style="margin-bottom:0; display: flex; align-items: center; min-width: 180px; justify-content: center; padding: 0 12px;">
             <input id="global-hide-weekends" type="checkbox" <?php echo $hideWeekends ? 'checked' : ''; ?>>
             <span style="margin-left:6px;">Ocultar fines de semana</span>
@@ -293,30 +316,16 @@ $holidayMap = [];
             <span style="margin-left:6px;">Ocultar vacaciones</span>
           </label>
         </div>
-      </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="toggle-all-months" class="btn" type="button">Plegar/Mostrar todo</button>
+          <button class="btn btn-secondary" id="export-csv-btn" type="button">📥 Descargar CSV</button>
+        </div>
+      </form>
+      <button id="add-entry-btn" class="btn btn-primary" type="button" style="margin-left:24px;">Añadir registro</button>
     </div>
 
 
-    <!-- Menú de plugins -->
-    <?php if (!empty($plugins)) : ?>
-    <div class="card" style="margin-bottom:16px;">
-      <h3 style="margin:12px 0 8px 12px;">Plugins</h3>
-      <ul style="list-style:none;padding:0 0 12px 12px;margin:0;">
-        <?php foreach ($plugins as $plugin): ?>
-          <li style="margin-bottom:10px;">
-            <a href="plugins/<?php echo htmlspecialchars($plugin['dir']); ?>/index.php" target="_blank" style="text-decoration:underline; color:#2a4d7a; font-weight:bold;">
-              <?php echo htmlspecialchars($plugin['name']); ?>
-            </a>
-            <?php if (!empty($plugin['description'])): ?>
-              <div style="font-size:0.95em; color:#555; margin-left:4px; margin-top:2px;">
-                <?php echo htmlspecialchars($plugin['description']); ?>
-              </div>
-            <?php endif; ?>
-          </li>
-        <?php endforeach; ?>
-      </ul>
-    </div>
-    <?php endif; ?>
+
 
     <!-- Modal for adding a work entry (mirrors settings.php behavior) -->
     <div id="entryModalOverlay" class="modal-overlay" aria-hidden="true" style="display:none;">
@@ -383,47 +392,7 @@ $holidayMap = [];
       </div>
     </div>
 
-    <form id="filters-form" method="get" class="row-form mt-2" style="display:flex;align-items:center;gap:12px;">
-      <!-- keep server-side checkbox in sync with global control (hidden to avoid duplicate UI) -->
-      <label style="display:none;"><input type="checkbox" name="hide_weekends" value="1" <?php echo $hideWeekends ? 'checked' : ''; ?>> Ocultar fines de semana</label>
-      <!-- Los checkboxes de ocultar festivos y vacaciones ahora están agrupados arriba -->
-      
-      <!-- New advanced filters -->
-      <div style="border-left:1px solid #ccc; padding-left:12px; margin-left:12px; display:flex; align-items:center; gap:12px;">
-        <label class="form-label" style="margin-bottom:0;">Año
-          <select id="entry-year" name="year" class="form-control auto-filter-trigger" aria-label="Año" style="width:90px;display:inline-block;">
-            <?php
-              // Años disponibles para este usuario (solo entries)
-              $years = [];
-              try {
-                $ystmt = $pdo->prepare('SELECT DISTINCT YEAR(date) AS y FROM entries WHERE user_id = ? AND date IS NOT NULL ORDER BY y DESC');
-                $ystmt->execute([$user['id']]);
-                foreach ($ystmt->fetchAll() as $r) { if (!empty($r['y'])) $years[] = intval($r['y']); }
-              } catch (Throwable $e) { /* ignore */ }
-              $years = array_values(array_unique(array_filter($years)));
-              rsort($years);
-              if (empty($years)) $years = [intval(date('Y'))];
-              if (!in_array(intval($year), $years, true)) array_unshift($years, intval($year));
-              foreach ($years as $y){
-                $sel = ($y === intval($year)) ? ' selected' : '';
-                echo "<option value=\"$y\"$sel>$y</option>";
-              }
-            ?>
-          </select>
-        </label>
-        <label class="form-label">Desde <input class="form-control auto-filter-trigger" type="date" name="filter_date_from" value="<?php echo htmlspecialchars($_GET['filter_date_from'] ?? ''); ?>" style="width:150px;"></label>
-        <label class="form-label">Hasta <input class="form-control auto-filter-trigger" type="date" name="filter_date_to" value="<?php echo htmlspecialchars($_GET['filter_date_to'] ?? ''); ?>" style="width:150px;"></label>
-        <label class="form-label">Estado <select class="form-control auto-filter-trigger" name="filter_status" style="width:150px;">
-          <option value="">Todos</option>
-          <option value="complete" <?php echo ($_GET['filter_status'] ?? '') === 'complete' ? 'selected' : ''; ?>>Completo</option>
-          <option value="incomplete" <?php echo ($_GET['filter_status'] ?? '') === 'incomplete' ? 'selected' : ''; ?>>Incompleto</option>
-          <option value="absence" <?php echo ($_GET['filter_status'] ?? '') === 'absence' ? 'selected' : ''; ?>>Con ausencia</option>
-        </select></label>
-        <label class="form-label">Buscar <input class="form-control auto-filter-trigger" type="text" name="filter_search" placeholder="Buscar en notas..." value="<?php echo htmlspecialchars($_GET['filter_search'] ?? ''); ?>" style="width:200px;"></label>
-      </div>
-      <button id="toggle-all-months" class="btn" type="button">Plegar/Mostrar todo</button>
-      <button class="btn btn-secondary" id="export-csv-btn" type="button">📥 Descargar CSV</button>
-    </form>
+
 
     <div class="table-responsive">
     <table class="sheet compact">
@@ -716,9 +685,16 @@ $holidayMap = [];
             <span class="muted">—</span>
           <?php else: ?>
             <?php $pillClass = trim($dayCellClass); $db = intval($calc['day_balance']); ?>
-            <span class="pill <?php echo htmlspecialchars($pillClass); ?>">
-              <span class="pill-icon" aria-hidden="true"><?php echo ($db > 0) ? '↑' : (($db < 0) ? '↓' : '•'); ?></span>
-              <span class="pill-value"><?php echo $calc['day_balance_formatted']; ?></span>
+            <?php
+              $balColor = ($db > 0) ? 'var(--success-color)' : (($db < 0) ? 'var(--danger-color)' : 'var(--text-secondary)');
+            ?>
+            <span class="pill <?php echo htmlspecialchars($pillClass); ?>" style="color:<?php echo $balColor; ?>;border-color:<?php echo $balColor; ?>;">
+              <span class="pill-icon" aria-hidden="true" style="color:<?php echo $balColor; ?>;">
+                <?php echo ($db > 0) ? '↑' : (($db < 0) ? '↓' : '•'); ?>
+              </span>
+              <span class="pill-value" style="color:<?php echo $balColor; ?>;">
+                <?php echo $calc['day_balance_formatted']; ?>
+              </span>
             </span>
           <?php endif; ?>
         </td>
@@ -790,7 +766,11 @@ $holidayMap = [];
           echo '<span class="week-summary-title">Semana ' . htmlspecialchars($weekDisplay) . '</span>';
           echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExp)).'</span></span>';
           echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Efectivas '.htmlspecialchars(minutes_to_hours_formatted($wWork)).'</span></span>';
-          echo '<span class="pill '.$wBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBal>0)?'↑':(($wBal<0)?'↓':'•')).'</span><span class="pill-value">Balance semanal '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span></span>';
+            $wBalColor = ($wBal > 0) ? 'var(--success-color)' : (($wBal < 0) ? 'var(--danger-color)' : 'var(--text-secondary)');
+            echo '<span class="pill '.$wBalClass.'" style="color:'.$wBalColor.';border-color:'.$wBalColor.';">'
+              .'<span class="pill-icon" aria-hidden="true" style="color:'.$wBalColor.';">'.(($wBal>0)?'↑':(($wBal<0)?'↓':'•')).'</span>'
+              .'<span class="pill-value" style="color:'.$wBalColor.';">Balance semanal '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span>'
+              .'</span>';
           echo '<span class="pill balance--info"><span class="pill-icon" aria-hidden="true">📊</span><span class="pill-value">Anual acum. '.htmlspecialchars(minutes_to_hours_formatted($yearBalance)).'</span></span>';
           echo '</div>';
           echo '</td>';
