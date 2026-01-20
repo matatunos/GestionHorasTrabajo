@@ -262,6 +262,7 @@ $holidayMap = [];
 <!doctype html>
 <html lang="es">
 <head>
+  <link rel="stylesheet" href="assets/fontawesome/css/all.min.css">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Registro Horas</title>
@@ -394,8 +395,9 @@ $holidayMap = [];
 
 
 
-    <div class="table-responsive">
-    <table class="sheet compact">
+    <div class="table-responsive" id="registro-table-container" style="position:relative;">
+      <!-- Flechas flotantes eliminadas -->
+      <table class="sheet compact">
     <?php
       $currentMonth = null;
       $monthStats = null;
@@ -411,6 +413,7 @@ $holidayMap = [];
       $end = new DateTimeImmutable("$year-12-31");
       for ($cur = $dt; $cur <= $end; $cur = $cur->modify('+1 day')) {
         $d = $cur->format('Y-m-d');
+        $isToday = ($d === date('Y-m-d'));
         $monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
         $month = $monthNames[intval($cur->format('n')) - 1];
         $monthKey = $cur->format('Y-m');
@@ -553,6 +556,7 @@ $holidayMap = [];
           // get day-of-week from current DateTimeImmutable
           $dow = (int)$cur->format('N');
           $rowClass = ($dow >= 6) ? 'weekend' : '';
+          if ($isToday) $rowClass .= ' today-row';
           if ($hideWeekends && $dow >= 6) continue;
           $e = isset($entries[$d]) ? $entries[$d] : ['date' => $d];
           $e['user_id'] = $user['id']; // Add user_id for incident calculation
@@ -633,14 +637,22 @@ $holidayMap = [];
             $extraClass = $t === 'vacation' ? ' vacation' : ($t === 'personal' ? ' personal' : ($t === 'enfermedad' ? ' illness' : ($t === 'permiso' ? ' permiso' : ' holiday')));
         }
       ?>
-      <tr class="<?php echo $rowClass . $extraClass; ?>">
+      <tr class="<?php echo $rowClass . $extraClass; ?><?php if ($isToday) echo ' highlight-today'; ?>">
         <?php
           $dateLabel = htmlspecialchars($d);
           $isWeekend = ($dow >= 6);
           if ($dow === 6) $dateLabel = 'Sabado';
           elseif ($dow === 7) $dateLabel = 'Domingo';
         ?>
-        <td class="date-cell<?php echo $isWeekend ? ' center' : ''; ?>"><?php echo $dateLabel; ?></td>
+        <td class="date-cell<?php echo $isWeekend ? ' center' : ''; ?><?php if ($isToday) echo ' today-cell'; ?>">
+          <?php if ($isToday): ?>
+            <span class="today-arrow" style="font-size:1.7em;color:#ffb300;vertical-align:middle;filter:drop-shadow(0 0 6px #fffbe6);">&#9728;&#65039;</span>
+          <?php endif; ?>
+          <?php echo $dateLabel; ?>
+          <?php if ($isToday): ?>
+            <span class="visually-hidden">(hoy)</span>
+          <?php endif; ?>
+        </td>
         <td><?php echo htmlspecialchars($e['start'] ?? ''); ?></td>
         <td><?php echo htmlspecialchars($e['coffee_out'] ?? ''); ?></td>
         <td><?php echo htmlspecialchars($e['coffee_in'] ?? ''); ?></td>
@@ -812,7 +824,7 @@ $holidayMap = [];
         echo "</tbody>";
       }
     ?>
-    </table>
+      </table>
     </div>
 
   </div>
@@ -821,6 +833,43 @@ $holidayMap = [];
   </div>
 </div>
 <script>
+// Flechas flotantes para destacar el día de hoy
+function updateFloatingArrows() {
+  var todayRow = document.querySelector('.sheet tr.today-row, .sheet tr.highlight-today');
+  var leftArrow = document.getElementById('floating-arrow-left');
+  var rightArrow = document.getElementById('floating-arrow-right');
+  if (!todayRow || !leftArrow || !rightArrow) {
+    if (leftArrow) leftArrow.style.display = 'none';
+    if (rightArrow) rightArrow.style.display = 'none';
+    return;
+  }
+  // Buscar el contenedor de la tabla para calcular el offset relativo
+  var tableContainer = document.querySelector('.table-responsive') || document.body;
+  var containerRect = tableContainer.getBoundingClientRect();
+  var rowRect = todayRow.getBoundingClientRect();
+  // Calcular el centro de la fila relativo al viewport
+  var rowCenter = rowRect.top + (rowRect.height / 2);
+  // Ajustar si el contenedor tiene desplazamiento vertical
+  var topPos = rowCenter - (leftArrow.offsetHeight / 2);
+  // Solo mostrar si la fila de hoy está visible en viewport
+  var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  if (rowRect.bottom > 0 && rowRect.top < viewportHeight) {
+    leftArrow.style.top = topPos + 'px';
+    rightArrow.style.top = topPos + 'px';
+    leftArrow.style.display = rightArrow.style.display = 'block';
+  } else {
+    leftArrow.style.display = rightArrow.style.display = 'none';
+  }
+}
+document.addEventListener('DOMContentLoaded', function() {
+  window.addEventListener('scroll', updateFloatingArrows);
+  window.addEventListener('resize', updateFloatingArrows);
+  setTimeout(updateFloatingArrows, 300);
+  setTimeout(updateFloatingArrows, 1000);
+  updateFloatingArrows();
+});
+// Re-ejecutar tras AJAX o recarga parcial
+window.updateFloatingArrows = updateFloatingArrows;
 // AJAX helpers: submit entry via fetch and update table fragment; apply filters without full reload
   (function(){
   const tableContainerSelector = '.table-responsive';
@@ -1054,7 +1103,10 @@ $holidayMap = [];
         const tmp = document.createElement('div'); tmp.innerHTML = html;
         const newTable = tmp.querySelector(tableContainerSelector);
         const cur = document.querySelector(tableContainerSelector);
-        if (newTable && cur) cur.innerHTML = newTable.innerHTML;
+        if (newTable && cur) {
+          cur.innerHTML = newTable.innerHTML;
+          if (window.updateFloatingArrows) setTimeout(window.updateFloatingArrows, 100);
+        }
       }).catch(err=>{ console.error('fetchTable error', err); });
   }
 

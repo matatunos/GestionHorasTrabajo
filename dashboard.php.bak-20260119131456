@@ -101,7 +101,7 @@ function load_year_maps(PDO $pdo, int $userId, int $year): array {
 }
 
 function count_afternoons_worked_in_month(int $year, int $month, array $entries, array $holidayMap, array $cfg, bool $limitToToday = false): int {
-  // "Tardes trabajadas" = días con saldo comida >= 0 min (como en resumen mensual de index.php)
+  // "Tardes trabajadas" = días con saldo comida >= 1 hora (>= 60 min)
   // saldo comida = lunch_balance (actual - configurado) en compute_day()
   $count = 0;
   $start = new DateTimeImmutable(sprintf('%04d-%02d-01', $year, $month));
@@ -119,7 +119,7 @@ function count_afternoons_worked_in_month(int $year, int $month, array $entries,
     }
     $calc = compute_day($e, $cfg);
     $lb = $calc['lunch_balance'];
-    if ($lb !== null && intval($lb) >= 0) $count++;
+    if ($lb !== null && intval($lb) >= 60) $count++;
   }
   return $count;
 }
@@ -167,23 +167,13 @@ for ($ts = $startTs; $ts <= $endTs; $ts += 86400) {
   $month_values[$m] += $worked;
 }
 
-// Year aggregates up to today (or full year if past), EXCLUDING weekends and any type of absence
+// Year aggregates up to today (or full year if past)
 $ytd_worked = 0; $ytd_expected = 0;
-$dtStart = new DateTimeImmutable(sprintf('%04d-01-01', $year));
-$dtEnd = ($year == $currentYear) ? new DateTimeImmutable(date('Y-m-d')) : new DateTimeImmutable(sprintf('%04d-12-31', $year));
-for ($cur = $dtStart; $cur <= $dtEnd; $cur = $cur->modify('+1 day')) {
-  $d = $cur->format('Y-m-d');
-  $e = $entries[$d] ?? ['date' => $d];
-  $dow = (int)$cur->format('N');
-  if ($dow >= 6) continue; // Exclude weekends
-  if (!empty($e['absence_type'])) continue; // Exclude absences
-  if (isset($holidayMap[$d]) && in_array($holidayMap[$d]['type'], ['vacation','illness','permiso','personal','other'])) continue; // Exclude special absence holidays
-  $calc = compute_day($e, $config);
-  $expected = intval($calc['expected_minutes'] ?? 0);
-  $worked = intval($calc['worked_minutes_for_display'] ?? 0);
-  if ($expected <= 0) continue; // Only real workdays
-  $ytd_expected += $expected;
-  $ytd_worked += $worked;
+for ($m=1;$m<=12;$m++) {
+  // if current year, only include months up to currentMonth
+  if ($year === $currentYear && $m > $currentMonth) break;
+  $ytd_worked += $months[$m]['worked'];
+  $ytd_expected += $months[$m]['expected'];
 }
 
 // Extra dashboard KPIs (computed on the fly)
@@ -305,12 +295,11 @@ $cumulativeBalances = [];
 $run = 0;
 foreach ($dailyBalances as $v) { $run += $v; $cumulativeBalances[] = $run; }
 
-
-// Distribution: avg end time and % split (lunch taken) over ALL workdays of the year
+// Distribution: avg end time and % split (lunch taken) over last 20 workdays
 $endMinutes = [];
 $splitCount = 0;
 $distCount = 0;
-for ($cur = $dtStart; $cur <= $dtEnd; $cur = $cur->modify('+1 day')) {
+for ($cur = $dtEnd; $cur >= $dtStart; $cur = $cur->modify('-1 day')) {
   $d = $cur->format('Y-m-d');
   $e = $entries[$d] ?? ['date' => $d];
   if (isset($holidayMap[$d])) {
@@ -324,6 +313,7 @@ for ($cur = $dtStart; $cur <= $dtEnd; $cur = $cur->modify('+1 day')) {
   $endMin = time_to_minutes($e['end'] ?? null);
   if ($endMin !== null) $endMinutes[] = $endMin;
   if (!empty($calc['lunch_taken'])) $splitCount++;
+  if ($distCount >= 20) break;
 }
 $avgEnd = null;
 if (!empty($endMinutes)) {
@@ -488,7 +478,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
         $curWeekExpected = $sum_week_expected($curWeekStart);
       ?>
       <div class="admin-stat-card card--wide">
-        <div class="admin-stat-icon" style="font-size:2.2rem;"><span role="img" aria-label="Resumen semanal">🗓️</span></div>
+        <div class="admin-stat-icon"><i class="fas fa-clock"></i></div>
         <h4>Resumen semanal</h4>
         <div class="week-cards">
           <?php $prevClass = $prevWeekMinutes >= 0 ? 'week-card positive' : 'week-card negative'; ?>
@@ -504,57 +494,19 @@ function svg_sparkline(array $values, $w=120, $h=28){
         </div>
       </div>
 
-
-      <!-- Card Dietas: semana pasada y acumulado actual -->
-      <?php
-        // Suponiendo que hay una función get_dietas($start, $end) que devuelve el total de dietas entre dos fechas
-        // Mostrar dietas para mes pasado y mes actual
-        $today = new DateTimeImmutable();
-        $curMonthStart = $today->modify('first day of this month');
-        $curMonthEnd = $today->modify('last day of this month');
-        $prevMonthStart = $curMonthStart->modify('-1 month')->modify('first day of this month');
-        $prevMonthEnd = $curMonthStart->modify('-1 day');
-        // Implementación real: contar días con lunch_balance >= 0 en el rango
-        function get_dietas($startDate, $endDate) {
-          global $pdo, $user;
-          $start = new DateTimeImmutable($startDate);
-          $end = new DateTimeImmutable($endDate);
-          $count = 0;
-          for ($d = $start; $d <= $end; $d = $d->modify('+1 day')) {
-            $dateStr = $d->format('Y-m-d');
-            $stmt = $pdo->prepare('SELECT * FROM entries WHERE user_id = ? AND date = ?');
-            $stmt->execute([$user['id'], $dateStr]);
-            $entry = $stmt->fetch(PDO::FETCH_ASSOC);
-            if (!$entry) continue;
-            $entry['user_id'] = $user['id'];
-            // Cargar config correcto para el año
-            $cfg = get_year_config(intval(substr($dateStr, 0, 4)), $user['id']);
-            $calc = compute_day($entry, $cfg);
-            $lb = $calc['lunch_balance'] ?? null;
-            if ($lb !== null && intval($lb) >= 0) $count++;
-          }
-          return $count;
-        }
-        $dietasPrev = get_dietas($prevMonthStart->format('Y-m-d'), $prevMonthEnd->format('Y-m-d'));
-        $dietasCur = get_dietas($curMonthStart->format('Y-m-d'), $curMonthEnd->format('Y-m-d'));
-      ?>
-      <div class="admin-stat-card dietas-card">
-        <div class="admin-stat-icon" style="font-size:2.5rem;line-height:1;"><span role="img" aria-label="Dietas">🍽️</span></div>
-        <h4 style="margin-bottom:0.5rem;">Dietas</h4>
-        <div style="display:flex;gap:1.5rem;align-items:center;justify-content:center;margin-bottom:0.5rem;">
-          <div style="text-align:center;">
-            <div class="muted" style="font-size:0.95rem;">Mes pasado</div>
-            <div style="font-size:2.2rem;font-weight:bold;color:#2d8f2d;line-height:1.1;\"><?php echo $dietasPrev; ?></div>
-          </div>
-          <div style="text-align:center;">
-            <div class="muted" style="font-size:0.95rem;">Mes actual</div>
-            <div style="font-size:2.2rem;font-weight:bold;color:#1a73e8;line-height:1.1;\"><?php echo $dietasCur; ?></div>
-          </div>
-        </div>
+      <?php if ($todayInYear && $todayCalc): ?>
+      <div class="admin-stat-card card--wide">
+        <div class="admin-stat-icon"><i class="fas fa-calendar-day"></i></div>
+        <h4>Hoy</h4>
+        <div class="dashboard-value dashboard-value--sm"><?php echo htmlspecialchars($today); ?></div>
+        <div class="muted">Trabajadas: <strong><?php echo $todayCalc['worked_hours_formatted'] !== '' ? htmlspecialchars($todayCalc['worked_hours_formatted']) : '—'; ?></strong></div>
+        <div class="muted">Saldo: <strong><?php echo $todayCalc['day_balance_formatted'] !== '' ? htmlspecialchars($todayCalc['day_balance_formatted']) : '—'; ?></strong></div>
+        <div class="muted">Café: <?php echo !empty($todayCalc['coffee_taken']) ? 'ok' : 'missing'; ?> · Comida: <?php echo !empty($todayCalc['lunch_taken']) ? 'ok' : 'missing'; ?></div>
       </div>
+      <?php endif; ?>
 
       <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="font-size:2.2rem;"><span role="img" aria-label="Calidad de datos">📊</span></div>
+        <div class="admin-stat-icon"><i class="fas fa-database"></i></div>
         <h4>Calidad de datos</h4>
         <div class="muted">Laborables sin fichaje: <strong><?php echo intval($missingDays); ?></strong></div>
         <div class="muted">Días incompletos: <strong><?php echo intval($incompleteDays); ?></strong></div>
@@ -562,15 +514,35 @@ function svg_sparkline(array $values, $w=120, $h=28){
         <div class="mt-2"><a class="btn btn-secondary" href="index.php?year=<?php echo urlencode($year); ?>">Revisar</a></div>
       </div>
 
-
-
       <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="font-size:2.2rem;"><span role="img" aria-label="Distribución">📈</span></div>
-        <h4>Distribución</h4>
-        <div class="muted">Hora media salida (año completo): <strong><?php echo htmlspecialchars(fmt_clock($avgEnd)); ?></strong></div>
-        <div class="muted">% jornada partida (año completo): <strong><?php echo intval($splitPct); ?>%</strong></div>
+        <div class="admin-stat-icon"><i class="fas fa-check-circle"></i></div>
+        <h4>Tendencia (30 laborables)</h4>
+        <div class="muted">Saldo diario</div>
+        <div class="sparkline"><?php echo svg_sparkline($dailyBalances, 220, 34); ?></div>
+        <div class="muted dashboard-note">Saldo acumulado</div>
+        <div class="sparkline"><?php echo svg_sparkline($cumulativeBalances, 220, 34); ?></div>
       </div>
 
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon"><i class="fas fa-chart-line"></i></div>
+        <h4>Distribución</h4>
+        <div class="muted">Hora media salida (20 laborables): <strong><?php echo htmlspecialchars(fmt_clock($avgEnd)); ?></strong></div>
+        <div class="muted">% jornada partida (20 laborables): <strong><?php echo intval($splitPct); ?>%</strong></div>
+      </div>
+
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon"><i class="fas fa-random"></i></div>
+        <h4>Alertas</h4>
+        <?php if ($alertLowBalance): ?>
+          <div class="muted">Saldo anual bajo: <strong><?php echo fmt($yearBalance); ?></strong></div>
+        <?php endif; ?>
+        <?php if ($alertStreak): ?>
+          <div class="muted">Racha de días incompletos: <strong><?php echo intval($incompleteStreak); ?></strong></div>
+        <?php endif; ?>
+        <?php if (!$alertLowBalance && !$alertStreak): ?>
+          <div class="muted">Sin alertas</div>
+        <?php endif; ?>
+      </div>
 
       <?php
         // Tardes trabajadas: para el año actual, mes actual/anterior; para años pasados, diciembre/noviembre.
@@ -595,14 +567,14 @@ function svg_sparkline(array $values, $w=120, $h=28){
         $prevAfternoons = count_afternoons_worked_in_month($yPrev, $mPrev, $prevEntries, $prevHolidayMap, $prevCfg, false);
       ?>
       <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="font-size:2.2rem;"><span role="img" aria-label="Tardes trabajadas">🌇</span></div>
+        <div class="admin-stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
         <h4>Tardes trabajadas</h4>
         <div class="dashboard-split-cards card--wide">
-          <div class="card dashboard-mini-card dashboard-mini-card--half" style="text-align:center;">
-            Mes actual<br><strong style="display:block;margin-top:2px;font-size:2.6em;line-height:1.1;"><?php echo intval($curAfternoons); ?></strong>
+          <div class="card dashboard-mini-card dashboard-mini-card--half">
+            Mes actual<br><strong><?php echo intval($curAfternoons); ?></strong>
           </div>
-          <div class="card dashboard-mini-card dashboard-mini-card--half" style="text-align:center;">
-            Mes anterior<br><strong style="display:block;margin-top:2px;font-size:2.6em;line-height:1.1;"><?php echo intval($prevAfternoons); ?></strong>
+          <div class="card dashboard-mini-card dashboard-mini-card--half">
+            Mes anterior<br><strong><?php echo intval($prevAfternoons); ?></strong>
           </div>
         </div>
         <div class="muted dashboard-note">Saldo comida ≥ 1:00</div>
@@ -611,7 +583,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
       
 
       <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="font-size:2.2rem;"><span role="img" aria-label="Acumulado año">☕</span></div>
+        <div class="admin-stat-icon"><i class="fas fa-mug-hot"></i></div>
         <h4>Acumulado año</h4>
         <div class="dashboard-value"><?php echo fmt($ytd_worked); ?></div>
         <div class="muted">Esperadas (YTD): <?php echo fmt($ytd_expected); ?></div>
@@ -628,28 +600,17 @@ function svg_sparkline(array $values, $w=120, $h=28){
         <div class="admin-stat-icon"><i class="fas fa-hourglass-half"></i></div>
         <h4>Media horas por día laboral</h4>
         <?php
-          // Nueva lógica: solo días laborables (no fines de semana, no ausencias)
           $days = 0; $totalWork = 0;
-          $dtStart = new DateTimeImmutable(sprintf('%04d-01-01', $year));
-          $dtEnd = ($year == $currentYear) ? new DateTimeImmutable(date('Y-m-d')) : new DateTimeImmutable(sprintf('%04d-12-31', $year));
-          for ($cur = $dtStart; $cur <= $dtEnd; $cur = $cur->modify('+1 day')) {
-            $d = $cur->format('Y-m-d');
-            $e = $entries[$d] ?? ['date' => $d];
-            $dow = (int)$cur->format('N');
-            if ($dow >= 6) continue; // Excluir sábados y domingos
-            if (!empty($e['absence_type'])) continue; // Excluir ausencias
-            if (isset($holidayMap[$d]) && in_array($holidayMap[$d]['type'], ['vacation','illness','permiso','personal','other'])) continue; // Excluir ausencias por festivo especial
-            $calc = compute_day($e, $config);
-            $expected = intval($calc['expected_minutes'] ?? 0);
-            if ($expected <= 0) continue; // Solo días laborables reales
-            $worked = intval($calc['worked_minutes_for_display'] ?? 0);
-            $days++;
-            $totalWork += $worked;
+          for ($m2=1;$m2<=12;$m2++){
+            if ($year == $currentYear && $m2 > $currentMonth) break;
+            // approximate working days counted: derive from expected > 0 days
+            $days += $months[$m2]['days_counted'];
+            $totalWork += $months[$m2]['worked'];
           }
           $avg = $days>0 ? intval(round($totalWork / $days)) : 0;
         ?>
         <div class="dashboard-value dashboard-value--sm"><?php echo fmt($avg); ?></div>
-        <div class="muted">Excluye ausencias y fines de semana</div>
+        <div class="muted">Basado en días procesados (incluye fines de semana filtrados)</div>
       </div>
     </div>
 

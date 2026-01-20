@@ -36,9 +36,9 @@ function current_user(){
 function require_login(){
     if (!current_user()){
         if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
-            header('Content-Type: application/json'); http_response_code(401); echo json_encode(['ok'=>false,'login'=>true,'redirect'=>'login.php']); exit;
+            header('Content-Type: application/json'); http_response_code(401); echo json_encode(['ok'=>false,'login'=>true,'redirect'=>'/login.php']); exit;
         }
-        header('Location: login.php'); exit;
+        header('Location: /login.php'); exit;
     }
 }
 

@@ -1,4 +1,7 @@
+
 <?php
+require_once __DIR__ . '/../../auth.php';
+require_login();
 // Plugin de informes: horas trabajadas por año y mes, con filtros, exportar CSV y gráfico
 $user = current_user();
 $pdo = get_pdo();
@@ -70,19 +73,10 @@ if ($export_csv) {
     $total_anual = array_sum($meses_data);
 ?>
   <h3><?php echo htmlspecialchars($year); ?> <span style="font-size:0.9em; color:#4a90e2;">(Total: <?php echo round($total_anual,2); ?> h)</span></h3>
-  <table>
-    <thead><tr><th>Mes</th><th>Horas trabajadas</th></tr></thead>
-    <tbody>
-      <?php foreach ($meses as $num => $nombre): ?>
-        <tr>
-          <td><?php echo htmlspecialchars($nombre); ?></td>
-          <td><?php echo isset($meses_data[$num]) ? htmlspecialchars($meses_data[$num]) : 0; ?></td>
-        </tr>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
+  <!-- Tabla de detalle eliminada, solo gráfica -->
   <canvas id="chart_<?php echo $year; ?>" width="600" height="200" style="margin:1em 0;"></canvas>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <script>
     const ctx_<?php echo $year; ?> = document.getElementById('chart_<?php echo $year; ?>').getContext('2d');
     new Chart(ctx_<?php echo $year; ?>, {
@@ -97,9 +91,21 @@ if ($export_csv) {
       },
       options: {
         responsive: true,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            anchor: 'end',
+            align: 'start',
+            color: '#222',
+            font: { weight: 'bold', size: 11 },
+            formatter: function(value) {
+              return value > 0 ? value : '';
+            }
+          }
+        },
         scales: { y: { beginAtZero: true } }
-      }
+      },
+      plugins: [ChartDataLabels]
     });
   </script>
 <?php endforeach; ?>

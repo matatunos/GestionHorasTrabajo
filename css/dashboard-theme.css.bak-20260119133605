@@ -1,43 +1,11 @@
-/* Dietas card visual tweaks */
-.dietas-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 180px;
-}
-
-/* GRID PRINCIPAL: 4 columnas en desktop */
-body.page-dashboard .container .dashboard-cards {
-  display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
-  gap: 1rem !important;
-  width: 100% !important;
-  max-width: 100vw !important;
-  overflow-x: hidden !important;
-}
-
-/* Las cards anchas ocupan 2 columnas */
-body.page-dashboard .container .dashboard-cards > .card.card--wide,
-body.page-dashboard .container .dashboard-cards > .admin-stat-card.card--wide {
-  grid-column: span 2 !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  min-height: 160px !important;
-  height: auto !important;
-  align-items: flex-start !important;
-  justify-content: flex-start !important;
-}
-
-/* Resumen semanal: las dos semanas ocupan la card entera, centradas y del mismo tamaño */
-body.page-dashboard .container .dashboard-cards > .admin-stat-card.card--wide .week-cards {
+body.page-dashboard .container .dashboard-cards > .admin-stat-card.card--wide > .week-cards {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
   width: 100% !important;
   gap: 2rem !important;
   margin: 0 auto !important;
 }
-body.page-dashboard .container .dashboard-cards > .admin-stat-card.card--wide .week-cards > .card {
+body.page-dashboard .container .dashboard-cards > .admin-stat-card.card--wide > .week-cards > .card {
   width: 100% !important;
   min-width: 0 !important;
   max-width: 100% !important;
@@ -52,6 +20,85 @@ body.page-dashboard .container .dashboard-cards > .admin-stat-card.card--wide .w
   font-size: 1.1rem !important;
   padding: 1.2rem 0.8rem !important;
 }
+body.page-dashboard .dashboard-cards > .admin-stat-card.card--wide .week-cards {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  width: 100% !important;
+  gap: 2rem !important;
+  margin: 0 auto !important;
+}
+body.page-dashboard .dashboard-cards > .admin-stat-card.card--wide .week-cards > .card {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 140px !important;
+  height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  font-size: 1.1rem !important;
+  padding: 1.2rem 0.8rem !important;
+}
+body.page-dashboard .dashboard-cards > .admin-stat-card.card--wide .week-cards {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  gap: 2rem !important;
+  margin: 0 auto !important;
+}
+body.page-dashboard .dashboard-cards > .admin-stat-card.card--wide .week-cards > .card {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  min-height: 140px !important;
+  height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  font-size: 1.1rem !important;
+  padding: 1.2rem 0.8rem !important;
+}
+body.page-dashboard .dashboard-cards > .admin-stat-card.card--wide .week-cards > .card:first-child,
+body.page-dashboard .dashboard-cards > .admin-stat-card.card--wide .week-cards > .card:last-child {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+body.page-dashboard .dashboard-cards > .admin-stat-card.card--wide .week-cards {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  gap: 2rem !important;
+  margin: 0 auto !important;
+}
+body.page-dashboard .dashboard-cards > .admin-stat-card.card--wide .week-cards > .card {
+  width: 50% !important;
+  flex: none !important;
+  min-width: 0 !important;
+  min-height: 140px !important;
+  max-width: 100% !important;
+  height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+body.page-dashboard .dashboard-cards > .admin-stat-card.card--wide .week-cards > .card {
+  flex: 1 1 50% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 120px !important;
+  height: auto !important;
+  padding: 1.1rem 0.7rem !important;
   margin: 0 !important;
   display: flex !important;
   flex-direction: column !important;
