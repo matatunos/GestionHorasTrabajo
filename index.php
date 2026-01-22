@@ -41,8 +41,21 @@ if (!empty($_GET['export_csv'])) {
   exit;
 }
 
-// selected year from GET or default current year
-$year = intval($_GET['year'] ?? date('Y'));
+// Construir $years ANTES de calcular $year
+$years = [];
+$minYear = $maxYear = intval(date('Y'));
+try {
+  $ystmt = $pdo->prepare('SELECT MIN(YEAR(date)) as min_y, MAX(YEAR(date)) as max_y FROM entries WHERE user_id = ? AND date IS NOT NULL');
+  $ystmt->execute([$user['id']]);
+  $row = $ystmt->fetch();
+  if ($row && $row['min_y']) $minYear = intval($row['min_y']);
+  if ($row && $row['max_y']) $maxYear = max($maxYear, intval($row['max_y']));
+} catch (Throwable $e) { /* ignore */ }
+$year = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : $maxYear;
+if ($year < $minYear) $minYear = $year;
+if ($year > $maxYear) $maxYear = $year;
+for ($y = $minYear; $y <= $maxYear; $y++) $years[] = $y;
+$initialDate = $_GET['date'] ?? date('Y-m-d');
 $initialDate = $_GET['date'] ?? date('Y-m-d');
 if (!is_string($initialDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $initialDate)) {
   $initialDate = date('Y-m-d');
@@ -277,26 +290,30 @@ $holidayMap = [];
     <!-- Barra de filtros y botón añadir registro alineados en una sola línea -->
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;justify-content:space-between;">
       <form id="filter-form" method="get" style="display:flex;align-items:center;gap:12px;flex:1;">
+        <?php
+        // Mantener otros filtros activos como campos ocultos
+        foreach (["filter_status","hide_weekends","hide_absences","filter_date_from","filter_date_to","filter_search"] as $f) {
+          if (isset($_GET[$f])) {
+            $v = htmlspecialchars($_GET[$f]);
+            echo "<input type='hidden' name='$f' value='$v'>\n";
+          }
+        }
+        ?>
         <label class="form-label">Año
-          <select class="form-control auto-filter-trigger" name="year" style="width:100px;">
+          <select class="form-control auto-filter-trigger" name="year" style="width:100px;" onchange="this.form.submit()">
             <?php
-              $years = [];
-              try {
-                $ystmt = $pdo->prepare('SELECT DISTINCT YEAR(date) AS y FROM entries WHERE user_id = ? AND date IS NOT NULL ORDER BY y DESC');
-                $ystmt->execute([$user['id']]);
-                foreach ($ystmt->fetchAll() as $r) { if (!empty($r['y'])) $years[] = intval($r['y']); }
-              } catch (Throwable $e) { /* ignore */ }
-              $years = array_values(array_unique(array_filter($years)));
-              rsort($years);
-              if (empty($years)) $years = [intval(date('Y'))];
-              if (!in_array(intval($year), $years, true)) array_unshift($years, intval($year));
-              foreach ($years as $y){
-                $sel = ($y === intval($year)) ? ' selected' : '';
+              foreach ($years as $y) {
+                $sel = ($y === $year) ? ' selected' : '';
                 echo "<option value=\"$y\"$sel>$y</option>";
               }
             ?>
           </select>
         </label>
+        <!-- ...otros elementos del formulario... -->
+      </form>
+      <?php if (count($entries) === 0): ?>
+        <div class="alert alert-info" style="margin:2em 0;text-align:center;">No hay registros para el año seleccionado (<?php echo htmlspecialchars($year); ?>).</div>
+      <?php endif; ?>
         <label class="form-label">Estado <select class="form-control auto-filter-trigger" name="filter_status" style="width:150px;">
           <option value="">Todos</option>
           <option value="complete" <?php echo ($_GET['filter_status'] ?? '') === 'complete' ? 'selected' : ''; ?>>Completo</option>
@@ -305,16 +322,12 @@ $holidayMap = [];
         </select></label>
         <div style="display: flex; flex-direction: row; gap: 0; justify-content: center; align-items: center; margin-left: 16px;">
           <label class="form-check" style="margin-bottom:0; display: flex; align-items: center; min-width: 180px; justify-content: center; padding: 0 12px;">
-            <input id="global-hide-weekends" type="checkbox" <?php echo $hideWeekends ? 'checked' : ''; ?>>
+            <input id="global-hide-weekends" type="checkbox" <?php echo $hideWeekends ? 'checked' : ''; ?> name="hide_weekends" value="1">
             <span style="margin-left:6px;">Ocultar fines de semana</span>
           </label>
           <label class="form-check" style="margin-bottom:0; display: flex; align-items: center; min-width: 150px; justify-content: center; padding: 0 12px;">
-            <input type="checkbox" class="auto-filter-trigger" name="hide_holidays" value="1" <?php echo $hideHolidays ? 'checked' : ''; ?>>
-            <span style="margin-left:6px;">Ocultar festivos</span>
-          </label>
-          <label class="form-check" style="margin-bottom:0; display: flex; align-items: center; min-width: 150px; justify-content: center; padding: 0 12px;">
-            <input type="checkbox" class="auto-filter-trigger" name="hide_vacations" value="1" <?php echo $hideVacations ? 'checked' : ''; ?>>
-            <span style="margin-left:6px;">Ocultar vacaciones</span>
+            <input type="checkbox" class="auto-filter-trigger" name="hide_absences" value="1" <?php echo !empty($_GET['hide_absences']) ? 'checked' : ''; ?>>
+            <span style="margin-left:6px;">Ocultar ausencias</span>
           </label>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
@@ -396,7 +409,7 @@ $holidayMap = [];
 
 
     <div class="table-responsive" id="registro-table-container" style="position:relative;">
-      <!-- Floating arrows removed as requested -->
+      <!-- Flechas flotantes eliminadas -->
       <table class="sheet compact">
     <?php
       $currentMonth = null;
@@ -428,27 +441,10 @@ $holidayMap = [];
             $wWork = intval($weekStats['worked_minutes'] ?? 0);
             $wBal = $wWork - $wExp;
             $wBalClass = ($wBal > 0) ? 'balance--good' : (($wBal < 0) ? 'balance--bad' : 'balance--ok');
+            
             $weekEndDate = $cur->modify('-1 day');
             $weekDisplay = $weekStart->format('d/m') . ' - ' . $weekEndDate->format('d/m');
-
-            // Calcular exceso semanal acumulado (suma algebraica de balances diarios de la semana, solo días con fichaje real)
-            $excesoSemanalAcumulado = 0;
-            $tmpDate = $weekStart;
-            while ($tmpDate <= $weekEndDate) {
-              $tmpD = $tmpDate->format('Y-m-d');
-              if (isset($entries[$tmpD])) {
-                $eTmp = $entries[$tmpD];
-                $hasEntry = !empty($eTmp['start']) || !empty($eTmp['end']);
-                if ($hasEntry) {
-                  $calc = compute_day($eTmp, $config);
-                  $bal = $calc['day_balance'] ?? 0;
-                  $excesoSemanalAcumulado += $bal;
-                }
-              }
-              $tmpDate = $tmpDate->modify('+1 day');
-            }
-            $excesoClass = ($excesoSemanalAcumulado > 0) ? 'balance--good' : (($excesoSemanalAcumulado < 0) ? 'balance--bad' : 'balance--ok');
-
+            
             echo '<tr class="week-summary">';
             echo '<td colspan="13">';
             echo '<div class="week-summary-row">';
@@ -456,9 +452,7 @@ $holidayMap = [];
             echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExp)).'</span></span>';
             echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Efectivas '.htmlspecialchars(minutes_to_hours_formatted($wWork)).'</span></span>';
             echo '<span class="pill '.$wBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBal>0)?'↑':(($wBal<0)?'↓':'•')).'</span><span class="pill-value">Balance semanal '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span></span>';
-            $yearBalClass = ($yearBalance > 0) ? 'balance--good' : (($yearBalance < 0) ? 'balance--bad' : 'balance--ok');
-            echo '<span class="pill '.$yearBalClass.'"><span class="pill-icon" aria-hidden="true">📊</span><span class="pill-value">Anual acum. '.htmlspecialchars(minutes_to_hours_formatted($yearBalance)).'</span></span>';
-            echo '<span class="pill '.$excesoClass.'"><span class="pill-icon" aria-hidden="true">Σ</span><span class="pill-value">Exceso semanal acumulado '.htmlspecialchars(minutes_to_hours_formatted($excesoSemanalAcumulado)).'</span></span>';
+            echo '<span class="pill balance--info"><span class="pill-icon" aria-hidden="true">📊</span><span class="pill-value">Anual acum. '.htmlspecialchars(minutes_to_hours_formatted($yearBalance)).'</span></span>';
             echo '</div>';
             echo '</td>';
             echo '</tr>';
@@ -589,6 +583,10 @@ $holidayMap = [];
             if ($hideHolidays && $ht === 'holiday') continue;
             if ($hideVacations && $ht === 'vacation') continue;
           }
+          // apply absence filter
+          if (isset($holidayMap[$d]) || !empty($e['absence_type'])) {
+            if (!empty($_GET['hide_absences'])) continue;
+          }
               $calc = compute_day($e, $config);
 
               // Avoid showing "No café / Sin comida / Sin dietas" labels on non-working days
@@ -664,7 +662,13 @@ $holidayMap = [];
           elseif ($dow === 7) $dateLabel = 'Domingo';
         ?>
         <td class="date-cell<?php echo $isWeekend ? ' center' : ''; ?><?php if ($isToday) echo ' today-cell'; ?>">
+          <?php if ($isToday): ?>
+            <span class="today-arrow" style="font-size:1.7em;color:#ffb300;vertical-align:middle;filter:drop-shadow(0 0 6px #fffbe6);">&#9728;&#65039;</span>
+          <?php endif; ?>
           <?php echo $dateLabel; ?>
+          <?php if ($isToday): ?>
+            <span class="visually-hidden">(hoy)</span>
+          <?php endif; ?>
         </td>
         <td><?php echo htmlspecialchars($e['start'] ?? ''); ?></td>
         <td><?php echo htmlspecialchars($e['coffee_out'] ?? ''); ?></td>
@@ -730,7 +734,7 @@ $holidayMap = [];
             $fullDayIncident = false;
             $hoursIncident = 0;
             foreach ($incidents as $inc) {
-              if ($inc['incident_type'] === 'full_day') $fullDayIncident = true;
+              if ($inc['incident_type'] === 'full_day' ) $fullDayIncident = true;
               elseif ($inc['incident_type'] === 'hours') $hoursIncident += ($inc['hours_lost'] ?? 0);
             }
           ?>
@@ -847,12 +851,48 @@ $holidayMap = [];
 </div>
 <script>
 // Flechas flotantes para destacar el día de hoy
-// Floating arrows logic removed as requested
+function updateFloatingArrows() {
+  var todayRow = document.querySelector('.sheet tr.today-row, .sheet tr.highlight-today');
+  var leftArrow = document.getElementById('floating-arrow-left');
+  var rightArrow = document.getElementById('floating-arrow-right');
+  if (!todayRow || !leftArrow || !rightArrow) {
+    if (leftArrow) leftArrow.style.display = 'none';
+    if (rightArrow) rightArrow.style.display = 'none';
+    return;
+  }
+  // Buscar el contenedor de la tabla para calcular el offset relativo
+  var tableContainer = document.querySelector('.table-responsive') || document.body;
+  var containerRect = tableContainer.getBoundingClientRect();
+  var rowRect = todayRow.getBoundingClientRect();
+  // Calcular el centro de la fila relativo al viewport
+  var rowCenter = rowRect.top + (rowRect.height / 2);
+  // Ajustar si el contenedor tiene desplazamiento vertical
+  var topPos = rowCenter - (leftArrow.offsetHeight / 2);
+  // Solo mostrar si la fila de hoy está visible en viewport
+  var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  if (rowRect.bottom > 0 && rowRect.top < viewportHeight) {
+    leftArrow.style.top = topPos + 'px';
+    rightArrow.style.top = topPos + 'px';
+    leftArrow.style.display = rightArrow.style.display = 'block';
+  } else {
+    leftArrow.style.display = rightArrow.style.display = 'none';
+  }
+}
+document.addEventListener('DOMContentLoaded', function() {
+  window.addEventListener('scroll', updateFloatingArrows);
+  window.addEventListener('resize', updateFloatingArrows);
+  setTimeout(updateFloatingArrows, 300);
+  setTimeout(updateFloatingArrows, 1000);
+  updateFloatingArrows();
+});
+// Re-ejecutar tras AJAX o recarga parcial
+window.updateFloatingArrows = updateFloatingArrows;
 // AJAX helpers: submit entry via fetch and update table fragment; apply filters without full reload
   (function(){
   const tableContainerSelector = '.table-responsive';
   const filtersForm = document.getElementById('filters-form');
   const entryForm = document.getElementById('entry-form');
+  window.entryForm = entryForm;
   const entryModalOverlay = document.getElementById('entryModalOverlay');
   const openAddEntryBtn = document.getElementById('openAddEntryBtn');
   const closeEntryModalBtn = document.getElementById('closeEntryModal');
@@ -1245,7 +1285,7 @@ $holidayMap = [];
         const collapsed = btn && btn.getAttribute('data-collapsed') === '1';
         // perform toggle in next animation frame to avoid jank
         requestAnimationFrame(function(){
-          try {
+ try {
             setHeaderStateFromTd(td, !collapsed);
             toggleMonthRowsFromHeaderTd(td, !collapsed);
           } catch(err){ console.error('toggle error', err); if (debugEl) debugEl.textContent = 'month-js: toggle error'; }
