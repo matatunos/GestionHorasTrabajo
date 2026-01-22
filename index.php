@@ -396,12 +396,7 @@ $holidayMap = [];
 
 
     <div class="table-responsive" id="registro-table-container" style="position:relative;">
-      <div id="floating-arrow-left" class="floating-arrow" style="left:-38px;">
-        <i class="fas fa-arrow-right"></i>
-      </div>
-      <div id="floating-arrow-right" class="floating-arrow" style="right:-38px;">
-        <i class="fas fa-arrow-right"></i>
-      </div>
+      <!-- Floating arrows removed as requested -->
       <table class="sheet compact">
     <?php
       $currentMonth = null;
@@ -852,42 +847,7 @@ $holidayMap = [];
 </div>
 <script>
 // Flechas flotantes para destacar el día de hoy
-function updateFloatingArrows() {
-  var todayRow = document.querySelector('.sheet tr.today-row, .sheet tr.highlight-today');
-  var leftArrow = document.getElementById('floating-arrow-left');
-  var rightArrow = document.getElementById('floating-arrow-right');
-  if (!todayRow || !leftArrow || !rightArrow) {
-    if (leftArrow) leftArrow.style.display = 'none';
-    if (rightArrow) rightArrow.style.display = 'none';
-    return;
-  }
-  // Buscar el contenedor de la tabla para calcular el offset relativo
-  var tableContainer = document.querySelector('.table-responsive') || document.body;
-  var containerRect = tableContainer.getBoundingClientRect();
-  var rowRect = todayRow.getBoundingClientRect();
-  // Calcular el centro de la fila relativo al viewport
-  var rowCenter = rowRect.top + (rowRect.height / 2);
-  // Ajustar si el contenedor tiene desplazamiento vertical
-  var topPos = rowCenter - (leftArrow.offsetHeight / 2);
-  // Solo mostrar si la fila de hoy está visible en viewport
-  var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-  if (rowRect.bottom > 0 && rowRect.top < viewportHeight) {
-    leftArrow.style.top = topPos + 'px';
-    rightArrow.style.top = topPos + 'px';
-    leftArrow.style.display = rightArrow.style.display = 'block';
-  } else {
-    leftArrow.style.display = rightArrow.style.display = 'none';
-  }
-}
-document.addEventListener('DOMContentLoaded', function() {
-  window.addEventListener('scroll', updateFloatingArrows);
-  window.addEventListener('resize', updateFloatingArrows);
-  setTimeout(updateFloatingArrows, 300);
-  setTimeout(updateFloatingArrows, 1000);
-  updateFloatingArrows();
-});
-// Re-ejecutar tras AJAX o recarga parcial
-window.updateFloatingArrows = updateFloatingArrows;
+// Floating arrows logic removed as requested
 // AJAX helpers: submit entry via fetch and update table fragment; apply filters without full reload
   (function(){
   const tableContainerSelector = '.table-responsive';
