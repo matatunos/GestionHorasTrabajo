@@ -41,21 +41,8 @@ if (!empty($_GET['export_csv'])) {
   exit;
 }
 
-// Construir $years ANTES de calcular $year
-$years = [];
-$minYear = $maxYear = intval(date('Y'));
-try {
-  $ystmt = $pdo->prepare('SELECT MIN(YEAR(date)) as min_y, MAX(YEAR(date)) as max_y FROM entries WHERE user_id = ? AND date IS NOT NULL');
-  $ystmt->execute([$user['id']]);
-  $row = $ystmt->fetch();
-  if ($row && $row['min_y']) $minYear = intval($row['min_y']);
-  if ($row && $row['max_y']) $maxYear = max($maxYear, intval($row['max_y']));
-} catch (Throwable $e) { /* ignore */ }
-$year = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : $maxYear;
-if ($year < $minYear) $minYear = $year;
-if ($year > $maxYear) $maxYear = $year;
-for ($y = $minYear; $y <= $maxYear; $y++) $years[] = $y;
-$initialDate = $_GET['date'] ?? date('Y-m-d');
+// selected year from GET or default current year
+$year = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : (isset($years[0]) ? $years[0] : intval(date('Y')));
 $initialDate = $_GET['date'] ?? date('Y-m-d');
 if (!is_string($initialDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $initialDate)) {
   $initialDate = date('Y-m-d');
@@ -289,31 +276,26 @@ $holidayMap = [];
 
     <!-- Barra de filtros y botón añadir registro alineados en una sola línea -->
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;justify-content:space-between;">
-      <form id="filter-form" method="get" style="display:flex;align-items:center;gap:12px;flex:1;">
-        <?php
-        // Mantener otros filtros activos como campos ocultos
-        foreach (["filter_status","hide_weekends","hide_absences","filter_date_from","filter_date_to","filter_search"] as $f) {
-          if (isset($_GET[$f])) {
-            $v = htmlspecialchars($_GET[$f]);
-            echo "<input type='hidden' name='$f' value='$v'>\n";
-          }
-        }
-        ?>
+      <form id="filters-form" method="get" style="display:flex;align-items:center;gap:12px;flex:1;">
         <label class="form-label">Año
-          <select class="form-control auto-filter-trigger" name="year" style="width:100px;" onchange="this.form.submit()">
+          <select id="entry-year" class="form-control auto-filter-trigger" name="year" style="width:100px;">
             <?php
-              foreach ($years as $y) {
-                $sel = ($y === $year) ? ' selected' : '';
+              $years = [];
+              try {
+                $ystmt = $pdo->prepare('SELECT DISTINCT YEAR(date) AS y FROM entries WHERE user_id = ? AND date IS NOT NULL ORDER BY y DESC');
+                $ystmt->execute([$user['id']]);
+                foreach ($ystmt->fetchAll() as $r) { if (!empty($r['y'])) $years[] = intval($r['y']); }
+              } catch (Throwable $e) { /* ignore */ }
+              $years = array_values(array_unique(array_filter($years)));
+              rsort($years);
+              if (empty($years)) $years = [intval(date('Y'))];
+              foreach ($years as $y){
+                $sel = ($y === intval($_GET['year'] ?? date('Y'))) ? ' selected' : '';
                 echo "<option value=\"$y\"$sel>$y</option>";
               }
             ?>
           </select>
         </label>
-        <!-- ...otros elementos del formulario... -->
-      </form>
-      <?php if (count($entries) === 0): ?>
-        <div class="alert alert-info" style="margin:2em 0;text-align:center;">No hay registros para el año seleccionado (<?php echo htmlspecialchars($year); ?>).</div>
-      <?php endif; ?>
         <label class="form-label">Estado <select class="form-control auto-filter-trigger" name="filter_status" style="width:150px;">
           <option value="">Todos</option>
           <option value="complete" <?php echo ($_GET['filter_status'] ?? '') === 'complete' ? 'selected' : ''; ?>>Completo</option>
@@ -892,7 +874,6 @@ window.updateFloatingArrows = updateFloatingArrows;
   const tableContainerSelector = '.table-responsive';
   const filtersForm = document.getElementById('filters-form');
   const entryForm = document.getElementById('entry-form');
-  window.entryForm = entryForm;
   const entryModalOverlay = document.getElementById('entryModalOverlay');
   const openAddEntryBtn = document.getElementById('openAddEntryBtn');
   const closeEntryModalBtn = document.getElementById('closeEntryModal');

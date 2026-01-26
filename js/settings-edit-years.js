@@ -34,7 +34,7 @@
     tr.dataset.editing = '1';
     tr._orig = {};
     
-    const fields = ['year','mon_thu','friday','summer_mon_thu','summer_friday','coffee_minutes','lunch_minutes'];
+    const fields = ['year','mon_thu','friday','summer_mon_thu','summer_friday','expected_daily_hours_winter','expected_daily_hours_summer','coffee_minutes','lunch_minutes'];
     
     // Store original HTML
     fields.forEach(k => {
@@ -46,18 +46,20 @@
     function setInput(cls, name, val, isMinutes){
       const td = tr.querySelector('.yc-' + cls);
       if (!td) return;
-      // Convert value to hh:mm format if it's hours or minutes
       let displayVal = val;
-      if (val && (cls.includes('mon_thu') || cls.includes('friday') || cls.includes('coffee') || cls.includes('lunch'))) {
+      // Para expected_daily_hours, usar el valor decimal puro del atributo data-*
+      if (cls === 'expected_daily_hours_winter' && tr.dataset.expectedDailyHoursWinterDecimal !== undefined) {
+        displayVal = tr.dataset.expectedDailyHoursWinterDecimal;
+      } else if (cls === 'expected_daily_hours_summer' && tr.dataset.expectedDailyHoursSummerDecimal !== undefined) {
+        displayVal = tr.dataset.expectedDailyHoursSummerDecimal;
+      } else if ((val !== null && val !== undefined && val !== '') && (cls.includes('mon_thu') || cls.includes('friday') || cls.includes('coffee') || cls.includes('lunch'))) {
         if (cls.includes('coffee') || cls.includes('lunch')) {
-          // These are minutes
           displayVal = decimalMinutesToHHMM(val);
         } else {
-          // These are hours
           displayVal = decimalToHHMM(val);
         }
       }
-      td.innerHTML = '<input class="form-control" name="' + name + '" value="' + (displayVal !== null && displayVal !== undefined && displayVal !== '' ? String(displayVal) : '') + '">';
+      td.innerHTML = '<input class="form-control" name="' + name + '" value="' + (displayVal !== null && displayVal !== undefined ? String(displayVal) : '') + '">';
     }
     
     setInput('year', 'yearcfg_year', tr.dataset.year);
@@ -65,6 +67,18 @@
     setInput('friday', 'yearcfg_friday', tr.dataset.friday, false);
     setInput('summer_mon_thu', 'yearcfg_summer_mon_thu', tr.dataset.summer_mon_thu, false);
     setInput('summer_friday', 'yearcfg_summer_friday', tr.dataset.summer_friday, false);
+    setInput('expected_daily_hours_winter', 'yearcfg_expected_daily_hours_winter', tr.dataset.expected_daily_hours_winter, false);
+    setInput('expected_daily_hours_summer', 'yearcfg_expected_daily_hours_summer', tr.dataset.expected_daily_hours_summer, false);
+
+    // Forzar el valor decimal puro para los inputs de horas esperadas
+    const edhw = tr.dataset.expectedDailyHoursWinterDecimal || tr.dataset.expected_daily_hours_winter_decimal;
+    const edhs = tr.dataset.expectedDailyHoursSummerDecimal || tr.dataset.expected_daily_hours_summer_decimal;
+    if (tr.querySelector('.yc-expected_daily_hours_winter input')) {
+      tr.querySelector('.yc-expected_daily_hours_winter input').value = edhw || '';
+    }
+    if (tr.querySelector('.yc-expected_daily_hours_summer input')) {
+      tr.querySelector('.yc-expected_daily_hours_summer input').value = edhs || '';
+    }
     setInput('coffee_minutes', 'yearcfg_coffee_minutes', tr.dataset.coffee_minutes, true);
     setInput('lunch_minutes', 'yearcfg_lunch_minutes', tr.dataset.lunch_minutes, true);
     
