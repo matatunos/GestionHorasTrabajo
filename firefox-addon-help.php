@@ -71,26 +71,22 @@ images/
       <div class="step">
         <span class="step-number">2</span>
         <strong>Abre la página de extensiones de Firefox</strong>
-        <p>En tu navegador Firefox, ve a <code>chrome://extensions/</code></p>
-        <p>O simplemente: Menú de Firefox (≡) → Más herramientas → Extensiones</p>
+        <p>En tu navegador Firefox, ve a <code>about:debugging#/runtime/this-firefox</code></p>
+        <p>O simplemente: Menú de Firefox (≡) → Más herramientas → Depuración de extensiones</p>
       </div>
 
       <div class="step">
         <span class="step-number">3</span>
-        <strong>Activa el "Modo de desarrollador"</strong>
-        <p>En la esquina superior derecha de la página de extensiones, encontrarás el botón "Modo de desarrollador". Haz clic para activarlo.</p>
+        <strong>Carga la extensión temporalmente</strong>
+        <p>En la página <code>about:debugging#/runtime/this-firefox</code>, haz clic en "Cargar complemento temporal..."</p>
+        <p>Selecciona el archivo <code>manifest.json</code> de la carpeta que descargaste</p>
       </div>
 
       <div class="step">
         <span class="step-number">4</span>
-        <strong>Carga la extensión</strong>
-        <p>Después de activar el modo de desarrollador, aparecerá un botón "Cargar extensión sin empaquetar". Haz clic y <strong>selecciona la carpeta que descargaste</strong> (la que contiene <code>manifest.json</code>).</p>
-      </div>
-
-      <div class="step">
-        <span class="step-number">5</span>
         <strong>¡Listo! Extensión instalada</strong>
-        <p>La extensión aparecerá en tu lista de extensiones. Verás un icono en la barra de herramientas de Firefox.</p>
+        <p>La extensión aparecerá en la página de depuración. El icono aparecerá en la barra de herramientas de Firefox.</p>
+        <p><strong>Nota:</strong> En Firefox, las extensiones de desarrollo son temporales y se descargan al reiniciar. Para instalarla permanentemente, deberá ser firmada por Mozilla o instalada como complemento en modo de desarrollo.</p>
       </div>
     </div>
 
