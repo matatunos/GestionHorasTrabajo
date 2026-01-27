@@ -29,7 +29,37 @@ function parseExternalEntry(times) {
     };
   }
   
-  // Si tenemos 4+ tiempos: entrada, cofee_out, coffee_in, salida comida, entrada comida, salida
+  // Si tenemos 3 tiempos: entrada, café_salida, café_entrada (sin salida total)
+  if (times.length === 3) {
+    return {
+      start: times[0],
+      coffee_out: times[1],
+      coffee_in: times[2]
+    };
+  }
+  
+  // Si tenemos 4 tiempos: entrada, café_salida, café_entrada, salida
+  if (times.length === 4) {
+    return {
+      start: times[0],
+      coffee_out: times[1],
+      coffee_in: times[2],
+      end: times[3]
+    };
+  }
+  
+  // Si tenemos 5 tiempos: entrada, café_salida, café_entrada, comida_salida, comida_entrada (sin salida total)
+  if (times.length === 5) {
+    return {
+      start: times[0],
+      coffee_out: times[1],
+      coffee_in: times[2],
+      lunch_out: times[3],
+      lunch_in: times[4]
+    };
+  }
+  
+  // Si tenemos 6+ tiempos: entrada, café_salida, café_entrada, comida_salida, comida_entrada, salida
   if (times.length >= 6) {
     return {
       start: times[0],
@@ -38,16 +68,6 @@ function parseExternalEntry(times) {
       lunch_out: times[3],
       lunch_in: times[4],
       end: times[5]
-    };
-  }
-  
-  // Si tenemos 4 tiempos
-  if (times.length === 4) {
-    return {
-      start: times[0],
-      coffee_out: times[1],
-      coffee_in: times[2],
-      end: times[3]
     };
   }
   
