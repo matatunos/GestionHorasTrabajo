@@ -184,6 +184,12 @@ function validate_time_entry(array $entry): array {
     $lunch_in = $entry['lunch_in'] ?? null;
     $end = $entry['end'] ?? null;
     
+    // Require at least one time value
+    if (!$start && !$coffee_out && !$coffee_in && !$lunch_out && !$lunch_in && !$end) {
+        $errors[] = 'Se requiere al menos una hora de trabajo';
+        return ['valid' => false, 'errors' => $errors];
+    }
+    
     // Convert to minutes for comparison
     $s = time_to_minutes($start);
     $co = time_to_minutes($coffee_out);
@@ -220,7 +226,7 @@ function validate_time_entry(array $entry): array {
         }
     }
     
-    // Check logical flow: coffee breaks should be within work hours
+    // Check logical flow: coffee breaks should be within work hours (if both are present)
     if ($s !== null && $co !== null && $s >= $co) {
         $errors[] = 'Salida café debe ser después de entrada';
     }
