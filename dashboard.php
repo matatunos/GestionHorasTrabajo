@@ -485,19 +485,23 @@ function svg_sparkline(array $values, $w=120, $h=28){
         $prevWeekExpected = $sum_week_expected($prevWeekStart);
         $curWeekExpected = $sum_week_expected($curWeekStart);
       ?>
-      <div class="admin-stat-card card--wide">
-        <div class="admin-stat-icon" style="font-size:2.2rem;"><span role="img" aria-label="Resumen semanal">🗓️</span></div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon">🗓️</div>
         <h4>Resumen semanal</h4>
         <div class="week-cards">
           <?php $prevClass = $prevWeekMinutes >= 0 ? 'week-card positive' : 'week-card negative'; ?>
           <?php $curClass = $curWeekMinutes >= 0 ? 'week-card positive' : 'week-card negative'; ?>
-          <div class="card dashboard-mini-card <?php echo $prevClass; ?>">Semana anterior<br><span class="muted"><?php echo htmlspecialchars(fmt_week_range($prevWeekStart)); ?></span><br>
-            <strong>Teóricas: <?php echo minutes_to_hours_formatted($prevWeekExpected); ?></strong><br>
-            <strong>Saldo: <?php echo minutes_to_hours_formatted($prevWeekMinutes); ?></strong>
+          <div class="card dashboard-mini-card <?php echo $prevClass; ?>">
+            <div style="margin-bottom:0.75rem;">📅 Semana anterior</div>
+            <div class="muted" style="font-size:0.8rem;margin-bottom:0.5rem;"><?php echo htmlspecialchars(fmt_week_range($prevWeekStart)); ?></div>
+            <strong style="color:var(--neutral-600);">Teóricas: <?php echo minutes_to_hours_formatted($prevWeekExpected); ?></strong>
+            <strong style="color:var(--primary-color);">Saldo: <?php echo minutes_to_hours_formatted($prevWeekMinutes); ?></strong>
           </div>
-          <div class="card dashboard-mini-card <?php echo $curClass; ?>">Semana actual<br><span class="muted"><?php echo htmlspecialchars(fmt_week_range($curWeekStart)); ?></span><br>
-            <strong>Teóricas: <?php echo minutes_to_hours_formatted($curWeekExpected); ?></strong><br>
-            <strong>Saldo: <?php echo minutes_to_hours_formatted($curWeekMinutes); ?></strong>
+          <div class="card dashboard-mini-card <?php echo $curClass; ?>">
+            <div style="margin-bottom:0.75rem;">📅 Semana actual</div>
+            <div class="muted" style="font-size:0.8rem;margin-bottom:0.5rem;"><?php echo htmlspecialchars(fmt_week_range($curWeekStart)); ?></div>
+            <strong style="color:var(--neutral-600);">Teóricas: <?php echo minutes_to_hours_formatted($curWeekExpected); ?></strong>
+            <strong style="color:var(--primary-color);">Saldo: <?php echo minutes_to_hours_formatted($curWeekMinutes); ?></strong>
           </div>
         </div>
       </div>
@@ -537,36 +541,40 @@ function svg_sparkline(array $values, $w=120, $h=28){
         $dietasCur = get_dietas($curMonthStart->format('Y-m-d'), $curMonthEnd->format('Y-m-d'));
       ?>
       <div class="admin-stat-card dietas-card">
-        <div class="admin-stat-icon" style="font-size:2.5rem;line-height:1;"><span role="img" aria-label="Dietas">🍽️</span></div>
-        <h4 style="margin-bottom:0.5rem;">Dietas</h4>
-        <div style="display:flex;gap:1.5rem;align-items:center;justify-content:center;margin-bottom:0.5rem;">
+        <div class="admin-stat-icon" style="font-size:2.5rem;line-height:1;">🍽️</div>
+        <h4>Dietas</h4>
+        <div style="display:flex;gap:3rem;align-items:center;justify-content:center;width:100%;">
           <div style="text-align:center;">
-            <div class="muted" style="font-size:0.95rem;">Mes pasado</div>
-            <div style="font-size:2.2rem;font-weight:bold;color:#2d8f2d;line-height:1.1;\"><?php echo $dietasPrev; ?></div>
+            <div class="muted" style="font-size:0.85rem;text-transform:uppercase;letter-spacing:0.5px;">Mes pasado</div>
+            <div style="font-size:2.8rem;font-weight:700;color:var(--success-color);line-height:1.1;"><?php echo $dietasPrev; ?></div>
           </div>
           <div style="text-align:center;">
-            <div class="muted" style="font-size:0.95rem;">Mes actual</div>
-            <div style="font-size:2.2rem;font-weight:bold;color:#1a73e8;line-height:1.1;\"><?php echo $dietasCur; ?></div>
+            <div class="muted" style="font-size:0.85rem;text-transform:uppercase;letter-spacing:0.5px;">Mes actual</div>
+            <div style="font-size:2.8rem;font-weight:700;color:var(--primary-color);line-height:1.1;"><?php echo $dietasCur; ?></div>
           </div>
         </div>
       </div>
 
       <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="font-size:2.2rem;"><span role="img" aria-label="Calidad de datos">📊</span></div>
+        <div class="admin-stat-icon">📊</div>
         <h4>Calidad de datos</h4>
-        <div class="muted">Laborables sin fichaje: <strong><?php echo intval($missingDays); ?></strong></div>
-        <div class="muted">Días incompletos: <strong><?php echo intval($incompleteDays); ?></strong></div>
-        <div class="muted">Racha incompletos: <strong><?php echo intval($incompleteStreak); ?></strong></div>
-        <div class="mt-2"><a class="btn btn-secondary" href="index.php?year=<?php echo urlencode($year); ?>">Revisar</a></div>
+        <div class="muted">
+          <div>❌ Sin fichaje: <strong><?php echo intval($missingDays); ?></strong></div>
+          <div>⚠️ Incompletos: <strong><?php echo intval($incompleteDays); ?></strong></div>
+          <div>📉 Racha: <strong><?php echo intval($incompleteStreak); ?></strong></div>
+        </div>
+        <div class="mt-2"><a class="btn btn-secondary" href="index.php?year=<?php echo urlencode($year); ?>" style="display:inline-block;">Revisar →</a></div>
       </div>
 
 
 
       <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="font-size:2.2rem;"><span role="img" aria-label="Distribución">📈</span></div>
+        <div class="admin-stat-icon">📈</div>
         <h4>Distribución</h4>
-        <div class="muted">Hora media salida (año completo): <strong><?php echo htmlspecialchars(fmt_clock($avgEnd)); ?></strong></div>
-        <div class="muted">% jornada partida (año completo): <strong><?php echo intval($splitPct); ?>%</strong></div>
+        <div class="muted">
+          <div>⏰ Hora media salida: <strong><?php echo htmlspecialchars(fmt_clock($avgEnd)); ?></strong></div>
+          <div>🍽️ % Jornada partida: <strong><?php echo intval($splitPct); ?>%</strong></div>
+        </div>
       </div>
 
 
@@ -592,39 +600,41 @@ function svg_sparkline(array $values, $w=120, $h=28){
         }
         $prevAfternoons = count_afternoons_worked_in_month($yPrev, $mPrev, $prevEntries, $prevHolidayMap, $prevCfg, false);
       ?>
-      <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="font-size:2.2rem;"><span role="img" aria-label="Tardes trabajadas">🌇</span></div>
+      <div class="admin-stat-card card--wide">
+        <div class="admin-stat-icon">🌇</div>
         <h4>Tardes trabajadas</h4>
-        <div class="dashboard-split-cards card--wide">
+        <div class="dashboard-split-cards">
           <div class="card dashboard-mini-card dashboard-mini-card--half" style="text-align:center;">
-            Mes actual<br><strong style="display:block;margin-top:2px;font-size:2.6em;line-height:1.1;"><?php echo intval($curAfternoons); ?></strong>
+            <div style="color:var(--neutral-600);margin-bottom:0.5rem;font-size:0.9rem;font-weight:500;">Mes actual</div>
+            <strong style="display:block;margin-top:0.5rem;font-size:2.4rem;line-height:1.1;color:var(--primary-color);"><?php echo intval($curAfternoons); ?></strong>
           </div>
           <div class="card dashboard-mini-card dashboard-mini-card--half" style="text-align:center;">
-            Mes anterior<br><strong style="display:block;margin-top:2px;font-size:2.6em;line-height:1.1;"><?php echo intval($prevAfternoons); ?></strong>
+            <div style="color:var(--neutral-600);margin-bottom:0.5rem;font-size:0.9rem;font-weight:500;">Mes anterior</div>
+            <strong style="display:block;margin-top:0.5rem;font-size:2.4rem;line-height:1.1;color:var(--success-color);"><?php echo intval($prevAfternoons); ?></strong>
           </div>
         </div>
-        <div class="muted dashboard-note">Saldo comida ≥ 1:00</div>
+        <div class="dashboard-note">📝 Saldo comida ≥ 1:00</div>
       </div>
 
       
 
       <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="font-size:2.2rem;"><span role="img" aria-label="Acumulado año">☕</span></div>
+        <div class="admin-stat-icon">☕</div>
         <h4>Acumulado año</h4>
         <div class="dashboard-value"><?php echo fmt($ytd_worked); ?></div>
         <div class="muted">Esperadas (YTD): <?php echo fmt($ytd_expected); ?></div>
       </div>
 
       <div class="admin-stat-card">
-        <div class="admin-stat-icon"><i class="fas fa-balance-scale"></i></div>
-        <h4>Saldo acumulado año</h4>
-        <div class="dashboard-value"><?php echo fmt($ytd_worked - $ytd_expected); ?></div>
-        <div class="muted">Incluye meses hasta la fecha</div>
+        <div class="admin-stat-icon">⚖️</div>
+        <h4>Saldo acumulado</h4>
+        <div class="dashboard-value" style="color:<?php echo ($ytd_worked - $ytd_expected) >= 0 ? 'var(--success-color)' : 'var(--danger-color)'; ?>;"><?php echo fmt($ytd_worked - $ytd_expected); ?></div>
+        <div class="muted">Hasta la fecha</div>
       </div>
 
       <div class="admin-stat-card">
-        <div class="admin-stat-icon"><i class="fas fa-hourglass-half"></i></div>
-        <h4>Media horas por día laboral</h4>
+        <div class="admin-stat-icon">⏳</div>
+        <h4>Media horas/día</h4>
         <?php
           // Nueva lógica: solo días laborables (no fines de semana, no ausencias)
           $days = 0; $totalWork = 0;
@@ -647,7 +657,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
           $avg = $days>0 ? intval(round($totalWork / $days)) : 0;
         ?>
         <div class="dashboard-value dashboard-value--sm"><?php echo fmt($avg); ?></div>
-        <div class="muted">Excluye ausencias y fines de semana</div>
+        <div class="muted">Excluye ausencias</div>
       </div>
     </div>
 
@@ -662,6 +672,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
     <div class="dashboard-cards">
       <!-- Login Statistics Card -->
       <div class="admin-stat-card">
+        <div class="admin-stat-icon">📊</div>
         <h4>Intentos de login (30 días)</h4>
         <div class="dashboard-value"><?php echo $logStats['total']; ?></div>
         <div class="muted">
