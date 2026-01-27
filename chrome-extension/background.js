@@ -2,16 +2,26 @@
  * Background service worker para manejar importaciones
  */
 
+// Detectar si estamos en Firefox o Chrome
+const isFirefox = typeof browser !== 'undefined';
+const runtime = isFirefox ? browser.runtime : chrome.runtime;
+const storage = isFirefox ? browser.storage : chrome.storage;
+
 // Asegurar que las variables globales existen
-if (typeof DEFAULT_APP_URL === 'undefined') {
-  const DEFAULT_APP_URL = 'https://calendar.favala.es';
-}
-if (typeof EXTENSION_TOKEN === 'undefined') {
-  const EXTENSION_TOKEN = '';
+let DEFAULT_APP_URL = 'https://calendar.favala.es';
+let EXTENSION_TOKEN = '';
+
+if (typeof window !== 'undefined') {
+  if (window.DEFAULT_APP_URL !== undefined) {
+    DEFAULT_APP_URL = window.DEFAULT_APP_URL;
+  }
+  if (window.EXTENSION_TOKEN !== undefined) {
+    EXTENSION_TOKEN = window.EXTENSION_TOKEN;
+  }
 }
 
 // Escuchar mensajes del content script y popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'importFichajes') {
     importFichajes(request.data, request.sourceFormat, request.appUrl)
       .then(result => {
@@ -110,7 +120,7 @@ async function importFichajes(data, sourceFormat, appUrl) {
   // Usar la URL proporcionada o buscar en storage
   let finalUrl = appUrl;
   if (!finalUrl) {
-    const settings = await chrome.storage.sync.get(['appUrl']);
+    const settings = await storage.sync.get(['appUrl']);
     finalUrl = settings.appUrl || 'https://calendar.favala.es';
   }
   
