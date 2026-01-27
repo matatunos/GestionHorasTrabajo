@@ -104,6 +104,8 @@ header('Content-Length: ' . filesize($zipFile));
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
+header('X-Content-Type-Options: nosniff');  // Evitar detección de tipo MIME
+header('Access-Control-Allow-Origin: *');  // CORS si es necesario
 
 readfile($zipFile);
 
