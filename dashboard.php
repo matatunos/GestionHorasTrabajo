@@ -629,7 +629,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
         <div class="admin-stat-icon">⚖️</div>
         <h4>Saldo acumulado</h4>
         <div class="dashboard-value" style="color:<?php echo ($ytd_worked - $ytd_expected) >= 0 ? 'var(--success-color)' : 'var(--danger-color)'; ?>;"><?php echo fmt($ytd_worked - $ytd_expected); ?></div>
-        <div class="muted">Desde el 1 de <?php echo strftime('%B', strtotime(sprintf('%04d-01-01', $year))); ?></div>
+        <div class="muted">Desde el 1 de <?php echo date('F', strtotime(sprintf('%04d-01-01', $year))); ?></div>
       </div>
 
       <div class="admin-stat-card">
