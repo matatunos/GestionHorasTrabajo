@@ -360,14 +360,14 @@ body.page-dashboard .container {
 .week-cards {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
-  gap: 2rem !important;
+  gap: 1.5rem !important;
   width: 100% !important;
-  margin: 1.5rem 0 0 0 !important;
+  margin: 1rem 0 0 0 !important;
 }
 
 .week-card {
   background: #f9fafb;
-  padding: 1.25rem;
+  padding: 1rem;
   border-radius: 8px;
   border-left: 4px solid #d1d5db;
   text-align: center;
@@ -385,9 +385,10 @@ body.page-dashboard .container {
 
 .week-card strong {
   display: block;
-  margin-top: 0.5rem;
+  margin-top: 0.4rem;
   color: #111827;
   font-weight: 600;
+  line-height: 1.3;
 }
 
 @media (max-width: 768px) {
@@ -399,7 +400,7 @@ body.page-dashboard .container {
 /* Dashboard Mini Cards */
 .dashboard-mini-card {
   background: white !important;
-  padding: 1.2rem !important;
+  padding: 1rem !important;
   border-radius: 8px !important;
   border: 1px solid #e5e7eb !important;
   text-align: center !important;
@@ -408,6 +409,8 @@ body.page-dashboard .container {
   flex-direction: column !important;
   justify-content: center !important;
   align-items: center !important;
+  min-height: 100px !important;
+}
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
   overflow: visible !important;
   min-height: 120px !important;
