@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/db.php';
+require __DIR__ . '/../db.php';
 $pdo = get_pdo();
 if (!$pdo) { echo "No DB connection\n"; exit(1); }
 // find admin id

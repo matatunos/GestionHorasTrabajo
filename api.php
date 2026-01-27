@@ -9,8 +9,8 @@
  * - CSRF token en X-CSRF-Token (opcional pero recomendado)
  */
 
-require_once __DIR__ . '/JWTHelper.php';
-require_once __DIR__ . '/LogConfig.php';
+require_once __DIR__ . '/lib/JWTHelper.php';
+require_once __DIR__ . '/lib/LogConfig.php';
 require_once __DIR__ . '/config.php';
 
 // Inicializar logging

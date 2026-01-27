@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../../db.php';
 
 /**
  * Migration: add `absence_type` column to `entries` table if missing.

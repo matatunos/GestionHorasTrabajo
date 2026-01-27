@@ -4,7 +4,7 @@
  * Run this to add the incidents table to existing databases
  */
 
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/../../db.php';
 
 $pdo = get_pdo();
 

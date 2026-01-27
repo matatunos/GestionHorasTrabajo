@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/lib.php';
+require_once __DIR__ . '/../../db.php';
+require_once __DIR__ . '/../../lib.php';
 
 $pdo = get_pdo();
 $user_id = 1;

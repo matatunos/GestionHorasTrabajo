@@ -2,7 +2,7 @@
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/lib.php';
-require_once __DIR__ . '/LogAnalytics.php';
+require_once __DIR__ . '/lib/LogAnalytics.php';
 require_login();
 
 // Redirect to password change if needed
