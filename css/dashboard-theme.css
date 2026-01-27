@@ -123,15 +123,58 @@ body.page-dashboard .dashboard-cards .card .material-icon {
   display: inline !important;
 }
 
-body.page-dashboard .dashboard-cards .card.card--wide {
-  grid-column: span 2 !important;
-  align-items: flex-start !important;
+/* Afternoons Card - Compact Single Column */
+.afternoons-card {
   padding: 1.5rem !important;
 }
 
-body.page-dashboard .dashboard-cards .card.card--wide h4 {
+.afternoons-card h4 {
   margin-top: 0 !important;
-  margin-bottom: 1rem !important;
+  margin-bottom: 1.25rem !important;
+}
+
+.afternoons-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 0;
+  width: 100%;
+}
+
+.afternoons-item {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  min-height: 85px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.afternoons-label {
+  color: #6b7280;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.afternoons-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.afternoons-current {
+  color: #2563eb;
+}
+
+.afternoons-previous {
+  color: #10b981;
 }
 
 /* Base Color Palette */
@@ -249,33 +292,16 @@ body.page-dashboard .container {
   border-color: #9ca3af;
 }
 
-/* Wide cards (2 columns) */
-@media (max-width: 1024px) {
-  body.page-dashboard .container .dashboard-cards > .card.card--wide,
-  body.page-dashboard .container .dashboard-cards > .admin-stat-card.card--wide {
-    grid-column: span 3 !important;
-  }
-}
-
+/* Wide cards (2 columns) - DEPRECATED: Use specific card classes instead */
 @media (max-width: 768px) {
   body.page-dashboard .container .dashboard-cards {
     grid-template-columns: repeat(2, 1fr) !important;
-  }
-  
-  body.page-dashboard .container .dashboard-cards > .card.card--wide,
-  body.page-dashboard .container .dashboard-cards > .admin-stat-card.card--wide {
-    grid-column: span 2 !important;
   }
 }
 
 @media (max-width: 480px) {
   body.page-dashboard .container .dashboard-cards {
     grid-template-columns: 1fr !important;
-  }
-  
-  body.page-dashboard .container .dashboard-cards > .card.card--wide,
-  body.page-dashboard .container .dashboard-cards > .admin-stat-card.card--wide {
-    grid-column: span 1 !important;
   }
 }
 
@@ -369,15 +395,6 @@ body.page-dashboard .container {
 
 .dashboard-mini-card--half strong {
   color: #2563eb;
-}
-
-/* Split Cards */
-.dashboard-split-cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-  margin: 1.5rem 0 0 0 !important;
-  width: 100%;
 }
 
 /* Dashboard Note */
