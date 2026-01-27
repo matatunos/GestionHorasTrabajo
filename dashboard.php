@@ -374,7 +374,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard</title><link rel="icon" type="image/svg+xml" href="images/favicon.svg"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="css/dashboard-theme.css"></head><body class="page-dashboard">
 <?php $hidePageHeader = true; include __DIR__ . '/header.php'; ?>
   <div class="container">
-    <div class="card">
+    <div class="dashboard-header-card">
       <div class="dashboard-header">
         <h1>Dashboard</h1>
         <form method="get" action="dashboard.php" class="row-form">
@@ -390,19 +390,17 @@ function svg_sparkline(array $values, $w=120, $h=28){
 
     <div class="dashboard-actions mt-2">
       <?php if ($todayInYear): ?>
-        <a class="btn btn-secondary" href="index.php?year=<?php echo urlencode($year); ?>&date=<?php echo urlencode($today); ?>">Ir a hoy</a>
-        <a class="btn btn-primary" href="index.php?year=<?php echo urlencode($year); ?>&date=<?php echo urlencode($today); ?>&open_add=1">Añadir hoy</a>
+        <a class="btn btn-primary" href="index.php?year=<?php echo urlencode($year); ?>&date=<?php echo urlencode($today); ?>&open_add=1">➕ Añadir fichaje</a>
+        <a class="btn btn-secondary" href="index.php?year=<?php echo urlencode($year); ?>&date=<?php echo urlencode($today); ?>">📅 Ir a hoy</a>
       <?php else: ?>
-        <a class="btn btn-secondary" href="index.php?year=<?php echo urlencode($year); ?>">Ver registro</a>
+        <a class="btn btn-secondary" href="index.php?year=<?php echo urlencode($year); ?>">📋 Ver registro</a>
       <?php endif; ?>
+    </div>
     </div>
 
     <!-- Alertas -->
     <?php
       $alerts = [];
-      
-      // Debug
-      // echo "<!-- DEBUG: todayInYear=$todayInYear, year=$year, today=$today, entryExists=" . (isset($entries[$today]) ? 'yes' : 'no') . ", inHolidayMap=" . (isset($holidayMap[$today]) ? 'yes' : 'no') . " -->";
       
       // Check if today's entry is missing (but only on working days)
       if ($todayInYear && empty($entries[$today])) {
@@ -428,7 +426,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
     ?>
       <div style="margin-top: 1rem;">
         <?php foreach ($alerts as $alert): ?>
-          <div style="padding: 0.75rem 1rem; background: <?php echo $alert['type'] === 'warning' ? 'rgba(217, 119, 6, 0.12)' : 'rgba(220, 38, 38, 0.12)'; ?>; border-left: 4px solid <?php echo $alert['type'] === 'warning' ? '#d97706' : '#dc2626'; ?>; border-radius: 6px; margin-bottom: 0.5rem; border: 1px solid <?php echo $alert['type'] === 'warning' ? 'rgba(217, 119, 6, 0.25)' : 'rgba(220, 38, 38, 0.25)'; ?>;">
+          <div class="dashboard-alert alert-<?php echo $alert['type']; ?>">
             <?php echo $alert['msg']; ?>
           </div>
         <?php endforeach; ?>
