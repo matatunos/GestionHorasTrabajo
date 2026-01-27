@@ -88,8 +88,8 @@ body.page-dashboard .dashboard-cards .admin-stat-card {
   box-sizing: border-box !important;
 }
 
-/* Admin Stat Icons */
-.admin-stat-icon {
+/* Admin Stat Icons - Vencer a styles.css .admin-stat-card .admin-stat-icon */
+body.page-dashboard .admin-stat-card .admin-stat-icon {
   font-size: 2rem !important;
   margin-bottom: 0.75rem !important;
   display: block !important;
@@ -100,6 +100,12 @@ body.page-dashboard .dashboard-cards .admin-stat-card {
   top: auto !important;
   transform: none !important;
   opacity: 1 !important;
+}
+
+/* Prevenir hover que añade styles.css */
+body.page-dashboard .admin-stat-card:hover .admin-stat-icon {
+  opacity: 1 !important;
+  transform: none !important;
 }
 
 body.page-dashboard .dashboard-cards .card:hover,
@@ -140,12 +146,12 @@ body.page-dashboard .dashboard-cards .card .material-icon {
   display: inline !important;
 }
 
-/* Wide Card - 2 columns */
+/* Wide Card - 2 columns con altura mínima aumentada */
 body.page-dashboard .dashboard-cards .admin-stat-card.card--wide {
   grid-column: span 2 !important;
   width: 100% !important;
   padding: 2rem !important;
-  min-height: 200px !important;
+  min-height: 300px !important;
 }
 
 /* Afternoons Card - Compact Single Column */
