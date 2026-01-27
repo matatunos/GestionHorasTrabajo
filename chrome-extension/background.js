@@ -7,11 +7,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'importFichajes') {
     importFichajes(request.data, request.sourceFormat, request.appUrl)
       .then(result => {
-        sendResponse({ success: true, count: result.count });
+        sendResponse({ ok: true, success: true, count: result.count, errors: result.errors || [] });
       })
       .catch(error => {
         console.error('Import error:', error);
-        sendResponse({ success: false, error: error.message });
+        sendResponse({ ok: false, success: false, error: error.message });
       });
     return true; // Indica que responderemos de forma asincrónica
   }

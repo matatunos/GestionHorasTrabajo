@@ -104,7 +104,7 @@ function importData() {
       importBtn.disabled = false;
       importBtn.textContent = '✅ Importar fichajes';
       
-      if (response && response.success) {
+      if (response && (response.success || response.ok)) {
         let message = `✅ ${response.count} fichajes importados correctamente`;
         
         // Mostrar errores si los hay
