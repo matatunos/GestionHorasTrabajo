@@ -150,12 +150,12 @@ body.page-dashboard .dashboard-cards .card .material-icon {
   display: inline !important;
 }
 
-/* Wide Card - 2 columns con altura mínima aumentada */
+/* Wide Card - 2 columns con altura aumentada para mostrar todo el contenido */
 body.page-dashboard .dashboard-cards .admin-stat-card.card--wide {
   grid-column: span 2 !important;
   width: 100% !important;
   padding: 2rem !important;
-  min-height: 300px !important;
+  min-height: 400px !important;
 }
 
 /* Afternoons Card - Compact Single Column */
