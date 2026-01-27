@@ -488,20 +488,20 @@ function svg_sparkline(array $values, $w=120, $h=28){
       <div class="admin-stat-card">
         <div class="admin-stat-icon">🗓️</div>
         <h4>Resumen semanal</h4>
-        <div class="week-cards">
+        <div class="week-cards" style="overflow: hidden; max-height: 140px;">
           <?php $prevClass = $prevWeekMinutes >= 0 ? 'week-card positive' : 'week-card negative'; ?>
           <?php $curClass = $curWeekMinutes >= 0 ? 'week-card positive' : 'week-card negative'; ?>
-          <div class="card dashboard-mini-card <?php echo $prevClass; ?>">
-            <div style="margin-bottom:0.75rem;">📅 Semana anterior</div>
-            <div class="muted" style="font-size:0.8rem;margin-bottom:0.5rem;"><?php echo htmlspecialchars(fmt_week_range($prevWeekStart)); ?></div>
-            <strong style="color:var(--neutral-600);">Teóricas: <?php echo minutes_to_hours_formatted($prevWeekExpected); ?></strong>
-            <strong style="color:var(--primary-color);">Saldo: <?php echo minutes_to_hours_formatted($prevWeekMinutes); ?></strong>
+          <div class="card dashboard-mini-card <?php echo $prevClass; ?>" style="font-size: 0.9rem;">
+            <div style="margin-bottom:0.5rem;">📅 Anterior</div>
+            <div class="muted" style="font-size:0.75rem;margin-bottom:0.25rem;"><?php echo htmlspecialchars(fmt_week_range($prevWeekStart)); ?></div>
+            <strong style="color:var(--neutral-600);font-size:0.85rem;">T: <?php echo minutes_to_hours_formatted($prevWeekExpected); ?></strong>
+            <strong style="color:var(--primary-color);font-size:0.9rem;">S: <?php echo minutes_to_hours_formatted($prevWeekMinutes); ?></strong>
           </div>
-          <div class="card dashboard-mini-card <?php echo $curClass; ?>">
-            <div style="margin-bottom:0.75rem;">📅 Semana actual</div>
-            <div class="muted" style="font-size:0.8rem;margin-bottom:0.5rem;"><?php echo htmlspecialchars(fmt_week_range($curWeekStart)); ?></div>
-            <strong style="color:var(--neutral-600);">Teóricas: <?php echo minutes_to_hours_formatted($curWeekExpected); ?></strong>
-            <strong style="color:var(--primary-color);">Saldo: <?php echo minutes_to_hours_formatted($curWeekMinutes); ?></strong>
+          <div class="card dashboard-mini-card <?php echo $curClass; ?>" style="font-size: 0.9rem;">
+            <div style="margin-bottom:0.5rem;">📅 Actual</div>
+            <div class="muted" style="font-size:0.75rem;margin-bottom:0.25rem;"><?php echo htmlspecialchars(fmt_week_range($curWeekStart)); ?></div>
+            <strong style="color:var(--neutral-600);font-size:0.85rem;">T: <?php echo minutes_to_hours_formatted($curWeekExpected); ?></strong>
+            <strong style="color:var(--primary-color);font-size:0.9rem;">S: <?php echo minutes_to_hours_formatted($curWeekMinutes); ?></strong>
           </div>
         </div>
       </div>
@@ -629,14 +629,14 @@ function svg_sparkline(array $values, $w=120, $h=28){
         <div class="admin-stat-icon">⚖️</div>
         <h4>Saldo acumulado</h4>
         <div class="dashboard-value" style="color:<?php echo ($ytd_worked - $ytd_expected) >= 0 ? 'var(--success-color)' : 'var(--danger-color)'; ?>;"><?php echo fmt($ytd_worked - $ytd_expected); ?></div>
-        <div class="muted">Hasta la fecha</div>
+        <div class="muted">Desde el 1 de <?php echo strftime('%B', strtotime(sprintf('%04d-01-01', $year))); ?></div>
       </div>
 
       <div class="admin-stat-card">
         <div class="admin-stat-icon">⏳</div>
         <h4>Media horas/día</h4>
         <?php
-          // Nueva lógica: solo días laborables (no fines de semana, no ausencias)
+          // Nueva lógica: solo días laborables CON ENTRADA (no fines de semana, no ausencias, no días sin registros)
           $days = 0; $totalWork = 0;
           $dtStart = new DateTimeImmutable(sprintf('%04d-01-01', $year));
           $dtEnd = ($year == $currentYear) ? new DateTimeImmutable(date('Y-m-d')) : new DateTimeImmutable(sprintf('%04d-12-31', $year));
@@ -645,11 +645,12 @@ function svg_sparkline(array $values, $w=120, $h=28){
             $e = $entries[$d] ?? ['date' => $d];
             $dow = (int)$cur->format('N');
             if ($dow >= 6) continue; // Excluir sábados y domingos
+            if (!isset($entries[$d])) continue; // SOLO días con entrada real
             if (!empty($e['absence_type'])) continue; // Excluir ausencias
-            if (isset($holidayMap[$d]) && in_array($holidayMap[$d]['type'], ['vacation','illness','permiso','personal','other'])) continue; // Excluir ausencias por festivo especial
+            if (isset($holidayMap[$d]) && in_array($holidayMap[$d]['type'], ['vacation','illness','permiso','personal','other'])) continue;
             $calc = compute_day($e, $config);
             $expected = intval($calc['expected_minutes'] ?? 0);
-            if ($expected <= 0) continue; // Solo días laborables reales
+            if ($expected <= 0) continue;
             $worked = intval($calc['worked_minutes_for_display'] ?? 0);
             $days++;
             $totalWork += $worked;
@@ -657,7 +658,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
           $avg = $days>0 ? intval(round($totalWork / $days)) : 0;
         ?>
         <div class="dashboard-value dashboard-value--sm"><?php echo fmt($avg); ?></div>
-        <div class="muted">Excluye ausencias</div>
+        <div class="muted"><?php echo $days; ?> días laborables</div>
       </div>
     </div>
 
@@ -751,22 +752,6 @@ function svg_sparkline(array $values, $w=120, $h=28){
           </div>
         <?php else: ?>
           <div class="muted">✅ Sin alertas - Sistema seguro</div>
-        <?php endif; ?>
-      </div>
-
-      <!-- Top Users Card -->
-      <div class="card">
-        <h4>Usuarios más activos (login)</h4>
-        <?php if (!empty($logStats['top_users'])): ?>
-          <div class="muted">
-            <?php foreach ($logStats['top_users'] as $user_name => $count): ?>
-              <div>
-                👤 <?php echo htmlspecialchars($user_name); ?>: <strong><?php echo $count; ?></strong>
-              </div>
-            <?php endforeach; ?>
-          </div>
-        <?php else: ?>
-          <div class="muted">Sin intentos registrados</div>
         <?php endif; ?>
       </div>
 
