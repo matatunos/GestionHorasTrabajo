@@ -1,54 +1,140 @@
-# Gestión de Horas — Demo
+# GestionHorasTrabajo
 
-Mini aplicación PHP para registrar una fila por día (estilo Excel) con campos:
+**Versión:** 1.1.1  
+**Estado:** ✅ Producción
 
+Sistema web para gestionar y registrar horas de trabajo con análisis, reportes y control de horarios.
 
-Calcula: horas trabajadas, balance diario y balances comparados con la configuración para verano/invierno.
+## 📖 Documentación
 
-## Funcionalidad de Importación de Fichajes
+Hemos consolidado toda la documentación en **dos manuales principales** + changelog:
 
-La aplicación permite importar registros de fichajes desde archivos HTML descargados de portales externos.
+### Para Usuarios
+📚 **[Manual de Usuario](USER_GUIDE.md)** - Guía completa de uso del sistema
+- Cómo acceder al sistema
+- Registrar entrada/salida
+- Gestionar ausencias
+- Ver reportes y análisis
+- Configuración personal
+- Preguntas frecuentes
 
-### Cómo usar la función de importación:
+### Para Desarrolladores
+👨‍💻 **[Manual Técnico](DEVELOPER_GUIDE.md)** - Guía para desarrolladores
+- Arquitectura y estructura del proyecto
+- Setup de desarrollo local
+- Configuración de BD
+- API REST
+- Seguridad y mejores prácticas
+- Testing y deployment
+- Cómo contribuir
 
-1. **Descargar el informe HTML**: Desde tu portal de horas externo, descarga tu informe de fichajes usando la opción "Guardar como" del navegador (Ctrl+S o Cmd+S), guardándolo como archivo HTML.
+### Historial de Cambios
+📝 **[CHANGELOG](CHANGELOG.md)** - Versiones y cambios realizados
 
-2. **Acceder a la función de importación**: En la aplicación, haz clic en "Importar Fichajes" en el menú lateral.
+---
 
-3. **Seleccionar el archivo**: 
-   - Haz clic en "Seleccionar archivo" y elige el archivo HTML descargado.
-   - Indica el año correspondiente al informe (necesario ya que la tabla no suele incluir el año).
+## 🚀 Inicio rápido
 
-4. **Previsualizar datos**: Haz clic en "Cargar y previsualizar" para ver los datos extraídos del archivo HTML. El sistema parseará automáticamente la tabla y mostrará:
-   - Día de la semana
-   - Fecha original
-   - Fecha en formato ISO (YYYY-MM-DD)
-   - Horas registradas
-   - Balance
+### Para usuarios
 
-5. **Importar**: Si la previsualización es correcta, haz clic en "Importar registros" para guardar los datos en la base de datos.
+1. Abre `https://calendar.favala.es` en tu navegador
+2. Inicia sesión con tus credenciales
+3. Consulta el [Manual de Usuario](USER_GUIDE.md) para instrucciones
 
-**Nota**: La utilidad de parsing está implementada en `importFichajes.js` y soporta múltiples formatos de tablas HTML comunes.
-
-Cómo ejecutar:
+### Para desarrolladores
 
 ```bash
-cd /opt/GestionHorasTrabajo
-php -S localhost:8000
-# luego abrir http://localhost:8000/index.php
+# Clonar repositorio
+git clone https://github.com/matatunos/GestionHorasTrabajo.git
+cd GestionHorasTrabajo
+
+# Seguir guía completa en Manual Técnico
+# Ver: DEVELOPER_GUIDE.md → Setup local
 ```
 
-Los datos se guardan ahora en la base de datos MySQL (tabla `entries`).
+---
 
-Configuración local para `example.com` (desarrollo)
+## 🔧 Requisitos mínimos
 
- - Añadir entrada en `/etc/hosts` (requerido para probar como example.com):
+- **PHP:** 8.3+
+- **BD:** MySQL 5.7+ o MariaDB 10.2+
+- **Servidor:** Apache 2.4+ (u otro compatible con PHP)
+- **Navegador:** Chrome, Firefox, Safari o Edge moderno
 
-```bash
-sudo sh -c 'echo "127.0.0.1 example.com" >> /etc/hosts'
-# o usar el script incluido:
-./setup_hosts.sh
+---
+
+## 📁 Estructura del proyecto
+
 ```
+/opt/GestionHorasTrabajo/
+├── Archivos principales (PHP)
+│   ├── index.php              Portal principal
+│   ├── login.php              Autenticación
+│   ├── dashboard.php          Dashboard del usuario
+│   ├── api.php                API REST
+│   └── config.php, db.php, auth.php, lib.php
+│
+├── lib/                       Librerías y helpers
+├── scripts/                   Scripts CLI y utilidades
+├── admin/                     Herramientas administrativas
+├── tools/                     Herramientas de análisis
+├── docs/                      Documentación detallada
+├── logs/                      Archivos de log
+│
+├── USER_GUIDE.md              👈 Manual para usuarios
+├── DEVELOPER_GUIDE.md         👈 Manual para desarrolladores
+├── CHANGELOG.md               👈 Versiones y cambios
+└── README.md                  👈 Este archivo
+```
+
+---
+
+## ✨ Características principales
+
+- ✅ Registro de entrada/salida
+- ✅ Cálculo automático de horas trabajadas
+- ✅ Soporte para horarios diferenciados (invierno/verano)
+- ✅ Gestión de ausencias y permisos
+- ✅ Reportes y análisis
+- ✅ API REST para integraciones
+- ✅ Extensión Chrome para registro rápido
+- ✅ Exportación de datos (Excel, PDF)
+- ✅ Autenticación segura (JWT, sesiones)
+
+---
+
+## 🔒 Seguridad
+
+- Passwords hasheados con bcrypt
+- Protección contra SQL injection (prepared statements)
+- CSRF tokens en formularios
+- Headers de seguridad HTTP
+- Validación de entrada en todos los endpoints
+- Logs de acceso y auditoría
+
+---
+
+## 📞 Soporte
+
+**Para usuarios:** Contacta a tu administrador o consulta el [Manual de Usuario](USER_GUIDE.md#contacto-y-soporte)
+
+**Para desarrolladores:** Consulta el [Manual Técnico](DEVELOPER_GUIDE.md#troubleshooting-técnico) o abre un issue en GitHub
+
+---
+
+## 📄 Licencia
+
+Consulta [LICENSE](LICENSE) para más detalles.
+
+---
+
+## 🎯 Próximas mejoras
+
+Consulta [CHANGELOG.md](CHANGELOG.md) para el roadmap de versiones futuras.
+
+---
+
+**Última actualización:** 27 de enero de 2026
 
  - Instalar el virtualhost en Apache (opcional si usas el servidor embebido PHP):
 
