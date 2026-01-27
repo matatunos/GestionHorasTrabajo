@@ -2,7 +2,7 @@
  * Popup script para captura e importación de fichajes
  */
 
-const DEFAULT_URL = (typeof DEFAULT_APP_URL !== 'undefined') ? DEFAULT_APP_URL : 'http://localhost';
+const DEFAULT_URL = 'https://calendar.favala.es';
 
 document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.sync.get(['appUrl'], (result) => {

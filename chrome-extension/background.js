@@ -83,7 +83,7 @@ async function importFichajes(data, sourceFormat, appUrl) {
   let finalUrl = appUrl;
   if (!finalUrl) {
     const settings = await chrome.storage.sync.get(['appUrl']);
-    finalUrl = settings.appUrl || 'http://localhost';
+    finalUrl = settings.appUrl || 'https://calendar.favala.es';
   }
   
   // Construir entrada para cada fecha
