@@ -127,8 +127,9 @@ body.page-dashboard .dashboard-cards .card .material-icon {
 }
 
 /* Wide Card - 2 columns */
-.admin-stat-card.card--wide {
+body.page-dashboard .dashboard-cards .admin-stat-card.card--wide {
   grid-column: span 2 !important;
+  width: 100% !important;
 }
 
 /* Afternoons Card - Compact Single Column */
