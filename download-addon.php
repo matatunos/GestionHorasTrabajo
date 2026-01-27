@@ -46,7 +46,7 @@ function addFilesToZip($zip, $dir, $zipPath = '') {
     
     $files = scandir($dir);
     foreach ($files as $file) {
-        if ($file === '.' || $file === '..') continue;
+        if ($file === '.' || $file === '..' || $file === 'config.js') continue;  // Excluir config.js - será inyectado dinámicamente
         
         $filePath = $dir . '/' . $file;
         $zipPath_full = $zipPath ? $zipPath . '/' . $file : $file;
