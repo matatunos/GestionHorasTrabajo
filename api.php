@@ -223,6 +223,9 @@ if ($method === 'POST' && $path === '/login') {
 // Autenticación HÍBRIDA: Sesión O Token
 // ============================================
 
+$user = null;
+$auth_method = null;
+
 // 1. Intentar autenticación por sesión
 // Nota: session_start() ya se llamó en auth.php, no repetir aquí
 if (!empty($_SESSION['user_id'])) {
