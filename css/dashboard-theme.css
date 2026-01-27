@@ -5,7 +5,8 @@
 
 /* CRITICAL RESET: Remove ALL conflicting styles from styles.css */
 body.page-dashboard {
-  background: #f9fafb !important;
+  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 50%, #fffbeb 100%) !important;
+  min-height: 100vh;
 }
 
 body.page-dashboard .card,
