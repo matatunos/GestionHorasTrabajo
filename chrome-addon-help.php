@@ -7,8 +7,10 @@ require_once __DIR__ . '/header.php';
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Extensión Chrome - Ayuda</title><link rel="icon" type="image/svg+xml" href="images/favicon.svg"><link rel="stylesheet" href="styles.css"><style>
   .help-section { margin-bottom: 30px; }
   .help-section h3 { color: #007bff; margin-top: 20px; margin-bottom: 10px; }
-  .step-number { display: inline-block; background: #007bff; color: white; width: 32px; height: 32px; border-radius: 50%; text-align: center; line-height: 32px; font-weight: bold; margin-right: 10px; }
-  .step { margin: 15px 0; padding: 10px; background: #f9f9f9; border-left: 3px solid #007bff; }
+  .step-number { display: inline-flex; align-items: center; justify-content: center; background: #007bff; color: white; width: 32px; height: 32px; min-width: 32px; border-radius: 50%; font-weight: bold; margin-right: 15px; flex-shrink: 0; vertical-align: top; }
+  .step { margin: 15px 0; padding: 15px; padding-left: 15px; background: #f9f9f9; border-left: 3px solid #007bff; }
+  .step strong { display: block; margin-bottom: 5px; margin-top: 0; }
+  .step p { margin: 5px 0; }
   .code-block { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: monospace; margin: 10px 0; }
   .feature-list { list-style: none; padding: 0; }
   .feature-list li { padding: 8px 0; padding-left: 25px; position: relative; }
