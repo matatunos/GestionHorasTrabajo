@@ -126,6 +126,12 @@ body.page-dashboard .dashboard-cards .card .material-icon {
 body.page-dashboard .dashboard-cards .card.card--wide {
   grid-column: span 2 !important;
   align-items: flex-start !important;
+  padding: 1.5rem !important;
+}
+
+body.page-dashboard .dashboard-cards .card.card--wide h4 {
+  margin-top: 0 !important;
+  margin-bottom: 1rem !important;
 }
 
 /* Base Color Palette */
@@ -331,35 +337,47 @@ body.page-dashboard .container {
 
 /* Dashboard Mini Cards */
 .dashboard-mini-card {
-  background: #f9fafb !important;
-  padding: 1rem !important;
+  background: white !important;
+  padding: 1.25rem !important;
   border-radius: 8px !important;
   border: 1px solid #e5e7eb !important;
   text-align: center !important;
   margin: 0 !important;
-}
-
-.dashboard-mini-card--half {
-  min-height: 120px !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
+  align-items: center !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  overflow: hidden !important;
+}
+
+.dashboard-mini-card--half {
+  min-height: 110px !important;
+  flex: 1 !important;
+  width: 100% !important;
 }
 
 .dashboard-mini-card strong {
   display: block;
-  font-size: 2.2rem;
+  font-size: 2rem;
   color: #2563eb;
-  margin-top: 0.5rem;
-  line-height: 1;
+  margin-top: 0.75rem;
+  line-height: 1.2;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.dashboard-mini-card--half strong {
+  color: #2563eb;
 }
 
 /* Split Cards */
 .dashboard-split-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin: 1rem 0;
+  gap: 1.25rem;
+  margin: 1.5rem 0 0 0 !important;
+  width: 100%;
 }
 
 /* Dashboard Note */

@@ -604,13 +604,13 @@ function svg_sparkline(array $values, $w=120, $h=28){
         <div class="admin-stat-icon">🌇</div>
         <h4>Tardes trabajadas</h4>
         <div class="dashboard-split-cards">
-          <div class="card dashboard-mini-card dashboard-mini-card--half" style="text-align:center;">
-            <div style="color:var(--neutral-600);margin-bottom:0.5rem;font-size:0.9rem;font-weight:500;">Mes actual</div>
-            <strong style="display:block;margin-top:0.5rem;font-size:2.4rem;line-height:1.1;color:var(--primary-color);"><?php echo intval($curAfternoons); ?></strong>
+          <div class="dashboard-mini-card dashboard-mini-card--half">
+            <div style="color:var(--neutral-600);font-size:0.9rem;font-weight:500;">Mes actual</div>
+            <strong style="color:var(--primary-color);"><?php echo intval($curAfternoons); ?></strong>
           </div>
-          <div class="card dashboard-mini-card dashboard-mini-card--half" style="text-align:center;">
-            <div style="color:var(--neutral-600);margin-bottom:0.5rem;font-size:0.9rem;font-weight:500;">Mes anterior</div>
-            <strong style="display:block;margin-top:0.5rem;font-size:2.4rem;line-height:1.1;color:var(--success-color);"><?php echo intval($prevAfternoons); ?></strong>
+          <div class="dashboard-mini-card dashboard-mini-card--half">
+            <div style="color:var(--neutral-600);font-size:0.9rem;font-weight:500;">Mes anterior</div>
+            <strong style="color:var(--success-color);"><?php echo intval($prevAfternoons); ?></strong>
           </div>
         </div>
         <div class="dashboard-note">📝 Saldo comida ≥ 1:00</div>

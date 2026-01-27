@@ -61,3 +61,9 @@
 {"timestamp":"2026-01-26 19:11:50","unix_timestamp":1769454710,"ip":"192.168.1.24","data":{"action":"LOGIN_SUCCESS","username":"admin","user_id":1,"reason":null}}
 {"timestamp":"2026-01-26 20:56:12","unix_timestamp":1769460972,"ip":"192.168.1.24","data":{"action":"LOGIN_SUCCESS","username":"admin","user_id":1,"reason":null}}
 {"timestamp":"2026-01-27 08:59:27","unix_timestamp":1769504367,"ip":"192.168.1.24","data":{"action":"LOGIN_SUCCESS","username":"admin","user_id":1,"reason":null}}
+{"timestamp":"2026-01-27 09:05:07","unix_timestamp":1769504707,"ip":"192.168.1.24","data":{"action":"LOGIN_FAILED","username":"admin","user_id":1,"reason":"invalid_password"}}
+{"timestamp":"2026-01-27 09:05:12","unix_timestamp":1769504712,"ip":"192.168.1.24","data":{"action":"LOGIN_FAILED","username":"admin","user_id":1,"reason":"invalid_password"}}
+{"timestamp":"2026-01-27 09:05:20","unix_timestamp":1769504720,"ip":"192.168.1.24","data":{"action":"LOGIN_SUCCESS","username":"admin","user_id":1,"reason":null}}
+{"timestamp":"2026-01-27 09:06:24","unix_timestamp":1769504784,"ip":"192.168.1.24","data":{"action":"LOGIN_SUCCESS","username":"admin","user_id":1,"reason":null}}
+{"timestamp":"2026-01-27 09:16:35","unix_timestamp":1769505395,"ip":"192.168.1.24","data":{"action":"LOGIN_SUCCESS","username":"admin","user_id":1,"reason":null}}
+{"timestamp":"2026-01-27 09:17:17","unix_timestamp":1769505437,"ip":"192.168.1.24","data":{"action":"LOGIN_SUCCESS","username":"admin","user_id":1,"reason":null}}
