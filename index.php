@@ -268,6 +268,7 @@ $holidayMap = [];
   <title>Registro Horas</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/dashboard-theme.css">
 </head>
 <body class="page-index">
 <?php include __DIR__ . '/header.php'; ?>
