@@ -98,7 +98,11 @@ async function importFichajes(data, sourceFormat, appUrl) {
         entryData = parseStandardEntry(entry, Object.keys(entry));
       }
       
-      if (!entryData || !entryData.start) {
+      // Verificar que hay AL MENOS UN dato de tiempo
+      const hasAnyTime = entryData.start || entryData.end || entryData.coffee_out || 
+                        entryData.coffee_in || entryData.lunch_out || entryData.lunch_in;
+      
+      if (!hasAnyTime) {
         console.warn(`[Background] ${date}: No se encontraron tiempos válidos`);
         continue;
       }
@@ -106,7 +110,7 @@ async function importFichajes(data, sourceFormat, appUrl) {
       // Agregar entrada con fecha formateada
       entries.push({
         date: formatDate(date),
-        start: entryData.start,
+        start: entryData.start || null,
         end: entryData.end || null,
         coffee_out: entryData.coffee_out || null,
         coffee_in: entryData.coffee_in || null,
