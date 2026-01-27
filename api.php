@@ -224,7 +224,7 @@ if ($method === 'POST' && $path === '/login') {
 // ============================================
 
 // 1. Intentar autenticación por sesión
-session_start();
+// Nota: session_start() ya se llamó en auth.php, no repetir aquí
 if (!empty($_SESSION['user_id'])) {
   $user = current_user();
   $auth_method = 'session';
