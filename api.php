@@ -114,6 +114,19 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
     exit;
 });
 
+// Set exception handler para excepciones no capturadas
+set_exception_handler(function($exception) {
+    http_response_code(500);
+    echo json_encode([
+        'ok' => false,
+        'error' => 'exception',
+        'message' => $exception->getMessage(),
+        'file' => $exception->getFile(),
+        'line' => $exception->getLine()
+    ]);
+    exit;
+});
+
 // Rutas de la API
 $method = $_SERVER['REQUEST_METHOD'];
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -244,7 +257,7 @@ if (!$user) {
     if ($payload && isset($payload['user_id'])) {
       $user_id = $payload['user_id'];
       $pdo = get_pdo();
-      $stmt = $pdo->prepare('SELECT id, username, email, name FROM users WHERE id = ?');
+      $stmt = $pdo->prepare('SELECT id, username, is_admin FROM users WHERE id = ?');
       $stmt->execute([$user_id]);
       $user = $stmt->fetch();
       $auth_method = 'bearer_token';
@@ -260,7 +273,7 @@ if (!$user) {
       if ($user_id) {
         // Validar usuario existe
         $pdo = get_pdo();
-        $stmt = $pdo->prepare('SELECT id, username, email, name FROM users WHERE id = ?');
+        $stmt = $pdo->prepare('SELECT id, username, is_admin FROM users WHERE id = ?');
         $stmt->execute([$user_id]);
         $user = $stmt->fetch();
         $auth_method = 'token';
@@ -295,7 +308,7 @@ if ($method === 'GET' && $path === '/debug') {
     'debug' => 'API funcionando',
     'method' => $_SERVER['REQUEST_METHOD'],
     'path' => $path,
-    'user' => ['id' => $user['id'], 'email' => $user['email']],
+    'user' => ['id' => $user['id'], 'username' => $user['username']],
     'raw_input_length' => strlen($raw_input),
     'parsed_input_keys' => $global_input ? array_keys($global_input) : [],
     'timestamp' => date('Y-m-d H:i:s')
@@ -314,8 +327,8 @@ else if ($method === 'GET' && ($path === '' || $path === '/')) {
     'status' => 'active',
     'user' => [
       'id' => $user['id'],
-      'name' => $user['name'],
-      'email' => $user['email']
+      'username' => $user['username'],
+      'is_admin' => $user['is_admin']
     ],
     'message' => 'GestionHorasTrabajo API v1.1 - Extensión Chrome con autenticación híbrida'
   ]);
@@ -328,8 +341,7 @@ else if ($method === 'GET' && $path === '/me') {
     'data' => [
       'id' => $user['id'],
       'username' => $user['username'],
-      'email' => $user['email'],
-      'name' => $user['name'] ?? $user['username'],
+      'is_admin' => $user['is_admin'],
     ]
   ]);
   exit;
@@ -538,7 +550,7 @@ function handleImportFichajes($input) {
   // DEBUG: Loguear qué se recibe
   $debug_log = fopen('/tmp/gestion_import_debug.log', 'a');
   fwrite($debug_log, "\n=== " . date('Y-m-d H:i:s') . " ===\n");
-  fwrite($debug_log, "User: " . ($user['email'] ?? 'UNKNOWN') . "\n");
+  fwrite($debug_log, "User: " . ($user['username'] ?? 'UNKNOWN') . "\n");
   fwrite($debug_log, "Input received:\n" . json_encode($input, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n");
   fclose($debug_log);
   
