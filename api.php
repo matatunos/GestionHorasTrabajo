@@ -103,6 +103,17 @@ $global_input = json_decode($raw_input, true);
 // Responder JSON
 header('Content-Type: application/json');
 
+// Set error handler para convertir todos los errores a JSON
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    http_response_code(500);
+    echo json_encode([
+        'ok' => false,
+        'error' => 'php_error',
+        'message' => $errstr . ' (' . $errfile . ':' . $errline . ')'
+    ]);
+    exit;
+});
+
 // Rutas de la API
 $method = $_SERVER['REQUEST_METHOD'];
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -571,13 +582,14 @@ function handleImportFichajes($input) {
     }
     
     try {
-      // UPSERT
+      // UPSERT: Si existe entrada para esta fecha, la SOBRESCRIBE. Si no, la crea.
       $stmt = $pdo->prepare('SELECT id FROM entries WHERE user_id = ? AND date = ? LIMIT 1');
       $stmt->execute([$user['id'], $date]);
       $row = $stmt->fetch();
       
       if ($row) {
-        // UPDATE
+        // SOBRESCRIBE la entrada existente
+        // Actualiza todos los campos de esta fecha
         $stmt = $pdo->prepare(
           'UPDATE entries SET start=?,coffee_out=?,coffee_in=?,lunch_out=?,lunch_in=?,end=?,note=?,absence_type=? WHERE id=?'
         );
@@ -586,7 +598,8 @@ function handleImportFichajes($input) {
           $data['lunch_in'], $data['end'], $data['note'], $data['absence_type'], $row['id']
         ]);
       } else {
-        // INSERT
+        // CREA nueva entrada si no existe
+        // INSERT nuevo registro
         $stmt = $pdo->prepare(
           'INSERT INTO entries (user_id,date,start,coffee_out,coffee_in,lunch_out,lunch_in,end,note,absence_type) VALUES (?,?,?,?,?,?,?,?,?,?)'
         );
@@ -607,7 +620,7 @@ function handleImportFichajes($input) {
     'imported' => $imported,
     'total' => count($input['entries']),
     'errors' => $errors,
-    'message' => "$imported de " . count($input['entries']) . " fichajes importados"
+    'message' => "$imported de " . count($input['entries']) . " fichajes importados. (Nota: Si ya existía entrada para una fecha, se sobrescribió completamente)"
   ]);
 }
 
