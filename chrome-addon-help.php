@@ -11,6 +11,9 @@ require_once __DIR__ . '/header.php';
   .step { margin: 15px 0; padding: 15px; padding-left: 15px; background: #f9f9f9; border-left: 3px solid #007bff; }
   .step strong { display: block; margin-bottom: 5px; margin-top: 0; }
   .step p { margin: 5px 0; }
+  .help-section ul, .help-section ol { margin: 10px 0; padding-left: 25px; }
+  .help-section li { margin: 5px 0; padding-left: 5px; }
+  .help-section h4 { color: #333; margin-top: 15px; margin-bottom: 8px; }
   .code-block { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: monospace; margin: 10px 0; }
   .feature-list { list-style: none; padding: 0; }
   .feature-list li { padding: 8px 0; padding-left: 25px; position: relative; }
@@ -18,6 +21,8 @@ require_once __DIR__ . '/header.php';
   .download-btn { display: inline-block; padding: 15px 30px; background: #007bff; color: white; border-radius: 5px; text-decoration: none; font-weight: bold; margin: 10px 5px 10px 0; }
   .download-btn:hover { background: #0056b3; text-decoration: none; }
   .warning-box { background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 15px; margin: 15px 0; }
+  .warning-box ul { margin: 10px 0; padding-left: 25px; }
+  .warning-box li { margin: 5px 0; padding-left: 5px; }
   .info-box { background: #e7f3ff; border: 1px solid #007bff; border-radius: 5px; padding: 15px; margin: 15px 0; }
   .screenshot { max-width: 100%; border: 1px solid #ddd; border-radius: 5px; margin: 15px 0; }
 </style></head><body>
