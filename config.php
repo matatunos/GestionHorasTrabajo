@@ -20,11 +20,12 @@ function get_config(){
         'coffee_minutes' => 15, // nominal coffee time (counts as work)
         'lunch_minutes' => 30,  // nominal lunch time (not counted as work)
         // database defaults (can be overridden by env vars)
+        // WARNING: These are FALLBACK defaults. Use .env for production credentials
         'db' => [
-            'host' => 'localhost',
-            'name' => 'gestion_horas',
-            'user' => getenv('DB_USER') ?: 'gestion_user',
-            'pass' => getenv('DB_PASS') ?: 'app_pass',
+            'host' => getenv('DB_HOST') ?: 'localhost',
+            'name' => getenv('DB_NAME') ?: 'gestion_horas',
+            'user' => getenv('DB_USER') ?: 'app_user',
+            'pass' => getenv('DB_PASS') ?: 'CHANGE_ME_IN_ENV',
             'charset' => 'utf8mb4',
         ],
         // Application URL used for building absolute links and CORS defaults

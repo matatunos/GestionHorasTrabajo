@@ -1,33 +1,120 @@
-node_modules/
-vendor/
-.DS_Store
-*.log
+# ═══════════════════════════════════════════════════════════
+# SEGURIDAD: Archivos con información sensible
+# ═══════════════════════════════════════════════════════════
+.env                          # Variables de entorno (BD, tokens, etc.)
+.env.local                    # Configuración local
+.env.*.php                    # Archivos de configuración específicos
+.env.*                        # Cualquier variante de .env
+*.key                         # Claves privadas
+*.pem                         # Certificados
+*.p8                          # Claves PKCS8
+*.p12                         # Certificados PKCS12
+*.pfx                         # Certificados PFX
+*.crt                         # Certificados
+.htpasswd                     # Credenciales HTTP basic auth
+
+# ═══════════════════════════════════════════════════════════
+# LOGS: Archivos de log (pueden contener información sensible)
+# ═══════════════════════════════════════════════════════════
+logs/                         # Directorio de logs
+*.log                         # Archivos de log
+.log
+debug.log
+error.log
+access.log
+php_errors.log
+apache_error.log
+
+# ═══════════════════════════════════════════════════════════
+# UPLOADS Y DATOS: Archivos generados por usuarios
+# ═══════════════════════════════════════════════════════════
+uploads/                      # Archivos subidos
+uploads/*
+!uploads/.gitkeep
+data/                         # Datos locales
 data/*.json
 data/*.db
-.env
-*.bak
-.bak_*
-*.bak-*
-/tmp/
-package.json
+data/*.sqlite
+temp/
+tmp/
+cache/
+.cache
+
+# ═══════════════════════════════════════════════════════════
+# DEPENDENCIAS: Node y Composer
+# ═══════════════════════════════════════════════════════════
+node_modules/
+vendor/
+composer.lock
 package-lock.json
-HORARIO_2024.xlsx
-PDO::*
-parsed_fichajes.csv
-*.xlsx
-cookies.txt
-# Archivos de test y debug
-test_*.php
-test_*.js
-debug*.php
-import_debug.php
-*_debug.php
-tmp_*.php
-*_tmp.php
-recalc_debug.php
-# Archivos respaldados
+
+# ═══════════════════════════════════════════════════════════
+# IDE Y SISTEMA OPERATIVO
+# ═══════════════════════════════════════════════════════════
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.env.swp
+thumbs.db
+.vs/
+
+# ═══════════════════════════════════════════════════════════
+# BACKUPS Y ARCHIVOS TEMPORALES
+# ═══════════════════════════════════════════════════════════
+*.bak
+*.bak-*
+*.bak_*
+*.backup
+*.backup-*
 index.php.bak-*
 dashboard.php.bak-*
 header.php.bak-*
-# Nota: Muchos archivos .md han sido reorganizados a /docs/archive
-# Solo se mantienen en raíz: README.md, INSTALL.md, CHANGELOG.md
+*.tmp
+*.temp
+tmp_*.php
+*_tmp.php
+*_backup.php
+*_debug.php
+debug_*.php
+import_debug.php
+recalc_debug.php
+
+# ═══════════════════════════════════════════════════════════
+# TESTING Y DEBUG
+# ═══════════════════════════════════════════════════════════
+test_*.php
+test_*.js
+*.test.php
+*.spec.php
+phpunit.xml
+coverage/
+.phpunit.result.cache
+
+# ═══════════════════════════════════════════════════════════
+# DATOS ESPECÍFICOS DEL PROYECTO
+# ═══════════════════════════════════════════════════════════
+HORARIO_2024.xlsx
+*.xlsx
+*.csv
+parsed_fichajes.csv
+cookies.txt
+PDO::*
+/tmp/
+.report_generated
+
+# ═══════════════════════════════════════════════════════════
+# SISTEMA DE ARCHIVOS
+# ═══════════════════════════════════════════════════════════
+.gitkeep
+.gitattributes
+
+# ═══════════════════════════════════════════════════════════
+# NOTA SOBRE DOCUMENTACIÓN
+# ═══════════════════════════════════════════════════════════
+# Documentación histórica:
+# - Muchos archivos .md han sido reorganizados a /docs/archive
+# - Se mantienen solo en raíz: README.md, INSTALL.md, CHANGELOG.md, USER_GUIDE.md, DEVELOPER_GUIDE.md
+# Los archivos en /docs/archive/ están versionados como referencia histórica
