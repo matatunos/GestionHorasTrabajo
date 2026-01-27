@@ -14,9 +14,53 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('settingsToggle').addEventListener('click', toggleSettings);
   document.getElementById('saveBtn').addEventListener('click', saveSettings);
   document.getElementById('resetBtn').addEventListener('click', resetSettings);
+  
+  // Auto-capturar datos al abrir el popup
+  setTimeout(autoCaptureData, 300);
 });
 
-// Capturar datos de la página
+// Captura automática al abrir popup
+function autoCaptureData() {
+  const captureBtn = document.getElementById('captureBtn');
+  captureBtn.disabled = true;
+  captureBtn.textContent = 'Capturando...';
+  
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (!tabs || tabs.length === 0) {
+      captureBtn.disabled = false;
+      captureBtn.textContent = '📥 Capturar datos';
+      document.getElementById('preview').innerHTML = 
+        '<div style="color: #e11d48; padding: 1rem;">No se encontró pestaña activa</div>';
+      return;
+    }
+    
+    chrome.tabs.sendMessage(tabs[0].id, { action: 'captureFichajes' }, (response) => {
+      captureBtn.disabled = false;
+      captureBtn.textContent = '📥 Re-capturar datos';
+      
+      if (chrome.runtime.lastError) {
+        console.error('[Popup] Error de comunicación:', chrome.runtime.lastError);
+        document.getElementById('preview').innerHTML = 
+          '<div style="color: #e11d48; padding: 1rem;">❌ No se pudo comunicar con la página.<br>Abre una página con tabla de fichajes e intenta de nuevo.</div>';
+        return;
+      }
+      
+      if (response && response.success) {
+        showCapturedData(response.data, response.count, response.sourceFormat);
+        document.getElementById('importBtn').disabled = false;
+        window.capturedData = response.data;
+        window.sourceFormat = response.sourceFormat;
+      } else {
+        const errorMsg = response?.error || 'Error desconocido';
+        console.error('[Popup] Error de captura:', response);
+        document.getElementById('preview').innerHTML = 
+          '<div style="color: #e11d48; padding: 1rem;">❌ No se encontraron datos de fichajes en esta página.</div>';
+      }
+    });
+  });
+}
+
+// Capturar datos de la página (función manual)
 function captureData() {
   const captureBtn = document.getElementById('captureBtn');
   captureBtn.disabled = true;
@@ -32,7 +76,7 @@ function captureData() {
     
     chrome.tabs.sendMessage(tabs[0].id, { action: 'captureFichajes' }, (response) => {
       captureBtn.disabled = false;
-      captureBtn.textContent = '📥 Capturar datos';
+      captureBtn.textContent = '📥 Re-capturar datos';
       
       if (chrome.runtime.lastError) {
         console.error('[Popup] Error de comunicación:', chrome.runtime.lastError);
