@@ -373,7 +373,7 @@ body.page-dashboard .container {
 /* Dashboard Mini Cards */
 .dashboard-mini-card {
   background: white !important;
-  padding: 1.25rem !important;
+  padding: 0.9rem !important;
   border-radius: 8px !important;
   border: 1px solid #e5e7eb !important;
   text-align: center !important;
@@ -383,7 +383,8 @@ body.page-dashboard .container {
   justify-content: center !important;
   align-items: center !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-  overflow: hidden !important;
+  overflow: visible !important;
+  min-height: 100px !important;
 }
 
 .dashboard-mini-card--half {
@@ -394,9 +395,9 @@ body.page-dashboard .container {
 
 .dashboard-mini-card strong {
   display: block;
-  font-size: 2rem;
+  font-size: 1.4rem;
   color: #2563eb;
-  margin-top: 0.75rem;
+  margin-top: 0.3rem;
   line-height: 1.2;
   word-wrap: break-word;
   overflow-wrap: break-word;

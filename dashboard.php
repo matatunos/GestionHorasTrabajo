@@ -488,20 +488,20 @@ function svg_sparkline(array $values, $w=120, $h=28){
       <div class="admin-stat-card card--wide">
         <div class="admin-stat-icon">🗓️</div>
         <h4>Resumen semanal</h4>
-        <div class="week-cards" style="overflow: hidden; max-height: 140px;">
+        <div class="week-cards">
           <?php $prevClass = $prevWeekMinutes >= 0 ? 'week-card positive' : 'week-card negative'; ?>
           <?php $curClass = $curWeekMinutes >= 0 ? 'week-card positive' : 'week-card negative'; ?>
-          <div class="card dashboard-mini-card <?php echo $prevClass; ?>" style="font-size: 0.9rem;">
-            <div style="margin-bottom:0.5rem;">📅 Anterior</div>
-            <div class="muted" style="font-size:0.75rem;margin-bottom:0.25rem;"><?php echo htmlspecialchars(fmt_week_range($prevWeekStart)); ?></div>
-            <strong style="color:var(--neutral-600);font-size:0.85rem;">T: <?php echo minutes_to_hours_formatted($prevWeekExpected); ?></strong>
-            <strong style="color:var(--primary-color);font-size:0.9rem;">S: <?php echo minutes_to_hours_formatted($prevWeekMinutes); ?></strong>
+          <div class="card dashboard-mini-card <?php echo $prevClass; ?>">
+            <div style="margin-bottom:0.4rem;font-size:0.85rem;">📅 Anterior</div>
+            <div class="muted" style="font-size:0.7rem;margin-bottom:0.3rem;"><?php echo htmlspecialchars(fmt_week_range($prevWeekStart)); ?></div>
+            <strong style="color:var(--neutral-600);font-size:0.8rem;">T: <?php echo minutes_to_hours_formatted($prevWeekExpected); ?></strong>
+            <strong style="color:var(--primary-color);font-size:0.85rem;">S: <?php echo minutes_to_hours_formatted($prevWeekMinutes); ?></strong>
           </div>
-          <div class="card dashboard-mini-card <?php echo $curClass; ?>" style="font-size: 0.9rem;">
-            <div style="margin-bottom:0.5rem;">📅 Actual</div>
-            <div class="muted" style="font-size:0.75rem;margin-bottom:0.25rem;"><?php echo htmlspecialchars(fmt_week_range($curWeekStart)); ?></div>
-            <strong style="color:var(--neutral-600);font-size:0.85rem;">T: <?php echo minutes_to_hours_formatted($curWeekExpected); ?></strong>
-            <strong style="color:var(--primary-color);font-size:0.9rem;">S: <?php echo minutes_to_hours_formatted($curWeekMinutes); ?></strong>
+          <div class="card dashboard-mini-card <?php echo $curClass; ?>">
+            <div style="margin-bottom:0.4rem;font-size:0.85rem;">📅 Actual</div>
+            <div class="muted" style="font-size:0.7rem;margin-bottom:0.3rem;"><?php echo htmlspecialchars(fmt_week_range($curWeekStart)); ?></div>
+            <strong style="color:var(--neutral-600);font-size:0.8rem;">T: <?php echo minutes_to_hours_formatted($curWeekExpected); ?></strong>
+            <strong style="color:var(--primary-color);font-size:0.85rem;">S: <?php echo minutes_to_hours_formatted($curWeekMinutes); ?></strong>
           </div>
         </div>
       </div>
