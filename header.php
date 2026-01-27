@@ -75,6 +75,7 @@ $site_name = $site_cfg['site_name'] ?? 'GestionHoras';
 							<a class="dropdown-item" href="/import-calendar-beta.php">📅 Importar Calendario (Beta)</a>
 							<a class="dropdown-item" href="/data_quality.php">📊 Calidad de Datos</a>
 							<a class="dropdown-item" href="/chrome-addon-help.php">🧩 Extensión Chrome</a>
+							<a class="dropdown-item" href="/firefox-addon-help.php">🧩 Extensión Firefox</a>
 							<a class="dropdown-item" href="/extension-tokens.php">🔐 Tokens</a>
 							<?php if (!empty($current) && !empty($current['is_admin'])): ?>
 								<a class="dropdown-item" href="/reports.php">📊 Reportes</a>
