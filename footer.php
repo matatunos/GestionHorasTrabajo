@@ -159,15 +159,27 @@ function openScheduleSuggestions(e) {
   const modal = document.getElementById('scheduleSuggestionsModal');
   modal.style.display = 'flex';
   
-  // Fetch suggestions
+  // Fetch suggestions with error handling
   fetch('schedule_suggestions.php')
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        renderSuggestions(data);
-      } else {
+    .then(r => {
+      if (!r.ok) {
+        throw new Error('HTTP ' + r.status);
+      }
+      return r.text();
+    })
+    .then(text => {
+      try {
+        const data = JSON.parse(text);
+        if (data.success) {
+          renderSuggestions(data);
+        } else {
+          document.getElementById('suggestionsContent').innerHTML = 
+            '<div style="color: #e11d48; padding: 1rem;">Error: ' + (data.error || 'Desconocido') + '</div>';
+        }
+      } catch(e) {
         document.getElementById('suggestionsContent').innerHTML = 
-          '<div style="color: #e11d48; padding: 1rem;">Error: ' + (data.error || 'Desconocido') + '</div>';
+          '<div style="color: #e11d48; padding: 1rem;">Error de respuesta del servidor. Intenta refrescar la página.</div>';
+        console.error('Parse error:', e.message, 'Response:', text.substring(0, 200));
       }
     })
     .catch(err => {
