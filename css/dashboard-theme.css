@@ -88,6 +88,15 @@ body.page-dashboard .dashboard-cards .admin-stat-card {
   box-sizing: border-box !important;
 }
 
+/* Admin Stat Icons */
+.admin-stat-icon {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  display: block;
+  text-align: center;
+  width: 100%;
+}
+
 body.page-dashboard .dashboard-cards .card:hover,
 body.page-dashboard .dashboard-cards .admin-stat-card:hover {
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12) !important;
