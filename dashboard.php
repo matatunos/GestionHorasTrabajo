@@ -600,23 +600,6 @@ function svg_sparkline(array $values, $w=120, $h=28){
         }
         $prevAfternoons = count_afternoons_worked_in_month($yPrev, $mPrev, $prevEntries, $prevHolidayMap, $prevCfg, false);
       ?>
-      <div class="admin-stat-card afternoons-card">
-        <div class="admin-stat-icon">🌇</div>
-        <h4>Tardes trabajadas</h4>
-        <div class="afternoons-split">
-          <div class="afternoons-item">
-            <div class="afternoons-label">Mes actual</div>
-            <strong class="afternoons-value afternoons-current"><?php echo intval($curAfternoons); ?></strong>
-          </div>
-          <div class="afternoons-item">
-            <div class="afternoons-label">Mes anterior</div>
-            <strong class="afternoons-value afternoons-previous"><?php echo intval($prevAfternoons); ?></strong>
-          </div>
-        </div>
-        <div class="dashboard-note">📝 Saldo comida ≥ 1:00</div>
-      </div>
-
-      
 
       <div class="admin-stat-card">
         <div class="admin-stat-icon">☕</div>
