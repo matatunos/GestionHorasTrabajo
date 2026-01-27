@@ -6,8 +6,9 @@
 body.page-dashboard,
 body.page-index {
   background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 50%, #fffbeb 100%) !important;
-  min-height: 100vh !important;
+  background-image: none !important;
   background-attachment: fixed !important;
+  min-height: 100vh !important;
 }
 
 body.page-dashboard .card,
