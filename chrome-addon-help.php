@@ -48,35 +48,42 @@ require_once __DIR__ . '/header.php';
       
       <div class="step">
         <span class="step-number">1</span>
-        <strong>Descargar la extensión</strong>
-        <p>Opción A: Descarga el ZIP comprimido arriba (recomendado) y descomprime en tu computadora.</p>
-        <p>Opción B: Clona el repositorio desde GitHub:</p>
-        <div class="code-block">git clone -b feature/multiuser-dashboard /ruta/local/GestionHorasTrabajo.git
-      cd GestionHorasTrabajo/chrome-extension</div>
+        <strong>Descargar y descomprimir</strong>
+        <p>Descarga el ZIP comprimido arriba (recomendado) y descomprime en tu computadora. Debería crear una carpeta con:</p>
+        <div class="code-block">manifest.json
+popup.html
+popup.js
+content.js
+background.js
+images/
+  icon-16.png
+  icon-48.png
+  icon-128.png</div>
       </div>
 
       <div class="step">
         <span class="step-number">2</span>
-        <strong>Ir a la página de extensiones de Chrome</strong>
-        <p>Abre Chrome y ve a <code>chrome://extensions</code> (o Menú → Más herramientas → Extensiones)</p>
+        <strong>Abre la página de extensiones de Chrome</strong>
+        <p>En tu navegador Chrome, ve a <code>chrome://extensions/</code></p>
+        <p>O simplemente: Menú de Chrome (≡) → Más herramientas → Extensiones</p>
       </div>
 
       <div class="step">
         <span class="step-number">3</span>
-        <strong>Habilitar modo de desarrollador</strong>
-        <p>En la esquina superior derecha de la página, activa el interruptor <strong>"Modo de desarrollador"</strong></p>
+        <strong>Activa el "Modo de desarrollador"</strong>
+        <p>En la esquina superior derecha de la página de extensiones, encontrarás el botón "Modo de desarrollador". Haz clic para activarlo.</p>
       </div>
 
       <div class="step">
         <span class="step-number">4</span>
-        <strong>Cargar la extensión</strong>
-        <p>Haz clic en <strong>"Cargar extensión sin empaquetar"</strong> y selecciona la carpeta <code>chrome-extension</code> que descargaste</p>
+        <strong>Carga la extensión</strong>
+        <p>Después de activar el modo de desarrollador, aparecerá un botón "Cargar extensión sin empaquetar". Haz clic y <strong>selecciona la carpeta que descargaste</strong> (la que contiene <code>manifest.json</code>).</p>
       </div>
 
       <div class="step">
         <span class="step-number">5</span>
-        <strong>¡Listo!</strong>
-        <p>Verás la extensión en tu lista de extensiones. El icono azul aparecerá en la barra de herramientas de Chrome.</p>
+        <strong>¡Listo! Extensión instalada</strong>
+        <p>La extensión aparecerá en tu lista de extensiones. Verás un icono en la barra de herramientas de Chrome.</p>
       </div>
     </div>
 
@@ -94,14 +101,14 @@ require_once __DIR__ . '/header.php';
 
       <div class="step">
         <span class="step-number">2</span>
-        <strong>Haz clic en el icono azul</strong>
-        <p>En la barra de herramientas superior derecha, verás el icono azul de GestionHorasTrabajo. Haz clic en él.</p>
+        <strong>Haz clic en el icono de la extensión</strong>
+        <p>En la barra de herramientas superior derecha, verás el icono de GestionHorasTrabajo. Haz clic en él.</p>
       </div>
 
       <div class="step">
         <span class="step-number">3</span>
-        <strong>Captura los datos</strong>
-        <p>Aparecerá un popup con un botón <strong>"📥 Capturar datos de esta página"</strong>. Haz clic para extraer los fichajes.</p>
+        <strong>Los datos se capturan automáticamente</strong>
+        <p>La extensión extraerá automáticamente los datos de fichajes de la página y mostrará una vista previa.</p>
       </div>
 
       <div class="step">
@@ -127,77 +134,6 @@ require_once __DIR__ . '/header.php';
     <div class="help-section">
       <h3>⚙️ Configuración</h3>
       
-      <p>Si la extensión se descargó desde esta página, la URL de tu aplicación ya está preconfigurada.</p>
-      
-      <p><strong>Si necesitas cambiar la URL:</strong></p>
-      
-      <div class="step">
-        <strong>1. Abre el popup de la extensión</strong>
-        <p>Haz clic en el icono azul</p>
-      </div>
-
-      <div class="step">
-        <strong>2. Haz clic en "⚙️ Configuración"</strong>
-        <p>Expandirá una sección donde puedes cambiar la URL</p>
-      </div>
-
-      <div class="step">
-        <strong>3. Ingresa tu URL</strong>
-        <p>Ejemplo: <code>http://192.168.1.100</code> o <code>http://miapp.com</code></p>
-      </div>
-
-      <div class="step">
-        <strong>4. Guarda los cambios</strong>
-        <p>Haz clic en "💾 Guardar" para almacenarla</p>
-      </div>
-    </div>
-        <strong>Descomprime el archivo</strong>
-        <p>Descomprime el ZIP que descargaste. Debería crear una carpeta con el siguiente contenido:</p>
-        <div class="code-block">manifest.json
-popup.html
-popup.js
-content.js
-background.js
-images/
-  icon-16.png
-  icon-48.png
-  icon-128.png</div>
-      </div>
-
-      <div class="step">
-        <span class="step-number">3</span>
-        <strong>Abre la página de extensiones de Chrome</strong>
-        <p>En tu navegador Chrome, ve a:</p>
-        <div class="code-block">chrome://extensions/</div>
-        <p>O simplemente:</p>
-        <ol>
-          <li>Menú de Chrome (≡) → Más herramientas → Extensiones</li>
-        </ol>
-      </div>
-
-      <div class="step">
-        <span class="step-number">4</span>
-        <strong>Activa el "Modo de desarrollador"</strong>
-        <p>En la esquina superior derecha de la página de extensiones, encontrarás el botón "Modo de desarrollador". Haz clic para activarlo.</p>
-      </div>
-
-      <div class="step">
-        <span class="step-number">5</span>
-        <strong>Carga la extensión</strong>
-        <p>Después de activar el modo de desarrollador, aparecerá un botón "Cargar extensión sin empaquetar". Haz clic y <strong>selecciona la carpeta que descargaste</strong> (la que contiene <code>manifest.json</code>).</p>
-      </div>
-
-      <div class="step">
-        <span class="step-number">6</span>
-        <strong>¡Listo! Extensión instalada</strong>
-        <p>La extensión aparecerá en tu lista de extensiones. Verás un icono (⏱) en la barra de herramientas de Chrome.</p>
-      </div>
-    </div>
-
-    <!-- Configuration -->
-    <div class="help-section">
-      <h3>⚙️ Configuración</h3>
-      
       <div class="info-box">
         <strong>✨ Preconfigured:</strong> La extensión viene automáticamente configurada con la URL de donde la descargaste. Si necesitas cambiarla, sigue los pasos abajo.
       </div>
@@ -205,7 +141,7 @@ images/
       <div class="step">
         <span class="step-number">1</span>
         <strong>Abre el panel de configuración</strong>
-        <p>Haz clic en el icono de la extensión (⏱) en la barra de herramientas de Chrome.</p>
+        <p>Haz clic en el icono de la extensión en la barra de herramientas de Chrome.</p>
       </div>
 
       <div class="step">
