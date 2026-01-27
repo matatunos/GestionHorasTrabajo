@@ -7,8 +7,7 @@
   "permissions": [
     "activeTab",
     "scripting",
-    "storage",
-    "webRequest"
+    "storage"
   ],
   
   "host_permissions": [
@@ -32,15 +31,8 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "js": ["importFichajes.js", "content.js"],
       "run_at": "document_end"
-    }
-  ],
-  
-  "web_accessible_resources": [
-    {
-      "resources": ["popup.html"],
-      "matches": ["<all_urls>"]
     }
   ],
   
