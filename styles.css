@@ -465,6 +465,7 @@ body.mobile-menu-open .sidebar {
     font-weight: 500;
     margin-bottom: 0.2rem;
 }
+/* DESACTIVADO - Conflicto con dashboard-theme.css 
 .admin-stat-card .admin-stat-icon {
     font-size: 3.2rem;
     position: absolute;
@@ -478,6 +479,7 @@ body.mobile-menu-open .sidebar {
     opacity: 0.16;
     transform: translateY(-50%) scale(1.13) rotate(5deg);
 }
+*/
 .admin-stat-card::after {
     content: '';
     position: absolute;
