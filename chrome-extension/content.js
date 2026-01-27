@@ -169,11 +169,16 @@ function extractExternalData() {
             if (time && /\d{2}:\d{2}/.test(time)) times.push(time);
           });
           
+          console.log(`[GestionHoras] EXTERNAL: ${fullDate} - encontrados ${times.length} tiempos:`, times);
+          
           if (times.length > 0) {
             data[fullDate] = {
               times: times,
               format: 'external'
             };
+            console.log(`[GestionHoras] EXTERNAL: ✅ Agregada fecha ${fullDate}`);
+          } else {
+            console.log(`[GestionHoras] EXTERNAL: ⚠️ Sin tiempos para ${fullDate}, saltando`);
           }
         }
       });
