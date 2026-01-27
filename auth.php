@@ -16,8 +16,9 @@ function log_auth_event($action, $username, $user_id = null, $reason = null) {
     ];
     file_put_contents($authLog, json_encode($entry, JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND | LOCK_EX);
 }
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
 ini_set('log_errors', 1);
 error_reporting(E_ALL);
 error_log('auth.php: INICIO');
