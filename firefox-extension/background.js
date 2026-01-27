@@ -2,6 +2,14 @@
  * Background service worker para manejar importaciones
  */
 
+// Asegurar que las variables globales existen
+if (typeof DEFAULT_APP_URL === 'undefined') {
+  const DEFAULT_APP_URL = 'https://calendar.favala.es';
+}
+if (typeof EXTENSION_TOKEN === 'undefined') {
+  const EXTENSION_TOKEN = '';
+}
+
 // Escuchar mensajes del content script y popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'importFichajes') {

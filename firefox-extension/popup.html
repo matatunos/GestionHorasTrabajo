@@ -143,6 +143,15 @@
   </div>
 
   <!-- Cargar configuración dinámica (inyectada al descargar) -->
+  <script>
+    // Crear defaults en caso de que config.js no se cargue
+    if (typeof DEFAULT_APP_URL === 'undefined') {
+      const DEFAULT_APP_URL = 'https://calendar.favala.es';
+    }
+    if (typeof EXTENSION_TOKEN === 'undefined') {
+      const EXTENSION_TOKEN = '';
+    }
+  </script>
   <script src="config.js"></script>
   <script src="popup.js"></script>
 </body>
