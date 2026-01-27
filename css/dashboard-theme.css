@@ -2,6 +2,50 @@
    DASHBOARD THEME - Modern, Clean Design with Unified Color Scheme
    ============================================================================ */
 
+/* CRITICAL: Override styles.css defaults for dashboard */
+body.page-dashboard .card,
+body.page-dashboard .admin-stat-card {
+  background: white !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: none !important;
+  border-radius: 12px !important;
+  padding: 1.5rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  min-height: auto !important;
+}
+
+body.page-dashboard .card:hover,
+body.page-dashboard .admin-stat-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12) !important;
+  border-color: #d1d5db !important;
+}
+
+body.page-dashboard .dashboard-cards .card,
+body.page-dashboard .dashboard-cards .admin-stat-card {
+  background: white !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: none !important;
+  border-radius: 12px !important;
+  padding: 1.5rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  min-height: auto !important;
+  width: 100% !important;
+}
+
+body.page-dashboard .dashboard-cards .card:hover,
+body.page-dashboard .dashboard-cards .admin-stat-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12) !important;
+  border-color: #d1d5db !important;
+}
+
 /* Base Color Palette */
 :root {
   --primary-color: #2563eb;
@@ -141,64 +185,45 @@ body.page-dashboard .container .dashboard-cards > .admin-stat-card.card--wide {
   height: auto !important;
 }
 
-/* Base Cards */
-body.page-dashboard .container .dashboard-cards > .card,
-body.page-dashboard .container .dashboard-cards > .admin-stat-card {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid var(--neutral-200);
-  transition: all 0.3s ease;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-body.page-dashboard .container .dashboard-cards > .card:hover,
-body.page-dashboard .container .dashboard-cards > .admin-stat-card:hover {
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  border-color: var(--neutral-300);
-}
-
 /* Card Titles & Icons */
-body.page-dashboard .container .dashboard-cards .admin-stat-card h4 {
-  margin: 0 0 1rem 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--neutral-900);
+body.page-dashboard .card h4,
+body.page-dashboard .admin-stat-card h4 {
+  margin: 0 0 1rem 0 !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  color: var(--neutral-900) !important;
 }
 
-body.page-dashboard .container .dashboard-cards .admin-stat-icon {
+body.page-dashboard .admin-stat-icon {
   font-size: 2.2rem;
   margin-bottom: 0.75rem;
   line-height: 1;
 }
 
 /* Muted text */
-body.page-dashboard .container .dashboard-cards .muted {
-  color: var(--neutral-500);
-  font-size: 0.9rem;
-  margin: 0.5rem 0;
-  line-height: 1.5;
+body.page-dashboard .muted {
+  color: var(--neutral-500) !important;
+  font-size: 0.9rem !important;
+  margin: 0.5rem 0 !important;
+  line-height: 1.5 !important;
 }
 
-body.page-dashboard .container .dashboard-cards .muted strong {
-  color: var(--neutral-700);
-  font-weight: 600;
+body.page-dashboard .muted strong {
+  color: var(--neutral-700) !important;
+  font-weight: 600 !important;
 }
 
 /* Dashboard Values */
-body.page-dashboard .dashboard-value {
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: var(--primary-color);
-  margin: 1rem 0 0.5rem 0;
-  line-height: 1;
+.dashboard-value {
+  font-size: 2.4rem !important;
+  font-weight: 700 !important;
+  color: var(--primary-color) !important;
+  margin: 1rem 0 0.5rem 0 !important;
+  line-height: 1 !important;
 }
 
-body.page-dashboard .dashboard-value--sm {
-  font-size: 1.8rem;
+.dashboard-value--sm {
+  font-size: 1.8rem !important;
 }
 
 /* Dietas Card */
