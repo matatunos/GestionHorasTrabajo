@@ -541,7 +541,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
         $dietasCur = get_dietas($curMonthStart->format('Y-m-d'), $curMonthEnd->format('Y-m-d'));
       ?>
       <div class="admin-stat-card dietas-card">
-        <div class="admin-stat-icon" style="font-size:2.5rem;line-height:1;">🍽️</div>
+        <div class="admin-stat-icon">🍽️</div>
         <h4>Dietas</h4>
         <div style="display:flex;gap:3rem;align-items:center;justify-content:center;width:100%;">
           <div style="text-align:center;">

@@ -89,6 +89,7 @@ body.page-dashboard .dashboard-cards .admin-stat-card {
 }
 
 /* Admin Stat Icons - Vencer a styles.css .admin-stat-card .admin-stat-icon */
+body.page-dashboard .container .dashboard-cards .admin-stat-card .admin-stat-icon,
 body.page-dashboard .admin-stat-card .admin-stat-icon {
   font-size: 2rem !important;
   margin-bottom: 0.75rem !important;
@@ -103,9 +104,12 @@ body.page-dashboard .admin-stat-card .admin-stat-icon {
 }
 
 /* Prevenir hover que añade styles.css */
+body.page-dashboard .container .dashboard-cards .admin-stat-card:hover .admin-stat-icon,
 body.page-dashboard .admin-stat-card:hover .admin-stat-icon {
   opacity: 1 !important;
   transform: none !important;
+  scale: 1 !important;
+  rotate: 0deg !important;
 }
 
 body.page-dashboard .dashboard-cards .card:hover,
