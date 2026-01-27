@@ -23,8 +23,8 @@ function get_config(){
         'db' => [
             'host' => 'localhost',
             'name' => 'gestion_horas',
-            'user' => getenv('DB_USER') ?: 'app_user',
-            'pass' => getenv('DB_PASS') ?: 'app_pass',
+            'user' => getenv('DB_USER') ?: 'gestion_user',
+            'pass' => getenv('DB_PASS') ?: 'gestion_secure_2024',
             'charset' => 'utf8mb4',
         ],
         // Application URL used for building absolute links and CORS defaults
@@ -82,23 +82,20 @@ function get_app_url(): string {
  * Get configuration for a specific year. Falls back to global config and
  * applies DB overrides from `year_configs` table when present.
  */
-function get_year_config(int $year, int $user_id = null){
+function get_year_config(int $year, ?int $user_id = null){
     $conf = get_config();
-    // try reading from DB if available
     try {
         $pdo = null;
         if (function_exists('get_pdo')) {
             $pdo = get_pdo();
         }
         if ($pdo) {
-            // ensure table exists
             $pdo->exec("CREATE TABLE IF NOT EXISTS year_configs (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 year INT NOT NULL,
                 user_id INT DEFAULT NULL,
                 mon_thu DOUBLE DEFAULT NULL,
                 friday DOUBLE DEFAULT NULL,
-                -- summer overrides
                 summer_mon_thu DOUBLE DEFAULT NULL,
                 summer_friday DOUBLE DEFAULT NULL,
                 coffee_minutes INT DEFAULT NULL,
@@ -107,9 +104,6 @@ function get_year_config(int $year, int $user_id = null){
                 UNIQUE KEY user_year (user_id, year)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-            // Support both schemas:
-            // - New: year_configs has user_id (per-user overrides + global user_id NULL)
-            // - Old: year_configs has no user_id (single global row per year)
             $hasUserId = false;
             try {
                 $cst = $pdo->query("SHOW COLUMNS FROM year_configs LIKE 'user_id'");
@@ -119,7 +113,6 @@ function get_year_config(int $year, int $user_id = null){
             }
 
             if ($hasUserId) {
-                // prefer user-specific override when user_id provided
                 if ($user_id !== null) {
                     $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? AND user_id = ? LIMIT 1');
                     $stmt->execute([$year, $user_id]);
@@ -127,52 +120,32 @@ function get_year_config(int $year, int $user_id = null){
                 } else {
                     $row = false;
                 }
-                // fallback to global config (user_id IS NULL)
                 if (!$row) {
                     $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? AND user_id IS NULL LIMIT 1');
                     $stmt->execute([$year]);
                     $row = $stmt->fetch();
                 }
             } else {
-                // old schema: one row per year
                 $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? LIMIT 1');
                 $stmt->execute([$year]);
                 $row = $stmt->fetch();
             }
             if ($row) {
-                if (!empty($row['config'])) {
-                    $json = json_decode($row['config'], true);
-                    if (is_array($json)) {
-                        $conf = $json;
-                    }
+                if ($row['mon_thu'] !== null) $conf['work_hours']['winter']['mon_thu'] = floatval($row['mon_thu']);
+                if ($row['friday'] !== null) $conf['work_hours']['winter']['friday'] = floatval($row['friday']);
+                if (array_key_exists('summer_mon_thu', $row) && $row['summer_mon_thu'] !== null) {
+                    $conf['work_hours']['summer']['mon_thu'] = floatval($row['summer_mon_thu']);
                 }
-                // Si no hay JSON, usar los campos individuales como fallback
-                if ($conf === null) {
-                    $conf = get_config();
-                    if ($row['mon_thu'] !== null) $conf['work_hours']['winter']['mon_thu'] = floatval($row['mon_thu']);
-                    if ($row['friday'] !== null) $conf['work_hours']['winter']['friday'] = floatval($row['friday']);
-                    if (array_key_exists('summer_mon_thu', $row) && $row['summer_mon_thu'] !== null) {
-                        $conf['work_hours']['summer']['mon_thu'] = floatval($row['summer_mon_thu']);
-                    }
-                    if (array_key_exists('summer_friday', $row) && $row['summer_friday'] !== null) {
-                        $conf['work_hours']['summer']['friday'] = floatval($row['summer_friday']);
-                    }
-                    if ($row['coffee_minutes'] !== null) $conf['coffee_minutes'] = intval($row['coffee_minutes']);
-                    if ($row['lunch_minutes'] !== null) $conf['lunch_minutes'] = intval($row['lunch_minutes']);
+                if (array_key_exists('summer_friday', $row) && $row['summer_friday'] !== null) {
+                    $conf['work_hours']['summer']['friday'] = floatval($row['summer_friday']);
                 }
+                if ($row['coffee_minutes'] !== null) $conf['coffee_minutes'] = intval($row['coffee_minutes']);
+                if ($row['lunch_minutes'] !== null) $conf['lunch_minutes'] = intval($row['lunch_minutes']);
             }
         }
     } catch (Throwable $e) {
         // ignore DB errors and return defaults
-        if (empty($conf)) {
-            $conf = get_config();
-        }
     }
-
-    if (empty($conf)) {
-        $conf = get_config();
-    }
-    // Asegurar que summer_start y summer_end siempre estén presentes
     $defaults = get_config();
     if (empty($conf['summer_start']) && !empty($defaults['summer_start'])) {
         $conf['summer_start'] = $defaults['summer_start'];

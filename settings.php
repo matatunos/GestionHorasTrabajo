@@ -124,35 +124,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_year_config']) 
           $sfr = $parse_hours($_POST['yearcfg_summer_friday'] ?? null, 6.0);
           $cm = $parse_minutes($_POST['yearcfg_coffee_minutes'] ?? null, 15);
           $lm = $parse_minutes($_POST['yearcfg_lunch_minutes'] ?? null, 30);
+          $expected_daily_hours_winter = $parse_hours($_POST['yearcfg_expected_daily_hours_winter'] ?? null, 7.65);
+          $expected_daily_hours_summer = $parse_hours($_POST['yearcfg_expected_daily_hours_summer'] ?? null, 7.0);
           $pdo->exec("CREATE TABLE IF NOT EXISTS year_configs (
             year INT PRIMARY KEY,
             mon_thu DOUBLE DEFAULT NULL,
             friday DOUBLE DEFAULT NULL,
             summer_mon_thu DOUBLE DEFAULT NULL,
             summer_friday DOUBLE DEFAULT NULL,
+            expected_daily_hours_winter DOUBLE DEFAULT NULL,
+            expected_daily_hours_summer DOUBLE DEFAULT NULL,
             coffee_minutes INT DEFAULT NULL,
             lunch_minutes INT DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+          try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS expected_daily_hours_winter DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN expected_daily_hours_winter DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
+          try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS expected_daily_hours_summer DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN expected_daily_hours_summer DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
           try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS mon_thu DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN mon_thu DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
           try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS friday DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN friday DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
           try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS summer_mon_thu DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN summer_mon_thu DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
           try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS summer_friday DOUBLE DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN summer_friday DOUBLE DEFAULT NULL"); }catch(Throwable $e2){} }
           try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS coffee_minutes INT DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN coffee_minutes INT DEFAULT NULL"); }catch(Throwable $e2){} }
           try { $pdo->exec("ALTER TABLE year_configs ADD COLUMN IF NOT EXISTS lunch_minutes INT DEFAULT NULL"); } catch(Throwable $e){ try{ $pdo->exec("ALTER TABLE year_configs ADD COLUMN lunch_minutes INT DEFAULT NULL"); }catch(Throwable $e2){} }
-          
-          // Build config JSON
-          $config = json_encode([
-            'work_hours' => [
-              'winter' => ['mon_thu' => $mt, 'friday' => $fr],
-              'summer' => ['mon_thu' => $smt, 'friday' => $sfr]
-            ],
-            'coffee_minutes' => $cm,
-            'lunch_minutes' => $lm
-          ]);
-          
-          $stmt = $pdo->prepare('REPLACE INTO year_configs (year, config, mon_thu, friday, summer_mon_thu, summer_friday, coffee_minutes, lunch_minutes) VALUES (?,?,?,?,?,?,?,?)');
-          $stmt->execute([$yy, $config, $mt, $fr, $smt, $sfr, $cm, $lm]);
+          $stmt = $pdo->prepare('REPLACE INTO year_configs (year, mon_thu, friday, summer_mon_thu, summer_friday, expected_daily_hours_winter, expected_daily_hours_summer, coffee_minutes, lunch_minutes) VALUES (?,?,?,?,?,?,?,?,?)');
+          $stmt->execute([$yy, $mt, $fr, $smt, $sfr, $expected_daily_hours_winter, $expected_daily_hours_summer, $cm, $lm]);
             $msg = 'Configuración del año guardada.';
             if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
               header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit;
@@ -432,6 +427,8 @@ if ($pdo) {
               <th>Invierno (Viernes)</th>
               <th>Verano (Lun-Jue)</th>
               <th>Verano (Viernes)</th>
+              <th>Horas esperadas Invierno</th>
+              <th>Horas esperadas Verano</th>
               <th>Café</th>
               <th>Comida</th>
               <th>Acciones</th>
@@ -439,12 +436,14 @@ if ($pdo) {
           </thead>
           <tbody>
           <?php foreach($year_configs as $yc): ?>
-            <tr data-year="<?php echo htmlspecialchars($yc['year']); ?>" data-mon_thu="<?php echo htmlspecialchars($yc['mon_thu']); ?>" data-friday="<?php echo htmlspecialchars($yc['friday']); ?>" data-summer_mon_thu="<?php echo htmlspecialchars($yc['summer_mon_thu']); ?>" data-summer_friday="<?php echo htmlspecialchars($yc['summer_friday']); ?>" data-coffee_minutes="<?php echo htmlspecialchars($yc['coffee_minutes']); ?>" data-lunch_minutes="<?php echo htmlspecialchars($yc['lunch_minutes']); ?>">
+            <tr data-year="<?php echo htmlspecialchars($yc['year']); ?>" data-mon_thu="<?php echo htmlspecialchars($yc['mon_thu']); ?>" data-friday="<?php echo htmlspecialchars($yc['friday']); ?>" data-summer_mon_thu="<?php echo htmlspecialchars($yc['summer_mon_thu']); ?>" data-summer_friday="<?php echo htmlspecialchars($yc['summer_friday']); ?>" data-expected_daily_hours_winter="<?php echo $yc['expected_daily_hours_winter'] !== null ? htmlspecialchars($yc['expected_daily_hours_winter']) : ''; ?>" data-expected_daily_hours_winter-decimal="<?php echo $yc['expected_daily_hours_winter'] !== null ? htmlspecialchars($yc['expected_daily_hours_winter']) : ''; ?>" data-expected_daily_hours_summer="<?php echo $yc['expected_daily_hours_summer'] !== null ? htmlspecialchars($yc['expected_daily_hours_summer']) : ''; ?>" data-expected_daily_hours_summer-decimal="<?php echo $yc['expected_daily_hours_summer'] !== null ? htmlspecialchars($yc['expected_daily_hours_summer']) : ''; ?>" data-coffee_minutes="<?php echo htmlspecialchars($yc['coffee_minutes']); ?>" data-lunch_minutes="<?php echo htmlspecialchars($yc['lunch_minutes']); ?>">
               <td class="yc-year"><?php echo htmlspecialchars($yc['year']); ?></td>
               <td class="yc-mon_thu"><?php echo sprintf('%02d:%02d', floor($yc['mon_thu']), round(($yc['mon_thu']-floor($yc['mon_thu']))*60)); ?></td>
               <td class="yc-friday"><?php echo sprintf('%02d:%02d', floor($yc['friday']), round(($yc['friday']-floor($yc['friday']))*60)); ?></td>
               <td class="yc-summer_mon_thu"><?php echo sprintf('%02d:%02d', floor($yc['summer_mon_thu']), round(($yc['summer_mon_thu']-floor($yc['summer_mon_thu']))*60)); ?></td>
               <td class="yc-summer_friday"><?php echo sprintf('%02d:%02d', floor($yc['summer_friday']), round(($yc['summer_friday']-floor($yc['summer_friday']))*60)); ?></td>
+              <td class="yc-expected_daily_hours_winter"><?php echo ($yc['expected_daily_hours_winter'] !== null) ? sprintf('%02d:%02d', floor($yc['expected_daily_hours_winter']), round(($yc['expected_daily_hours_winter']-floor($yc['expected_daily_hours_winter']))*60)) : ''; ?></td>
+              <td class="yc-expected_daily_hours_summer"><?php echo ($yc['expected_daily_hours_summer'] !== null) ? sprintf('%02d:%02d', floor($yc['expected_daily_hours_summer']), round(($yc['expected_daily_hours_summer']-floor($yc['expected_daily_hours_summer']))*60)) : ''; ?></td>
               <td class="yc-coffee_minutes"><?php echo sprintf('%02d:%02d', floor($yc['coffee_minutes']/60), $yc['coffee_minutes']%60); ?></td>
               <td class="yc-lunch_minutes"><?php echo sprintf('%02d:%02d', floor($yc['lunch_minutes']/60), $yc['lunch_minutes']%60); ?></td>
               <td>
@@ -536,6 +535,16 @@ if ($pdo) {
             <input class="form-control" name="yearcfg_summer_mon_thu" placeholder="Lun-Jue e.g. 07:30 o 7.5">
             <input class="form-control" name="yearcfg_summer_friday" placeholder="Viernes e.g. 06:00 o 6">
           </div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Horas esperadas por día (invierno/verano)</label>
+          <div style="display:flex;gap:8px;">
+            <input class="form-control" name="yearcfg_expected_daily_hours_winter" placeholder="Invierno e.g. 07:39 o 7.65">
+            <input class="form-control" name="yearcfg_expected_daily_hours_summer" placeholder="Verano e.g. 07:00 o 7">
+          </div>
+          <div class="form-help">Valor fijo de horas esperadas por día laborable en invierno y verano.</div>
         </div>
       </div>
       <div class="form-grid">

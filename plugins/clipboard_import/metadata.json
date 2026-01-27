@@ -1,0 +1,6 @@
+{
+  "name": "Importar desde portapapeles",
+  "description": "Permite importar datos pegados desde el portapapeles usando la API Clipboard.",
+  "author": "GitHub Copilot",
+  "version": "1.0.0"
+}

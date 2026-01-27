@@ -7,6 +7,7 @@ Este plugin permite generar informes en PDF con estructura personalizada, usando
 - Composer (https://getcomposer.org/)
 - Acceso a la base de datos de GestionHorasTrabajo
 
+
 ## Pasos de instalación
 
 1. **Accede a la carpeta del plugin:**
@@ -15,9 +16,21 @@ Este plugin permite generar informes en PDF con estructura personalizada, usando
    cd plugins/pdf_informe
    ```
 
-2. **Instala las dependencias:**
+2. **Instala Composer (si no lo tienes):**
 
-   Ejecuta el siguiente comando para instalar TCPDF:
+   Puedes instalar Composer ejecutando:
+
+   ```bash
+   php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+   php composer-setup.php
+   php -r "unlink('composer-setup.php');"
+   mv composer.phar /usr/local/bin/composer
+   ```
+   O sigue las instrucciones oficiales en: https://getcomposer.org/download/
+
+3. **Instala las dependencias del plugin:**
+
+   Ejecuta el siguiente comando para instalar TCPDF y otras dependencias:
 
    ```bash
    composer install

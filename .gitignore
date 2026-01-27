@@ -7,6 +7,7 @@ data/*.db
 .env
 *.bak
 .bak_*
+*.bak-*
 /tmp/
 package.json
 package-lock.json
@@ -14,6 +15,7 @@ HORARIO_2024.xlsx
 PDO::*
 parsed_fichajes.csv
 *.xlsx
+cookies.txt
 # Archivos de test y debug
 test_*.php
 test_*.js
@@ -23,3 +25,7 @@ import_debug.php
 tmp_*.php
 *_tmp.php
 recalc_debug.php
+# Archivos respaldados
+index.php.bak-*
+dashboard.php.bak-*
+header.php.bak-*

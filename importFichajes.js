@@ -211,6 +211,186 @@ function validarRegistros(registros) {
   return { valid: errors.length === 0, errors };
 }
 
+/**
+ * Parsea texto plano copiado de la web y extrae los registros de fichajes.
+ * Cada línea debe corresponder a una fila de la tabla, separada por tabuladores o múltiples espacios.
+ */
+function parseFichajesTextoPlano(texto, year) {
+  const registros = [];
+  const lineas = texto.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+  for (const linea of lineas) {
+    // Separar por tabulador o 2+ espacios
+    const celdas = linea.split(/\t|  +/).map(c => c.trim());
+    if (celdas.length < 2) continue;
+    let dia = '';
+    let fecha = '';
+    let horas = [];
+    let balance = '';
+    if (celdas.length >= 3) {
+      const primeraCelda = (celdas[0] || '').toLowerCase();
+      if (DIAS_SEMANA.some(d => primeraCelda.includes(d))) {
+        dia = celdas[0];
+        fecha = celdas[1];
+        balance = celdas[celdas.length - 1];
+        horas = celdas.slice(2, celdas.length - 1).filter(h => h && h !== EMPTY_CELL_MARKER);
+      } else {
+        fecha = celdas[0];
+        balance = celdas[celdas.length - 1];
+        horas = celdas.slice(1, celdas.length - 1).filter(h => h && h !== EMPTY_CELL_MARKER);
+      }
+    } else {
+      fecha = celdas[0];
+      if (celdas.length > 1) {
+        if (celdas[1].includes(':') && !celdas[1].includes('-')) horas = [celdas[1]];
+        else balance = celdas[1];
+      }
+    }
+    let fechaISO = parseFechaToISO(fecha, year);
+    if (!fechaISO) continue;
+    if (!dia) {
+      const d = new Date(fechaISO);
+      dia = DIAS_SEMANA_LABELS[d.getDay()];
+    }
+    registros.push({ dia, fecha, fechaISO, horas, balance });
+  }
+  return registros;
+}
+
+/**
+ * Parsea texto plano en formato tabla transpuesta (días como columnas, fechas en la segunda fila).
+ * Devuelve registros por día con sus fichajes.
+ */
+function parseFichajesTranspuesta(texto, year) {
+  const lineas = texto.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+  // Buscar la fila de días y la fila de fechas
+  let idxDias = -1, idxFechas = -1;
+  const regexDias = /lunes.*martes.*mi[eé]rcoles.*jueves.*viernes/i;
+  const regexFecha = /\d{1,2}[-\/]?(ene|enero|feb|febrero|mar|marzo|abr|abril|may|mayo|jun|junio|jul|julio|ago|agosto|sep|septiembre|oct|octubre|nov|noviembre|dic|diciembre)/i;
+  for (let i = 0; i < lineas.length; i++) {
+    if (regexDias.test(lineas[i])) idxDias = i;
+    if (regexFecha.test(lineas[i])) idxFechas = i;
+    if (idxDias !== -1 && idxFechas !== -1) break;
+  }
+  if (idxDias === -1 || idxFechas === -1) return [];
+  // Extraer fechas (permitir separadores flexibles)
+  const fechas = lineas[idxFechas].split(/[\t ]+/).map(f => f.trim()).filter(f => f);
+  // Extraer filas de fichajes (las siguientes a la fila de fechas, hasta que no haya más horas)
+  const fichajesPorFila = [];
+  for (let i = idxFechas + 1; i < lineas.length; i++) {
+    if (!/\d{1,2}:\d{2}/.test(lineas[i])) break;
+    const fichajes = lineas[i].split(/[\t ]+/).map(f => f.trim());
+    fichajesPorFila.push(fichajes);
+  }
+  // Transponer: cada columna es un día
+  const registros = [];
+  for (let col = 0; col < fechas.length; col++) {
+    const horas = [];
+    for (let fila = 0; fila < fichajesPorFila.length; fila++) {
+      const valor = fichajesPorFila[fila][col];
+      if (valor && /\d{1,2}:\d{2}/.test(valor)) horas.push(valor);
+    }
+    const fechaTexto = fechas[col];
+    const fechaISO = parseFechaToISO(fechaTexto, year);
+    if (!fechaISO) continue;
+    const d = new Date(fechaISO);
+    const dia = DIAS_SEMANA_LABELS[d.getDay()];
+    registros.push({ dia, fecha: fechaTexto, fechaISO, horas, balance: '' });
+  }
+  return registros;
+}
+
+/**
+ * Parsea texto plano en formato vertical/apilado (fechas en una línea, luego bloques de fichajes por línea, cada columna es un día).
+ */
+function parseFichajesVerticalApilado(texto, year) {
+  const lineas = texto.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+  // Buscar la fila de fechas
+  let idxFechas = -1;
+  const regexFecha = /\d{1,2}[-\/]?(ene|enero|feb|febrero|mar|marzo|abr|abril|may|mayo|jun|junio|jul|julio|ago|agosto|sep|septiembre|oct|octubre|nov|noviembre|dic|diciembre)/i;
+  for (let i = 0; i < lineas.length; i++) {
+    if (regexFecha.test(lineas[i])) { idxFechas = i; break; }
+  }
+  if (idxFechas === -1) return [];
+  // Extraer fechas (permitir separadores flexibles)
+  const fechas = lineas[idxFechas].split(/[\t ]+/).map(f => f.trim()).filter(f => f);
+  // Leer bloques de fichajes (6 líneas por bloque, o menos si hay días con menos fichajes)
+  const bloques = [];
+  let i = idxFechas + 1;
+  while (i < lineas.length) {
+    // Saltar líneas vacías
+    if (!/\d{1,2}:\d{2}/.test(lineas[i])) { i++; continue; }
+    // Leer hasta 6 líneas de fichajes
+    const bloque = [];
+    for (let j = 0; j < 6 && i < lineas.length; j++, i++) {
+      if (/\d{1,2}:\d{2}/.test(lineas[i])) {
+        bloque.push(lineas[i].split(/[\t ]+/).map(f => f.trim()));
+      } else {
+        break;
+      }
+    }
+    if (bloque.length > 0) bloques.push(bloque);
+  }
+  // Para cada día (columna), recolectar los fichajes de cada bloque
+  const registros = [];
+  for (let col = 0; col < fechas.length; col++) {
+    const horas = [];
+    for (const bloque of bloques) {
+      if (bloque.length > 0 && bloque[0][col] && /\d{1,2}:\d{2}/.test(bloque[0][col])) {
+        for (let fila = 0; fila < bloque.length; fila++) {
+          const valor = bloque[fila][col];
+          if (valor && /\d{1,2}:\d{2}/.test(valor)) horas.push(valor);
+        }
+      }
+    }
+    const fechaTexto = fechas[col];
+    const fechaISO = parseFechaToISO(fechaTexto, year);
+    if (!fechaISO) continue;
+    const d = new Date(fechaISO);
+    const dia = DIAS_SEMANA_LABELS[d.getDay()];
+    registros.push({ dia, fecha: fechaTexto, fechaISO, horas, balance: '' });
+  }
+  return registros;
+}
+
+/**
+ * Parsea texto plano pegado desde navegador: fechas en una línea, luego líneas de fichajes (una por hora), agrupando en bloques de N (N=fechas).
+ */
+function parseFichajesPegadoNavegador(texto, year) {
+  const lineas = texto.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+  // Buscar la fila de fechas
+  let idxFechas = -1;
+  const regexFecha = /\d{1,2}[-\/]?(ene|enero|feb|febrero|mar|marzo|abr|abril|may|mayo|jun|junio|jul|julio|ago|agosto|sep|septiembre|oct|octubre|nov|noviembre|dic|diciembre)/i;
+  for (let i = 0; i < lineas.length; i++) {
+    if (regexFecha.test(lineas[i])) { idxFechas = i; break; }
+  }
+  if (idxFechas === -1) return [];
+  // Extraer fechas
+  const fechas = lineas[idxFechas].split(/[\t ]+/).map(f => f.trim()).filter(f => f);
+  // Leer todas las líneas siguientes que sean horas (hh:mm)
+  const horasLineas = [];
+  for (let i = idxFechas + 1; i < lineas.length; i++) {
+    if (/^\d{1,2}:\d{2}$/.test(lineas[i])) horasLineas.push(lineas[i]);
+  }
+  // Agrupar en bloques de N (N=fechas)
+  const fichajesPorDia = Array.from({ length: fechas.length }, () => []);
+  for (let i = 0; i < horasLineas.length; i++) {
+    const dia = i % fechas.length;
+    fichajesPorDia[dia].push(horasLineas[i]);
+  }
+  // Crear registros
+  const registros = [];
+  for (let col = 0; col < fechas.length; col++) {
+    const horas = fichajesPorDia[col].filter(h => /\d{1,2}:\d{2}/.test(h));
+    const fechaTexto = fechas[col];
+    const fechaISO = parseFechaToISO(fechaTexto, year);
+    if (!fechaISO) continue;
+    const d = new Date(fechaISO);
+    const dia = DIAS_SEMANA_LABELS[d.getDay()];
+    registros.push({ dia, fecha: fechaTexto, fechaISO, horas, balance: '' });
+  }
+  return registros;
+}
+
 if (typeof window !== 'undefined') {
-  window.importFichajes = { parseFichajesHTML, parseFechaToISO, validarRegistros };
+  window.importFichajes = { ...window.importFichajes, parseFichajesTextoPlano, parseFichajesTranspuesta, parseFichajesVerticalApilado, parseFichajesPegadoNavegador };
 }

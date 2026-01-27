@@ -51,6 +51,8 @@ body:not(.page-index) #floating-arrow-right {
     background: transparent;
 }
 /* === Destacado del día de hoy en el registro horario === */
+/* Resaltado fuerte para el día de hoy */
+/* Resaltado verde con borde parpadeante para el día de hoy */
 .sheet tr.today-row,
 .sheet tr.highlight-today {
     background: linear-gradient(90deg, #e6ffe6 0%, #b2f5b2 100%) !important;
@@ -58,7 +60,7 @@ body:not(.page-index) #floating-arrow-right {
     font-size: 1.12em;
     font-weight: 900;
     position: relative;
-    z-index: 3;
+    z-index: 10;
     border-radius: 12px;
     animation: today-glow 1.2s infinite alternate;
     border: 3px solid #43a047;
@@ -68,20 +70,6 @@ body:not(.page-index) #floating-arrow-right {
     0% { box-shadow: 0 0 0 4px #43a047, 0 0 16px 4px #b2f5b2, 0 2px 24px 4px #43a04744; }
     100% { box-shadow: 0 0 0 8px #b2f5b2, 0 0 32px 8px #43a047, 0 2px 32px 8px #43a04788; }
 }
-
-.today-arrow {
-    color: #ffb300;
-    font-size: 2em;
-    font-weight: bold;
-    margin: 0 0.3em;
-    vertical-align: middle;
-    filter: drop-shadow(0 0 6px #fffbe6) drop-shadow(0 0 2px #ffb300);
-    animation: today-arrow-blink 1.1s infinite alternate;
-}
-
-@keyframes today-arrow-blink {
-    0% { opacity: 1; filter: drop-shadow(0 0 6px #fffbe6) drop-shadow(0 0 2px #ffb300); }
-    100% { opacity: 0.5; filter: drop-shadow(0 0 12px #fffbe6) drop-shadow(0 0 8px #ffb300); }
 }
 .sheet td.today-cell {
     color: #d97706 !important;

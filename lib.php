@@ -59,31 +59,29 @@ function minutes_to_hours_formatted(?int $min): string {
 }
 
 function compute_day(array $entry, ?array $config = null): array {
+    //
     // expected minutes
     // if no config provided, fetch by year
     if ($config === null) {
         $year = date('Y', strtotime($entry['date']));
-        // try to use current user if available
         $user_id = null;
         if (function_exists('current_user')) { $cu = current_user(); if ($cu) $user_id = $cu['id']; }
         $config = get_year_config(intval($year), $user_id);
     }
     $isSummer = is_summer_date($entry['date'], $config);
-    $weekday = date('N', strtotime($entry['date'])); // 1-7
     $season = $isSummer ? 'summer' : 'winter';
-    // weekends or explicit holidays are non-working days by default
+    $weekday = date('N', strtotime($entry['date'])); // 1-7
     $isHolidayFlag = !empty($entry['is_holiday']);
-    // also consider vacation or personal leave
     $isVacation = isset($entry['special_type']) && $entry['special_type'] === 'vacation';
     $isPersonal = isset($entry['special_type']) && $entry['special_type'] === 'personal';
     if ($weekday >= 6 || $isHolidayFlag || $isVacation || $isPersonal) {
         $expected_hours = 0.0;
     } else {
-        // En PHP date('N'), 5 es viernes
-        if ($weekday == 5) {
-            $expected_hours = $config['work_hours'][$season]['friday'];
+        // Usar valor configurable de la base de datos si existe, si no, usar el valor por defecto
+        if ($isSummer) {
+            $expected_hours = isset($config['expected_daily_hours_summer']) ? floatval($config['expected_daily_hours_summer']) : 7.0;
         } else {
-            $expected_hours = $config['work_hours'][$season]['mon_thu'];
+            $expected_hours = isset($config['expected_daily_hours_winter']) ? floatval($config['expected_daily_hours_winter']) : 7.65;
         }
     }
     // Usar precisión completa para minutos teóricos
