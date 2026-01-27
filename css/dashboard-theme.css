@@ -90,11 +90,16 @@ body.page-dashboard .dashboard-cards .admin-stat-card {
 
 /* Admin Stat Icons */
 .admin-stat-icon {
-  font-size: 2rem;
-  margin-bottom: 0.75rem;
-  display: block;
-  text-align: center;
-  width: 100%;
+  font-size: 2rem !important;
+  margin-bottom: 0.75rem !important;
+  display: block !important;
+  text-align: center !important;
+  width: 100% !important;
+  position: static !important;
+  right: auto !important;
+  top: auto !important;
+  transform: none !important;
+  opacity: 1 !important;
 }
 
 body.page-dashboard .dashboard-cards .card:hover,
@@ -140,6 +145,7 @@ body.page-dashboard .dashboard-cards .admin-stat-card.card--wide {
   grid-column: span 2 !important;
   width: 100% !important;
   padding: 2rem !important;
+  min-height: 200px !important;
 }
 
 /* Afternoons Card - Compact Single Column */
