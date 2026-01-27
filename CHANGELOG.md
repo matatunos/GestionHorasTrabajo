@@ -2,6 +2,45 @@
 
 Todas las versiones importantes y cambios relevantes del proyecto se documentarán aquí.
 
+## [v1.2.0] - 2026-01-27
+### Agregado
+- Creación de USER_GUIDE.md: Manual completo para usuarios finales
+  - Instrucciones de login y primer acceso
+  - Guía de registro de fichajes
+  - Administración de horarios
+  - Reportes y análisis
+  - Configuración personal
+  - Troubleshooting
+  - Contacto y soporte
+
+- Creación de DEVELOPER_GUIDE.md: Manual técnico para desarrolladores
+  - Arquitectura y estructura del proyecto
+  - Setup de desarrollo local paso a paso
+  - Configuración de base de datos
+  - Documentación de API REST
+  - Guía de seguridad
+  - Scripts de testing
+  - Procedimientos de deployment
+  - Guía de contribución
+
+- README.md actualizado como punto de entrada centralizado
+  - Enlaces claros a ambas guías
+  - Estructura mejorada
+  - Requisitos y inicio rápido
+
+### Cambiado
+- Consolidación de documentación: De 67 archivos .md dispersos a estructura clara
+  - 2 manuales principales (usuario y técnico)
+  - 1 changelog (versiones)
+  - 1 README (punto de entrada)
+  - Documentación histórica en /docs/archive
+
+### Objetivo alcanzado
+- Eliminar fragmentación de documentación
+- Facilitar navegación y búsqueda de información
+- Mejorar experiencia tanto para usuarios como para desarrolladores
+- Mantener información actualizada en un lugar único
+
 ## [v1.1.1] - 2026-01-27
 ### Arreglado
 - Corrección de problemas de login causados por cambio de credenciales incorrecto
