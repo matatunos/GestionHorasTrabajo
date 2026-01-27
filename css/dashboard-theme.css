@@ -75,7 +75,6 @@ body.page-dashboard .dashboard-cards .admin-stat-card {
   flex-direction: column !important;
   align-items: flex-start !important;
   justify-content: flex-start !important;
-  min-height: auto !important;
   width: 100% !important;
   position: static !important;
   transition: all 0.3s ease !important;
@@ -150,12 +149,13 @@ body.page-dashboard .dashboard-cards .card .material-icon {
   display: inline !important;
 }
 
-/* Wide Card - 2 columns con altura aumentada para mostrar todo el contenido */
+/* Wide Card - 2 columns - altura automática para mostrar todo */
 body.page-dashboard .dashboard-cards .admin-stat-card.card--wide {
   grid-column: span 2 !important;
   width: 100% !important;
   padding: 2rem !important;
-  min-height: 400px !important;
+  height: auto !important;
+  min-height: fit-content !important;
 }
 
 /* Afternoons Card - Compact Single Column */
