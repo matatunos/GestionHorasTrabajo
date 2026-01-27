@@ -49,28 +49,64 @@ function addFilesToZip($zip, $dir, $zipPath = '') {
         if ($file === '.' || $file === '..') continue;
         
         $filePath = $dir . '/' . $file;
-        $zipPath = $zipPath . '/' . $file;
+        $zipPath_full = $zipPath ? $zipPath . '/' . $file : $file;
         
         if (is_dir($filePath)) {
-            addFilesToZip($zip, $filePath, $zipPath);
+            $zip->addEmptyDir($zipPath_full);
+            addFilesToZip($zip, $filePath, $zipPath_full);
         } else {
-            $zip->addFile($filePath, ltrim($zipPath, '/'));
+            $zip->addFile($filePath, $zipPath_full);
         }
     }
 }
 
-// Agregar todos los archivos de la extensión
-addFilesToZip($zip, $sourceDir);
+// Agregar la carpeta firefox-extension al ZIP
+if (is_dir($sourceDir)) {
+    addFilesToZip($zip, $sourceDir);
+} else {
+    http_response_code(404);
+    die('Carpeta de extensión no encontrada');
+}
+
+// Crear archivo de configuración dinámico (igual que Chrome)
+$configContent = <<<'JS'
+/**
+ * Configuración preconfigurada de GestionHorasTrabajo Extension
+ * Generada automáticamente al descargar el addon
+ * 
+ * ⚠️ IMPORTANTE: Este token es personal y único para este usuario
+ * No lo compartas con otros usuarios
+ * Expira en 7 días. Si necesitas más extensiones, descarga nuevas desde la aplicación
+ */
+
+const DEFAULT_APP_URL = 'APP_URL_PLACEHOLDER';
+const EXTENSION_TOKEN = 'TOKEN_PLACEHOLDER';  // Token de autenticación
+
+JS;
+
+// Reemplazar placeholders
+$configContent = str_replace('APP_URL_PLACEHOLDER', $appUrl, $configContent);
+$configContent = str_replace('TOKEN_PLACEHOLDER', $tokenInfo['token'], $configContent);
+
+// Agregar config.js
+$zip->addFromString('config.js', $configContent);
+
+// Registrar descarga en logs
+error_log("Firefox Extension descargada por usuario: " . $user['username'] . " (ID: " . $user['id'] . ") - Token: " . substr($tokenInfo['token'], 0, 8) . "...");
 
 // Cerrar ZIP
 $zip->close();
 
-// Descargar
+// Enviar ZIP al navegador
 header('Content-Type: application/zip');
 header('Content-Disposition: attachment; filename="gestionhoras-firefox-extension.zip"');
 header('Content-Length: ' . filesize($zipFile));
-header('Cache-Control: no-cache, must-revalidate');
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 readfile($zipFile);
-unlink($zipFile);
+
+// Limpiar archivo temporal
+@unlink($zipFile);
 exit;
