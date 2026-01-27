@@ -126,6 +126,11 @@ body.page-dashboard .dashboard-cards .card .material-icon {
   display: inline !important;
 }
 
+/* Wide Card - 2 columns */
+.admin-stat-card.card--wide {
+  grid-column: span 2 !important;
+}
+
 /* Afternoons Card - Compact Single Column */
 .afternoons-card {
   padding: 1.5rem !important;

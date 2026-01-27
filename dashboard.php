@@ -485,7 +485,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
         $prevWeekExpected = $sum_week_expected($prevWeekStart);
         $curWeekExpected = $sum_week_expected($curWeekStart);
       ?>
-      <div class="admin-stat-card">
+      <div class="admin-stat-card card--wide">
         <div class="admin-stat-icon">🗓️</div>
         <h4>Resumen semanal</h4>
         <div class="week-cards" style="overflow: hidden; max-height: 140px;">
