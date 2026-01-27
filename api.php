@@ -545,7 +545,15 @@ else {
  * Body: { entries: [{ date, start, end, coffee_out, coffee_in, lunch_out, lunch_in, note }] }
  */
 function handleImportFichajes($input) {
-  global $pdo, $user;
+  global $user;
+  
+  // Obtener conexión PDO
+  $pdo = get_pdo();
+  if (!$pdo) {
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'error' => 'database_error', 'message' => 'No se pudo conectar a la base de datos']);
+    exit;
+  }
   
   // DEBUG: Loguear qué se recibe
   $debug_log = fopen('/tmp/gestion_import_debug.log', 'a');
