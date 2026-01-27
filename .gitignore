@@ -29,3 +29,5 @@ recalc_debug.php
 index.php.bak-*
 dashboard.php.bak-*
 header.php.bak-*
+# Nota: Muchos archivos .md han sido reorganizados a /docs/archive
+# Solo se mantienen en raíz: README.md, INSTALL.md, CHANGELOG.md

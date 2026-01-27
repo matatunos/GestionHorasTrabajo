@@ -24,7 +24,7 @@ function get_config(){
             'host' => 'localhost',
             'name' => 'gestion_horas',
             'user' => getenv('DB_USER') ?: 'gestion_user',
-            'pass' => getenv('DB_PASS') ?: 'gestion_secure_2024',
+            'pass' => getenv('DB_PASS') ?: 'app_pass',
             'charset' => 'utf8mb4',
         ],
         // Application URL used for building absolute links and CORS defaults

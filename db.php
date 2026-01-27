@@ -20,8 +20,8 @@ function get_pdo(){
     // final fallbacks (defaults used when no env vars present)
     $host = $host ?: 'localhost';
     $name = $name ?: 'gestion_horas';
-    $user = $user ?: 'gestion_user';
-    $pass = $pass ?: 'gestion_secure_2024';
+    $user = $user ?: 'app_user';
+    $pass = $pass ?: 'app_pass';
     $charset = $charset ?: 'utf8mb4';
 
     $dsn = "mysql:host={$host};dbname={$name};charset={$charset}";
