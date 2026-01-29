@@ -403,6 +403,10 @@ $holidayMap = [];
       $weekStart = null;
       // Annual balance accumulator
       $yearBalance = 0;
+      $yearGuardias = 0;
+      $yearWorkedMinutes = 0;
+      $yearExpectedMinutes = 0;
+      $yearDietas = 0;
       // iterate every day of the year so weekends are shown even when no entry exists
       $hideWeekends = !empty($_GET['hide_weekends']);
       $dt = new DateTimeImmutable("$year-01-01");
@@ -499,6 +503,10 @@ $holidayMap = [];
               echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Esperadas '.htmlspecialchars(minutes_to_hours_formatted($mExp)).'</span></span>';
               echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Hechas '.htmlspecialchars(minutes_to_hours_formatted($mWork)).'</span></span>';
               echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">🍽</span><span class="pill-value">Dietas '.$dietas.'</span></span>';
+              $guardias = intval($monthStats['guardias'] ?? 0);
+              if ($guardias > 0) {
+                echo '<span class="pill balance--guardia"><span class="pill-icon" aria-hidden="true">🛡️</span><span class="pill-value">Guardias '.$guardias.'</span></span>';
+              }
               if ($coffeeExCount > 0) {
                 echo '<span class="pill balance--bad"><span class="pill-icon" aria-hidden="true">☕</span><span class="pill-value">Café exceso medio '.htmlspecialchars(minutes_to_hours_formatted($coffeeExAvg)).'</span></span>';
               } else {
@@ -523,6 +531,7 @@ $holidayMap = [];
             'dietas' => 0,
             'coffee_excess_total' => 0,
             'coffee_excess_days' => 0,
+            'guardias' => 0,
           ];
           
           // Reset week stats when month changes to avoid carrying over incomplete weeks
@@ -557,8 +566,12 @@ $holidayMap = [];
           $e = isset($entries[$d]) ? $entries[$d] : ['date' => $d];
           $e['user_id'] = $user['id']; // Add user_id for incident calculation
           if (isset($holidayMap[$d])) {
-            $e['is_holiday'] = true;
-            $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
+            $holidayType = $holidayMap[$d]['type'] ?? 'holiday';
+            // Guardias NO deben afectar el cálculo de horas - son días laborables normales
+            if ($holidayType !== 'guardia') {
+              $e['is_holiday'] = true;
+              $e['special_type'] = $holidayType;
+            }
           }
           // apply holiday/vacation filters
           if (isset($holidayMap[$d])) {
@@ -594,19 +607,33 @@ $holidayMap = [];
                   if ($calc['worked_minutes'] === null) {
                     $monthStats['missing_workdays'] += 1;
                   }
+                  // Acumular horas esperadas anuales
+                  $yearExpectedMinutes += $exp;
                 }
                 if ($calc['worked_minutes_for_display'] !== null) {
                   $monthStats['worked_minutes'] += intval($calc['worked_minutes_for_display']);
                   $monthStats['days_with_worked'] += 1;
+                  // Acumular horas trabajadas anuales
+                  $yearWorkedMinutes += intval($calc['worked_minutes_for_display']);
                 }
                 // Diet is earned when lunch_balance >= 0 (i.e., lunch taken >= configured minutes)
                 $lb = $calc['lunch_balance'] ?? null;
-                if ($lb !== null && intval($lb) >= 0) $monthStats['dietas'] += 1;
+                if ($lb !== null && intval($lb) >= 0) {
+                  $monthStats['dietas'] += 1;
+                  // Acumular dietas anuales
+                  $yearDietas += 1;
+                }
 
                 $cb = $calc['coffee_balance'] ?? null;
                 if ($cb !== null && intval($cb) > 0) {
                   $monthStats['coffee_excess_total'] += intval($cb);
                   $monthStats['coffee_excess_days'] += 1;
+                }
+                
+                // Contar días de guardia
+                if (isset($holidayMap[$d]) && ($holidayMap[$d]['type'] ?? '') === 'guardia') {
+                  $monthStats['guardias'] += 1;
+                  $yearGuardias += 1;
                 }
               }
               
@@ -632,9 +659,15 @@ $holidayMap = [];
     ?>
       <?php
         $extraClass = '';
+        $isGuardia = false;
         if (isset($holidayMap[$d])) {
             $t = $holidayMap[$d]['type'] ?? 'holiday';
-            $extraClass = $t === 'vacation' ? ' vacation' : ($t === 'personal' ? ' personal' : ($t === 'enfermedad' ? ' illness' : ($t === 'permiso' ? ' permiso' : ' holiday')));
+            if ($t === 'guardia') {
+                $extraClass = ' guardia';
+                $isGuardia = true;
+            } else {
+                $extraClass = $t === 'vacation' ? ' vacation' : ($t === 'personal' ? ' personal' : ($t === 'enfermedad' ? ' illness' : ($t === 'permiso' ? ' permiso' : ' holiday')));
+            }
         }
       ?>
       <tr class="<?php echo $rowClass . $extraClass; ?><?php if ($isToday) echo ' highlight-today'; ?>">
@@ -743,6 +776,8 @@ $holidayMap = [];
               <span class="badge badge-warning"><?php echo $hlabel ?: 'Enfermedad'; ?></span>
             <?php elseif ($ht === 'permiso'): ?>
               <span class="badge badge-info"><?php echo $hlabel ?: 'Permiso'; ?></span>
+            <?php elseif ($ht === 'guardia'): ?>
+              <span class="badge badge-guardia"><?php echo $hlabel ?: 'Guardia'; ?></span>
             <?php else: ?>
               <span class="badge badge-danger"><?php echo $hlabel ?: 'Festivo'; ?></span>
             <?php endif; ?>
@@ -810,6 +845,10 @@ $holidayMap = [];
           echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Esperadas '.htmlspecialchars(minutes_to_hours_formatted($mExp)).'</span></span>';
           echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Hechas '.htmlspecialchars(minutes_to_hours_formatted($mWork)).'</span></span>';
           echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">🍽</span><span class="pill-value">Dietas '.$dietas.'</span></span>';
+          $guardias = intval($monthStats['guardias'] ?? 0);
+          if ($guardias > 0) {
+            echo '<span class="pill balance--guardia"><span class="pill-icon" aria-hidden="true">🛡️</span><span class="pill-value">Guardias '.$guardias.'</span></span>';
+          }
           if ($coffeeExCount > 0) {
             echo '<span class="pill balance--bad"><span class="pill-icon" aria-hidden="true">☕</span><span class="pill-value">Café exceso medio '.htmlspecialchars(minutes_to_hours_formatted($coffeeExAvg)).'</span></span>';
           } else {
@@ -822,6 +861,27 @@ $holidayMap = [];
         }
         
         echo "</tbody>";
+      }
+      
+      // Resumen anual al final (siempre mostrar si hay datos)
+      if ($yearWorkedMinutes > 0 || $yearGuardias > 0) {
+        $yearBalanceClass = ($yearBalance > 0) ? 'balance--good' : (($yearBalance < 0) ? 'balance--bad' : 'balance--ok');
+        echo '<tbody class="year-summary-group">';
+        echo '<tr class="year-summary">';
+        echo '<td colspan="13">';
+        echo '<div class="year-summary-row">';
+        echo '<span class="year-summary-title">📊 Resumen Anual '.$year.'</span>';
+        echo '<span class="pill"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Horas teóricas: '.htmlspecialchars(minutes_to_hours_formatted($yearExpectedMinutes)).'</span></span>';
+        echo '<span class="pill"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Horas trabajadas: '.htmlspecialchars(minutes_to_hours_formatted($yearWorkedMinutes)).'</span></span>';
+        echo '<span class="pill '.$yearBalanceClass.'"><span class="pill-icon" aria-hidden="true">'.(($yearBalance>0)?'↑':(($yearBalance<0)?'↓':'•')).'</span><span class="pill-value">Balance: '.htmlspecialchars(minutes_to_hours_formatted($yearBalance)).'</span></span>';
+        echo '<span class="pill"><span class="pill-icon" aria-hidden="true">🍽</span><span class="pill-value">Dietas: '.$yearDietas.'</span></span>';
+        if ($yearGuardias > 0) {
+          echo '<span class="pill balance--guardia"><span class="pill-icon" aria-hidden="true">🛡️</span><span class="pill-value">Guardias: '.$yearGuardias.' días</span></span>';
+        }
+        echo '</div>';
+        echo '</td>';
+        echo '</tr>';
+        echo '</tbody>';
       }
     ?>
       </table>
@@ -1233,19 +1293,49 @@ window.updateFloatingArrows = updateFloatingArrows;
       if (btn){ btn.setAttribute('data-collapsed', collapsed ? '1' : '0'); btn.textContent = collapsed ? '+' : '−'; }
       try { localStorage.setItem('month_collapsed_'+key, collapsed ? '1' : '0'); } catch(e){}
     }
-    function initHeaders(root){
+    let initialLoadDone = false;
+    
+    function initHeaders(root, isInitialLoad = false){
+      // Mes actual en formato YYYY-MM
+      const now = new Date();
+      const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      
       root.querySelectorAll('tbody.month-group').forEach(function(tbody){
         const key = tbody.getAttribute('data-month');
         const td = tbody.querySelector('td.month-header');
         const btn = td ? td.querySelector('.month-toggle') : null;
-        try {
-          const st = localStorage.getItem('month_collapsed_'+key);
-          const collapsed = st === '1';
+        
+        // Solo establecer estado inicial en la primera carga
+        if (isInitialLoad) {
+          // Por defecto: colapsar todos excepto el mes actual
+          const isCurrentMonth = (key === currentMonth);
+          const collapsed = !isCurrentMonth;
+          
           if (btn){ btn.setAttribute('data-collapsed', collapsed ? '1' : '0'); btn.textContent = collapsed ? '+' : '−'; }
           tbody.classList.toggle('collapsed', collapsed);
           if (td) td.classList.toggle('collapsed', collapsed);
-        } catch(e){}
+          
+          // Aplicar display:none a las filas si está colapsado
+          tbody.querySelectorAll('tr').forEach(function(tr){
+            if (tr.classList.contains('month')) return;
+            if (tr.classList.contains('month-summary')) return;
+            tr.style.display = collapsed ? 'none' : '';
+          });
+        }
+        // En re-inicializaciones (MutationObserver), no hacemos nada - el estado ya está correcto
       });
+      
+      // Scroll al día actual solo en la carga inicial
+      if (isInitialLoad && !initialLoadDone) {
+        initialLoadDone = true;
+        setTimeout(function(){
+          const todayRow = document.querySelector('.sheet tr.today-row, .sheet tr.highlight-today');
+          if (todayRow) {
+            // Hacer scroll al día actual
+            todayRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+      }
     }
 
     const toggling = new Set();
@@ -1300,11 +1390,8 @@ window.updateFloatingArrows = updateFloatingArrows;
     }
 
     const container = document.querySelector(containerSelector);
-    if (container) initHeaders(container);
-    try {
-      const allSt = localStorage.getItem('months_all_collapsed');
-      if (allSt === '1') setAll(true);
-    } catch(e){}
+    if (container) initHeaders(container, true);  // true = carga inicial
+    // Ya no usamos localStorage para el estado inicial, siempre abrimos el mes actual
 
     let initScheduled = false;
     const mo = new MutationObserver(function(muts){
@@ -1313,7 +1400,7 @@ window.updateFloatingArrows = updateFloatingArrows;
       setTimeout(function(){
         initScheduled = false;
         const c = document.querySelector(containerSelector);
-        if (c) initHeaders(c);
+        if (c) initHeaders(c, false);  // false = no es carga inicial, mantener estado
       }, 60);
     });
     if (container) mo.observe(container, {childList:true, subtree:true});

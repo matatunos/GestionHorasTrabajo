@@ -70,18 +70,39 @@ function compute_day(array $entry, ?array $config = null): array {
     }
     $isSummer = is_summer_date($entry['date'], $config);
     $season = $isSummer ? 'summer' : 'winter';
-    $weekday = date('N', strtotime($entry['date'])); // 1-7
+    $weekday = date('N', strtotime($entry['date'])); // 1=Lunes, 5=Viernes, 6=Sábado, 7=Domingo
+    $isFriday = ($weekday == 5);
     $isHolidayFlag = !empty($entry['is_holiday']);
     $isVacation = isset($entry['special_type']) && $entry['special_type'] === 'vacation';
     $isPersonal = isset($entry['special_type']) && $entry['special_type'] === 'personal';
     if ($weekday >= 6 || $isHolidayFlag || $isVacation || $isPersonal) {
         $expected_hours = 0.0;
     } else {
-        // Usar valor configurable de la base de datos si existe, si no, usar el valor por defecto
+        // Usar valores de work_hours según temporada (verano/invierno) y día de semana (lun-jue/viernes)
         if ($isSummer) {
-            $expected_hours = isset($config['expected_daily_hours_summer']) ? floatval($config['expected_daily_hours_summer']) : 7.0;
+            if ($isFriday) {
+                // Verano viernes
+                $expected_hours = isset($config['work_hours']['summer']['friday']) 
+                    ? floatval($config['work_hours']['summer']['friday']) 
+                    : 6.0;
+            } else {
+                // Verano lunes-jueves
+                $expected_hours = isset($config['work_hours']['summer']['mon_thu']) 
+                    ? floatval($config['work_hours']['summer']['mon_thu']) 
+                    : 7.5;
+            }
         } else {
-            $expected_hours = isset($config['expected_daily_hours_winter']) ? floatval($config['expected_daily_hours_winter']) : 7.65;
+            if ($isFriday) {
+                // Invierno viernes
+                $expected_hours = isset($config['work_hours']['winter']['friday']) 
+                    ? floatval($config['work_hours']['winter']['friday']) 
+                    : 6.0;
+            } else {
+                // Invierno lunes-jueves
+                $expected_hours = isset($config['work_hours']['winter']['mon_thu']) 
+                    ? floatval($config['work_hours']['winter']['mon_thu']) 
+                    : 8.0;
+            }
         }
     }
     // Usar precisión completa para minutos teóricos

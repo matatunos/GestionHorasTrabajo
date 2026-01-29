@@ -226,7 +226,7 @@ if ($hol_pdo) {
       $d = $_POST['date'];
       $y = intval(date('Y', strtotime($d)));
       $label = trim($_POST['label'] ?? '');
-      $type = in_array($_POST['type'] ?? '', ['holiday','vacation','personal','enfermedad','permiso']) ? $_POST['type'] : 'holiday';
+      $type = in_array($_POST['type'] ?? '', ['holiday','vacation','personal','enfermedad','permiso','guardia']) ? $_POST['type'] : 'holiday';
       $annual = !empty($_POST['annual']) ? 1 : 0;
       $is_global = (!empty($hol_user) && !empty($hol_user['is_admin']) && !empty($_POST['global']));
       $uid = $is_global ? null : ($hol_user['id'] ?? null);
@@ -241,7 +241,7 @@ if ($hol_pdo) {
       $id = intval($_POST['id']);
       $d = $_POST['date'] ?? null;
       $label = trim($_POST['label'] ?? '');
-      $type = in_array($_POST['type'] ?? '', ['holiday','vacation','personal','enfermedad','permiso']) ? $_POST['type'] : 'holiday';
+      $type = in_array($_POST['type'] ?? '', ['holiday','vacation','personal','enfermedad','permiso','guardia']) ? $_POST['type'] : 'holiday';
       $annual = !empty($_POST['annual']) ? 1 : 0;
       // determine uid: allow admin to make global
       $is_global = (!empty($hol_user) && !empty($hol_user['is_admin']) && !empty($_POST['global']));
@@ -340,6 +340,7 @@ if ($hol_pdo) {
                     <option value="personal">Asuntos propios</option>
                     <option value="enfermedad">Enfermedad</option>
                     <option value="permiso">Permiso</option>
+                    <option value="guardia">Guardia</option>
                   </select>
                 </div>
                 <div class="form-group"><?php echo render_checkbox('annual', 0, 'Repite anualmente'); ?></div>
@@ -365,10 +366,10 @@ if ($hol_pdo) {
                 $displayDate = sprintf('%04d-%s', $selHolidayYear, substr($r['date'],5));
               }
             ?>
-              <tr class="<?php echo $r['type'] === 'vacation' ? 'vacation' : ($r['type'] === 'personal' ? 'personal' : 'holiday'); ?>" data-hid="<?php echo intval($r['id']); ?>" data-date="<?php echo htmlspecialchars($r['date']); ?>" data-annual="<?php echo intval($r['annual']); ?>" data-type="<?php echo htmlspecialchars($r['type']); ?>" data-label="<?php echo htmlspecialchars($r['label']); ?>" data-userid="<?php echo htmlspecialchars($r['user_id'] ?? ''); ?>" data-global="<?php echo empty($r['user_id']) ? '1' : '0'; ?>">
+              <tr class="<?php echo $r['type'] === 'vacation' ? 'vacation' : ($r['type'] === 'personal' ? 'personal' : ($r['type'] === 'guardia' ? 'guardia' : 'holiday')); ?>" data-hid="<?php echo intval($r['id']); ?>" data-date="<?php echo htmlspecialchars($r['date']); ?>" data-annual="<?php echo intval($r['annual']); ?>" data-type="<?php echo htmlspecialchars($r['type']); ?>" data-label="<?php echo htmlspecialchars($r['label']); ?>" data-userid="<?php echo htmlspecialchars($r['user_id'] ?? ''); ?>" data-global="<?php echo empty($r['user_id']) ? '1' : '0'; ?>">
                 <td class="holiday-date"><?php echo htmlspecialchars($displayDate)?></td>
                 <td class="holiday-annual"><?php echo !empty($r['annual']) ? '<span class="badge badge-primary">Anual</span>' : ''?></td>
-                <td class="holiday-type"><?php echo ($r['type']==='vacation') ? 'Vacaciones' : (($r['type']==='personal') ? 'Asuntos propios' : (($r['type']==='enfermedad') ? 'Enfermedad' : (($r['type']==='permiso') ? 'Permiso' : 'Festivo'))); ?></td>
+                <td class="holiday-type"><?php echo ($r['type']==='vacation') ? 'Vacaciones' : (($r['type']==='personal') ? 'Asuntos propios' : (($r['type']==='enfermedad') ? 'Enfermedad' : (($r['type']==='permiso') ? 'Permiso' : (($r['type']==='guardia') ? 'Guardia' : 'Festivo')))); ?></td>
                 <td class="holiday-label"><?php echo htmlspecialchars($r['label'])?></td>
                 <td class="holiday-global">
                   <?php if (empty($r['user_id'])): ?>

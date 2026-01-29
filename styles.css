@@ -1353,6 +1353,35 @@ body { display: flex; flex-direction: column; }
     .month-summary-meta { width: 100%; margin-left: 0; }
 }
 
+/* Year summary row */
+.sheet tr.year-summary td { 
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+  border-top: 3px solid #1e40af;
+  padding: 16px 20px;
+}
+.year-summary-row { 
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 16px; 
+  align-items: center;
+  justify-content: center;
+}
+.year-summary-title { 
+  font-weight: 700; 
+  color: white !important;
+  font-size: 1.15em;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+.year-summary-row .pill {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.3);
+  color: white;
+}
+.year-summary-row .pill .pill-icon,
+.year-summary-row .pill .pill-value {
+  color: white !important;
+}
+
 /* Week summary row */
 .sheet tr.week-summary td { background: rgba(229, 231, 235, 0.5); border-top: 2px solid var(--border-color); border-bottom: 2px solid var(--border-color); }
 .week-summary-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 2px 0; }
@@ -2062,6 +2091,53 @@ tbody.month-group.collapsed tr.weekend td:not(.month) { opacity: 0.95; }
 .sheet tbody tr.personal td { background-color: rgba(235, 255, 230, 0.85); }
 .sheet tbody tr.illness td { background-color: rgba(255, 250, 230, 0.85); }
 .sheet tbody tr.permiso td { background-color: rgba(240, 245, 255, 0.85); }
+
+/* Guardia highlight - azul suave con borde izquierdo */
+.sheet tbody tr.guardia td {
+    background: rgba(147, 197, 253, 0.15);
+    border-left: 3px solid rgba(59, 130, 246, 0.5) !important;
+}
+.sheet tbody tr.guardia td:first-child {
+    padding-left: 32px;
+    position: relative;
+}
+.sheet tbody tr.guardia td:first-child::before {
+    content: "🛡️";
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    opacity: 0.8;
+}
+/* Marcar días de guardia consecutivos con línea conectora suave */
+.sheet tbody tr.guardia + tr.guardia td {
+    border-top: 1px dashed rgba(59, 130, 246, 0.25) !important;
+}
+/* Primer día de guardia - borde superior suave */
+.sheet tbody tr:not(.guardia) + tr.guardia td,
+.sheet tbody tr.month-columns + tr.guardia td {
+    border-top: 1px solid rgba(59, 130, 246, 0.4) !important;
+}
+/* Último día de guardia - borde inferior suave */
+.sheet tbody tr.guardia:has(+ tr:not(.guardia)) td,
+.sheet tbody tr.guardia:last-child td {
+    border-bottom: 1px solid rgba(59, 130, 246, 0.4) !important;
+}
+
+/* Pill para guardias en resumen mensual */
+.pill.balance--guardia {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.2) 100%);
+    color: #2563eb;
+    border-color: #3b82f6;
+}
+
+/* Badge para guardia */
+.badge-guardia {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #1d4ed8;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
 
 
 

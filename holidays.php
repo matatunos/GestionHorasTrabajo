@@ -175,11 +175,20 @@ try {
       ['personal', 'Asuntos propios', '#f97316', 2, 1],
       ['enfermedad', 'Enfermedad', '#3b82f6', 3, 1],
       ['permiso', 'Permiso', '#8b5cf6', 4, 1],
+      ['guardia', 'Guardia', '#0284c7', 5, 1],
     ];
     $insertStmt = $pdo->prepare('INSERT INTO holiday_types (code, label, color, sort_order, is_system) VALUES (?, ?, ?, ?, ?)');
     foreach ($defaults as $def) {
       $insertStmt->execute($def);
     }
+  }
+  
+  // Asegurar que el tipo "guardia" exista (para instalaciones existentes)
+  $guardiaCheck = $pdo->prepare("SELECT COUNT(*) as cnt FROM holiday_types WHERE code = 'guardia'");
+  $guardiaCheck->execute();
+  if ($guardiaCheck->fetch()['cnt'] == 0) {
+    $pdo->prepare('INSERT INTO holiday_types (code, label, color, sort_order, is_system) VALUES (?, ?, ?, ?, ?)')
+        ->execute(['guardia', 'Guardia', '#0284c7', 5, 1]);
   }
 } catch (Exception $e) {
   // ok
@@ -273,13 +282,13 @@ $pageStyles = '
     .btn-sm { padding: 0.4rem 0.7rem; font-size: 0.8rem; }
     .holiday-actions { display: flex; gap: 0.5rem; }
     .holiday-actions .btn-sm { margin-left: auto; }
-    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.4); }
-    .modal.show { display: flex; align-items: center; justify-content: center; }
-    .modal-content { background-color: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-    .modal-header h2 { margin: 0; }
-    .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; }
-    .modal-close:hover { color: #000; }
+    #holidayModal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); }
+    #holidayModal.show { display: flex !important; align-items: center; justify-content: center; }
+    #holidayModal .modal-content { background-color: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+    #holidayModal .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    #holidayModal .modal-header h2 { margin: 0; }
+    #holidayModal .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; }
+    #holidayModal .modal-close:hover { color: #000; }
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
     .form-group input, .form-group select { width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; font-size: 0.95rem; }
@@ -324,7 +333,7 @@ $pageStyles = '
       <div class="holidays-header">
         <div><h1>📅 Festivos y Ausencias</h1></div>
         <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-          <button class="btn btn-primary" id="addHolidayBtn" style="white-space: nowrap;">➕ Agregar Ausencia</button>
+          <button class="btn btn-primary" id="addHolidayBtn" onclick="openAddModal()" style="white-space: nowrap;">➕ Agregar Ausencia</button>
           <a href="holiday-types.php" class="btn btn-secondary" style="white-space: nowrap;">🏷️ Gestionar Tipos</a>
           <div class="year-selector">
             <label>Año:</label>
@@ -513,6 +522,20 @@ $pageStyles = '
     let calMonth = null; // 1-12
     const availableYears = <?php echo json_encode($availableYears); ?>;
 
+    function openAddModal() {
+      console.log('openAddModal called');
+      const holidayModal = document.getElementById('holidayModal');
+      const holidayForm = document.getElementById('holidayForm');
+      if (!holidayModal) { console.error('holidayModal not found'); return; }
+      editingDate = null;
+      document.getElementById('modalTitle').textContent = 'Agregar Ausencia';
+      if (holidayForm) holidayForm.reset();
+      const now = new Date(); calYear = now.getFullYear(); calMonth = now.getMonth()+1;
+      holidayModal.classList.add('show');
+      console.log('Modal show class added, classes:', holidayModal.className);
+      setTimeout(renderCalendarForModal, 40);
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
       const yearFilter = document.getElementById('yearFilter');
       const filterAll = document.getElementById('filterAll');
@@ -523,14 +546,20 @@ $pageStyles = '
       const holidayForm = document.getElementById('holidayForm');
       
       if (addHolidayBtn) {
-        addHolidayBtn.addEventListener('click', function() {
+        addHolidayBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          console.log('addHolidayBtn clicked');
           editingDate = null;
           document.getElementById('modalTitle').textContent = 'Agregar Ausencia';
           holidayForm.reset();
           const now = new Date(); calYear = now.getFullYear(); calMonth = now.getMonth()+1;
+          console.log('Adding show class to modal');
           holidayModal.classList.add('show');
+          console.log('Modal classes:', holidayModal.className);
           setTimeout(renderCalendarForModal, 40);
         });
+      } else {
+        console.error('addHolidayBtn not found!');
       }
 
       if (holidayForm) {
@@ -611,8 +640,8 @@ $pageStyles = '
         const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
         cal.innerHTML = '';
         const hdr = document.createElement('div'); hdr.className = 'cal-header';
-        const prev = document.createElement('button'); prev.className = 'btn btn-sm'; prev.textContent = '◀';
-        const next = document.createElement('button'); next.className = 'btn btn-sm'; next.textContent = '▶';
+        const prev = document.createElement('button'); prev.type = 'button'; prev.className = 'btn btn-sm'; prev.textContent = '◀';
+        const next = document.createElement('button'); next.type = 'button'; next.className = 'btn btn-sm'; next.textContent = '▶';
         const monthSel = document.createElement('select'); monthSel.className = '';
         monthNames.forEach((mname, idx) => { const opt = document.createElement('option'); opt.value = idx+1; opt.textContent = mname; if (idx+1===month) opt.selected = true; monthSel.appendChild(opt); });
         const yearSel = document.createElement('select');
@@ -713,7 +742,7 @@ $pageStyles = '
         body: bodyParams
       })
       .then(response => response.json())
-      .then data => {
+      .then(data => {
         if (data.success) {
           closeModal();
           refreshHolidays();
