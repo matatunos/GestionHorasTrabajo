@@ -816,8 +816,9 @@ svg polyline { stroke: var(--brand-primary) !important; }
 .sheet.compact th:nth-child(6), .sheet.compact td:nth-child(6),
 .sheet.compact th:nth-child(7), .sheet.compact td:nth-child(7),
 .sheet.compact th:nth-child(9), .sheet.compact td:nth-child(9) { width: 70px; }
-.sheet.compact th:nth-child(11), .sheet.compact td:nth-child(11) { width: 85px; }
-.sheet.compact th:nth-child(12), .sheet.compact td:nth-child(12) { width: 140px; }
+.sheet.compact th:nth-child(11), .sheet.compact td:nth-child(11),
+.sheet.compact th:nth-child(12), .sheet.compact td:nth-child(12) { width: 85px; }
+.sheet.compact th:nth-child(13), .sheet.compact td:nth-child(13) { width: 140px; }
 
 /* Table container: keep full height; only use horizontal scroll when needed */
 .table-responsive { overflow: visible; max-width: 100%; }
@@ -825,14 +826,14 @@ svg polyline { stroke: var(--brand-primary) !important; }
 @media (max-width: 900px) {
     .sheet.compact th, .sheet.compact td { padding: 5px 6px; font-size: 12px; }
     .sheet.compact th:nth-child(1), .sheet.compact td:nth-child(1) { width: 90px; }
-    .sheet.compact th:nth-child(12), .sheet.compact td:nth-child(12) { width: 110px; }
+    .sheet.compact th:nth-child(13), .sheet.compact td:nth-child(13) { width: 110px; }
     .sheet.compact .btn { padding: 3px 6px; font-size: 0.78rem; }
 }
 
 /* More aggressive compacting: fixed table layout and truncation */
 .sheet.compact { table-layout: fixed; }
 .sheet.compact td, .sheet.compact th { overflow: hidden; text-overflow: ellipsis; }
-.sheet.compact td:nth-child(12), .sheet.compact th:nth-child(12) { white-space: nowrap; }
+.sheet.compact td:nth-child(13), .sheet.compact th:nth-child(13) { white-space: nowrap; }
 
 /* Icon buttons style */
 .icon-btn { padding: 4px 6px; width: 30px; text-align: center; }

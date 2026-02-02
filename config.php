@@ -16,6 +16,9 @@ function get_config(){
             'winter' => ['mon_thu' => 8.0, 'friday' => 6.0],
             'summer' => ['mon_thu' => 7.5, 'friday' => 6.0],
         ],
+        // Expected daily hours for empresa calculations (flat rate per workday)
+        'expected_daily_hours_winter' => 7.65,
+        'expected_daily_hours_summer' => 7.0,
         // configured break durations in minutes
         'coffee_minutes' => 15, // nominal coffee time (counts as work)
         'lunch_minutes' => 30,  // nominal lunch time (not counted as work)
@@ -131,6 +134,36 @@ function get_year_config(int $year, ?int $user_id = null){
                 $stmt->execute([$year]);
                 $row = $stmt->fetch();
             }
+            
+            // Si no hay configuración para este año, buscar el último año con configuración
+            if (!$row) {
+                $searchYear = $year - 1;
+                $maxAttempts = 10; // Buscar hasta 10 años atrás
+                $attempts = 0;
+                
+                while (!$row && $attempts < $maxAttempts) {
+                    if ($hasUserId) {
+                        if ($user_id !== null) {
+                            $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? AND user_id = ? LIMIT 1');
+                            $stmt->execute([$searchYear, $user_id]);
+                            $row = $stmt->fetch();
+                        }
+                        if (!$row) {
+                            $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? AND user_id IS NULL LIMIT 1');
+                            $stmt->execute([$searchYear]);
+                            $row = $stmt->fetch();
+                        }
+                    } else {
+                        $stmt = $pdo->prepare('SELECT * FROM year_configs WHERE year = ? LIMIT 1');
+                        $stmt->execute([$searchYear]);
+                        $row = $stmt->fetch();
+                    }
+                    
+                    $searchYear--;
+                    $attempts++;
+                }
+            }
+            
             if ($row) {
                 if ($row['mon_thu'] !== null) $conf['work_hours']['winter']['mon_thu'] = floatval($row['mon_thu']);
                 if ($row['friday'] !== null) $conf['work_hours']['winter']['friday'] = floatval($row['friday']);
@@ -139,6 +172,12 @@ function get_year_config(int $year, ?int $user_id = null){
                 }
                 if (array_key_exists('summer_friday', $row) && $row['summer_friday'] !== null) {
                     $conf['work_hours']['summer']['friday'] = floatval($row['summer_friday']);
+                }
+                if (array_key_exists('expected_daily_hours_winter', $row) && $row['expected_daily_hours_winter'] !== null) {
+                    $conf['expected_daily_hours_winter'] = floatval($row['expected_daily_hours_winter']);
+                }
+                if (array_key_exists('expected_daily_hours_summer', $row) && $row['expected_daily_hours_summer'] !== null) {
+                    $conf['expected_daily_hours_summer'] = floatval($row['expected_daily_hours_summer']);
                 }
                 if ($row['coffee_minutes'] !== null) $conf['coffee_minutes'] = intval($row['coffee_minutes']);
                 if ($row['lunch_minutes'] !== null) $conf['lunch_minutes'] = intval($row['lunch_minutes']);

@@ -403,9 +403,11 @@ $holidayMap = [];
       $weekStart = null;
       // Annual balance accumulator
       $yearBalance = 0;
+      $yearBalanceEmpresa = 0;
       $yearGuardias = 0;
       $yearWorkedMinutes = 0;
       $yearExpectedMinutes = 0;
+      $yearExpectedEmpresaMinutes = 0;
       $yearDietas = 0;
       // iterate every day of the year so weekends are shown even when no entry exists
       $hideWeekends = !empty($_GET['hide_weekends']);
@@ -425,20 +427,23 @@ $holidayMap = [];
           // Show week summary before moving to next week
           if (is_array($weekStats)) {
             $wExp = intval($weekStats['expected_minutes'] ?? 0);
+            $wExpEmpresa = intval($weekStats['expected_empresa_minutes'] ?? 0);
             $wWork = intval($weekStats['worked_minutes'] ?? 0);
             $wBal = $wWork - $wExp;
+            $wBalEmpresa = $wWork - $wExpEmpresa;
             $wBalClass = ($wBal > 0) ? 'balance--good' : (($wBal < 0) ? 'balance--bad' : 'balance--ok');
+            $wBalEmpresaClass = ($wBalEmpresa > 0) ? 'balance--good' : (($wBalEmpresa < 0) ? 'balance--bad' : 'balance--ok');
             
             $weekEndDate = $cur->modify('-1 day');
             $weekDisplay = $weekStart->format('d/m') . ' - ' . $weekEndDate->format('d/m');
             
             echo '<tr class="week-summary">';
-            echo '<td colspan="13">';
+            echo '<td colspan="14">';
             echo '<div class="week-summary-row">';
             echo '<span class="week-summary-title">Semana ' . htmlspecialchars($weekDisplay) . '</span>';
-            echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExp)).'</span></span>';
+            echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExpEmpresa)).'</span></span>';
             echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Efectivas '.htmlspecialchars(minutes_to_hours_formatted($wWork)).'</span></span>';
-            echo '<span class="pill '.$wBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBal>0)?'↑':(($wBal<0)?'↓':'•')).'</span><span class="pill-value">Balance semanal '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span></span>';
+            echo '<span class="pill '.$wBalEmpresaClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBalEmpresa>0)?'↑':(($wBalEmpresa<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($wBalEmpresa)).'</span></span>';
             echo '<span class="pill balance--info"><span class="pill-icon" aria-hidden="true">📊</span><span class="pill-value">Anual acum. '.htmlspecialchars(minutes_to_hours_formatted($yearBalance)).'</span></span>';
             echo '</div>';
             echo '</td>';
@@ -453,6 +458,7 @@ $holidayMap = [];
           $weekStart = $cur;
           $weekStats = [
             'expected_minutes' => 0,
+            'expected_empresa_minutes' => 0,
             'worked_minutes' => 0,
           ];
         }
@@ -462,20 +468,23 @@ $holidayMap = [];
             // Show week summary before month summary if there's an incomplete week at month end
             if (is_array($weekStats) && $weekStart !== null) {
               $wExp = intval($weekStats['expected_minutes'] ?? 0);
+              $wExpEmpresa = intval($weekStats['expected_empresa_minutes'] ?? 0);
               $wWork = intval($weekStats['worked_minutes'] ?? 0);
               $wBal = $wWork - $wExp;
+              $wBalEmpresa = $wWork - $wExpEmpresa;
               $wBalClass = ($wBal > 0) ? 'balance--good' : (($wBal < 0) ? 'balance--bad' : 'balance--ok');
+              $wBalEmpresaClass = ($wBalEmpresa > 0) ? 'balance--good' : (($wBalEmpresa < 0) ? 'balance--bad' : 'balance--ok');
               
               $weekEndDate = $cur->modify('-1 day');
               $weekDisplay = $weekStart->format('d/m') . ' - ' . $weekEndDate->format('d/m');
               
               echo '<tr class="week-summary">';
-              echo '<td colspan="13">';
+              echo '<td colspan="14">';
               echo '<div class="week-summary-row">';
               echo '<span class="week-summary-title">Semana ' . htmlspecialchars($weekDisplay) . '</span>';
-              echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExp)).'</span></span>';
+              echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExpEmpresa)).'</span></span>';
               echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Efectivas '.htmlspecialchars(minutes_to_hours_formatted($wWork)).'</span></span>';
-              echo '<span class="pill '.$wBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBal>0)?'↑':(($wBal<0)?'↓':'•')).'</span><span class="pill-value">Balance semanal '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span></span>';
+              echo '<span class="pill '.$wBalEmpresaClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBalEmpresa>0)?'↑':(($wBalEmpresa<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($wBalEmpresa)).'</span></span>';
               echo '<span class="pill balance--info"><span class="pill-icon" aria-hidden="true">📊</span><span class="pill-value">Anual acum. '.htmlspecialchars(minutes_to_hours_formatted($yearBalance)).'</span></span>';
               echo '</div>';
               echo '</td>';
@@ -485,9 +494,12 @@ $holidayMap = [];
             // month summary row
             if (is_array($monthStats)) {
               $mExp = intval($monthStats['expected_minutes'] ?? 0);
+              $mExpEmpresa = intval($monthStats['expected_empresa_minutes'] ?? 0);
               $mWork = intval($monthStats['worked_minutes'] ?? 0);
               $mBal = $mWork - $mExp;
+              $mBalEmpresa = $mWork - $mExpEmpresa;
               $mBalClass = ($mBal > 0) ? 'balance--good' : (($mBal < 0) ? 'balance--bad' : 'balance--ok');
+              $mBalEmpresaClass = ($mBalEmpresa > 0) ? 'balance--good' : (($mBalEmpresa < 0) ? 'balance--bad' : 'balance--ok');
 
               $dietas = intval($monthStats['dietas'] ?? 0);
               $coffeeExCount = intval($monthStats['coffee_excess_days'] ?? 0);
@@ -496,12 +508,12 @@ $holidayMap = [];
               $workdays = intval($monthStats['workdays'] ?? 0);
 
               echo '<tr class="month-summary">';
-              echo '<td colspan="13">';
+              echo '<td colspan="14">';
               echo '<div class="month-summary-row">';
               echo '<span class="month-summary-title">📅 Resumen '.htmlspecialchars($monthNameForStats ?? $currentMonth).'</span>';
-              echo '<span class="pill '.$mBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($mBal>0)?'↑':(($mBal<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($mBal)).'</span></span>';
-              echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Esperadas '.htmlspecialchars(minutes_to_hours_formatted($mExp)).'</span></span>';
+              echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Esperadas '.htmlspecialchars(minutes_to_hours_formatted($mExpEmpresa)).'</span></span>';
               echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Hechas '.htmlspecialchars(minutes_to_hours_formatted($mWork)).'</span></span>';
+              echo '<span class="pill '.$mBalEmpresaClass.'"><span class="pill-icon" aria-hidden="true">'.(($mBalEmpresa>0)?'↑':(($mBalEmpresa<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($mBalEmpresa)).'</span></span>';
               echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">🍽</span><span class="pill-value">Dietas '.$dietas.'</span></span>';
               $guardias = intval($monthStats['guardias'] ?? 0);
               if ($guardias > 0) {
@@ -524,6 +536,7 @@ $holidayMap = [];
           $monthNameForStats = $month;
           $monthStats = [
             'expected_minutes' => 0,
+            'expected_empresa_minutes' => 0,
             'worked_minutes' => 0,
             'workdays' => 0,
             'days_with_worked' => 0,
@@ -540,7 +553,7 @@ $holidayMap = [];
           $weekStart = null;
           
           echo "<tbody class=\"month-group\" data-month=\"".$monthKey."\">";
-          echo "<tr class=\"month\"><td class=\"month-header\" data-month=\"".$monthKey."\" colspan=13><button class=\"month-toggle\" data-month=\"".$monthKey."\">−</button> ".htmlspecialchars($month)."</td></tr>";
+          echo "<tr class=\"month\"><td class=\"month-header\" data-month=\"".$monthKey."\" colspan=14><button class=\"month-toggle\" data-month=\"".$monthKey."\">−</button> ".htmlspecialchars($month)."</td></tr>";
           // insert a header row at the top of each month for quick reference
           echo "<tr class=\"month-columns\">";
           echo "<th>Fecha</th>";
@@ -554,6 +567,7 @@ $holidayMap = [];
           echo "<th>Hora salida</th>";
           echo "<th>Horas trabajadas</th>";
           echo "<th>Balance día</th>";
+          echo "<th>Balance<br>Empresa</th>";
           echo "<th>Nota</th>";
           echo "<th>Acciones</th>";
           echo "</tr>";
@@ -601,6 +615,7 @@ $holidayMap = [];
               // Aggregate per month (for summary row)
               if (is_array($monthStats)) {
                 $exp = intval($calc['expected_minutes'] ?? 0);
+                $expEmpresa = intval($calc['expected_empresa_minutes'] ?? 0);
                 if ($exp > 0) {
                   $monthStats['expected_minutes'] += $exp;
                   $monthStats['workdays'] += 1;
@@ -609,6 +624,11 @@ $holidayMap = [];
                   }
                   // Acumular horas esperadas anuales
                   $yearExpectedMinutes += $exp;
+                }
+                if ($expEmpresa > 0) {
+                  $monthStats['expected_empresa_minutes'] += $expEmpresa;
+                  // Acumular horas esperadas empresa anuales
+                  $yearExpectedEmpresaMinutes += $expEmpresa;
                 }
                 if ($calc['worked_minutes_for_display'] !== null) {
                   $monthStats['worked_minutes'] += intval($calc['worked_minutes_for_display']);
@@ -640,8 +660,12 @@ $holidayMap = [];
               // Aggregate per week (for weekly summary row)
               if (is_array($weekStats)) {
                 $exp = intval($calc['expected_minutes'] ?? 0);
+                $expEmpresa = intval($calc['expected_empresa_minutes'] ?? 0);
                 if ($exp > 0) {
                   $weekStats['expected_minutes'] += $exp;
+                }
+                if ($expEmpresa > 0) {
+                  $weekStats['expected_empresa_minutes'] += $expEmpresa;
                 }
                 if ($calc['worked_minutes_for_display'] !== null) {
                   $weekStats['worked_minutes'] += intval($calc['worked_minutes_for_display']);
@@ -653,8 +677,10 @@ $holidayMap = [];
               $hasEntry = !empty($e['start']) || !empty($e['end']);
               if ($hasEntry) {
                 $dailyExp = intval($calc['expected_minutes'] ?? 0);
+                $dailyExpEmpresa = intval($calc['expected_empresa_minutes'] ?? 0);
                 $dailyWork = intval($calc['worked_minutes_for_display'] ?? 0);
                 $yearBalance += ($dailyWork - $dailyExp);
+                $yearBalanceEmpresa += ($dailyWork - $dailyExpEmpresa);
               }
     ?>
       <?php
@@ -744,6 +770,23 @@ $holidayMap = [];
           <?php endif; ?>
         </td>
         <td>
+          <?php if (!empty($calc['balance_empresa_formatted']) || $calc['balance_empresa'] === 0): ?>
+            <?php
+              $be = intval($calc['balance_empresa'] ?? 0);
+              $pillClass = ($be > 0) ? 'pill-positive' : (($be < 0) ? 'pill-negative' : 'pill-neutral');
+              $balEmpresaColor = ($be > 0) ? 'var(--success-color)' : (($be < 0) ? 'var(--danger-color)' : 'var(--text-secondary)');
+            ?>
+            <span class="pill <?php echo htmlspecialchars($pillClass); ?>" style="color:<?php echo $balEmpresaColor; ?>;border-color:<?php echo $balEmpresaColor; ?>;">
+              <span class="pill-icon" aria-hidden="true" style="color:<?php echo $balEmpresaColor; ?>;">
+                <?php echo ($be > 0) ? '↑' : (($be < 0) ? '↓' : '•'); ?>
+              </span>
+              <span class="pill-value" style="color:<?php echo $balEmpresaColor; ?>;">
+                <?php echo $calc['balance_empresa_formatted']; ?>
+              </span>
+            </span>
+          <?php endif; ?>
+        </td>
+        <td>
           <?php 
             $incidents = get_incidents_for_date($user['id'], $d, $pdo);
             $hasIncidents = count($incidents) > 0;
@@ -808,7 +851,7 @@ $holidayMap = [];
           $weekDisplay = $weekStart->format('d/m') . ' - ' . $weekEndDate->format('d/m');
           
           echo '<tr class="week-summary">';
-          echo '<td colspan="13">';
+          echo '<td colspan="14">';
           echo '<div class="week-summary-row">';
           echo '<span class="week-summary-title">Semana ' . htmlspecialchars($weekDisplay) . '</span>';
           echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExp)).'</span></span>';
@@ -838,7 +881,7 @@ $holidayMap = [];
           $workdays = intval($monthStats['workdays'] ?? 0);
 
           echo '<tr class="month-summary">';
-          echo '<td colspan="13">';
+          echo '<td colspan="14">';
           echo '<div class="month-summary-row">';
           echo '<span class="month-summary-title">📅 Resumen '.htmlspecialchars($monthNameForStats ?? $currentMonth).'</span>';
           echo '<span class="pill '.$mBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($mBal>0)?'↑':(($mBal<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($mBal)).'</span></span>';
@@ -866,14 +909,17 @@ $holidayMap = [];
       // Resumen anual al final (siempre mostrar si hay datos)
       if ($yearWorkedMinutes > 0 || $yearGuardias > 0) {
         $yearBalanceClass = ($yearBalance > 0) ? 'balance--good' : (($yearBalance < 0) ? 'balance--bad' : 'balance--ok');
+        $yearBalanceEmpresaClass = ($yearBalanceEmpresa > 0) ? 'balance--good' : (($yearBalanceEmpresa < 0) ? 'balance--bad' : 'balance--ok');
         echo '<tbody class="year-summary-group">';
         echo '<tr class="year-summary">';
-        echo '<td colspan="13">';
+        echo '<td colspan="14">';
         echo '<div class="year-summary-row">';
         echo '<span class="year-summary-title">📊 Resumen Anual '.$year.'</span>';
         echo '<span class="pill"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Horas teóricas: '.htmlspecialchars(minutes_to_hours_formatted($yearExpectedMinutes)).'</span></span>';
+        echo '<span class="pill"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Horas teóricas Empresa: '.htmlspecialchars(minutes_to_hours_formatted($yearExpectedEmpresaMinutes)).'</span></span>';
         echo '<span class="pill"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Horas trabajadas: '.htmlspecialchars(minutes_to_hours_formatted($yearWorkedMinutes)).'</span></span>';
         echo '<span class="pill '.$yearBalanceClass.'"><span class="pill-icon" aria-hidden="true">'.(($yearBalance>0)?'↑':(($yearBalance<0)?'↓':'•')).'</span><span class="pill-value">Balance: '.htmlspecialchars(minutes_to_hours_formatted($yearBalance)).'</span></span>';
+        echo '<span class="pill '.$yearBalanceEmpresaClass.'"><span class="pill-icon" aria-hidden="true">'.(($yearBalanceEmpresa>0)?'↑':(($yearBalanceEmpresa<0)?'↓':'•')).'</span><span class="pill-value">Balance Empresa: '.htmlspecialchars(minutes_to_hours_formatted($yearBalanceEmpresa)).'</span></span>';
         echo '<span class="pill"><span class="pill-icon" aria-hidden="true">🍽</span><span class="pill-value">Dietas: '.$yearDietas.'</span></span>';
         if ($yearGuardias > 0) {
           echo '<span class="pill balance--guardia"><span class="pill-icon" aria-hidden="true">🛡️</span><span class="pill-value">Guardias: '.$yearGuardias.' días</span></span>';

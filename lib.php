@@ -108,6 +108,23 @@ function compute_day(array $entry, ?array $config = null): array {
     // Usar precisión completa para minutos teóricos
     $expected_minutes = round($expected_hours * 60, 0);
 
+    // Calcular horas esperadas empresa (usando campos expected_daily_hours de year_configs)
+    $expected_empresa_hours = 0.0;
+    if (!($weekday >= 6 || $isHolidayFlag || $isVacation || $isPersonal)) {
+        // Es día laborable - usar valores de expected_daily_hours según temporada
+        // La empresa usa un valor fijo por día sin diferenciar lun-jue y viernes
+        if ($isSummer) {
+            $expected_empresa_hours = isset($config['expected_daily_hours_summer']) 
+                ? floatval($config['expected_daily_hours_summer']) 
+                : 7.0;
+        } else {
+            $expected_empresa_hours = isset($config['expected_daily_hours_winter']) 
+                ? floatval($config['expected_daily_hours_winter']) 
+                : 7.65;
+        }
+    }
+    $expected_empresa_minutes = round($expected_empresa_hours * 60, 0);
+
     $start = time_to_minutes($entry['start'] ?? null);
     $coffee_out = time_to_minutes($entry['coffee_out'] ?? null);
     $coffee_in = time_to_minutes($entry['coffee_in'] ?? null);
@@ -154,6 +171,9 @@ function compute_day(array $entry, ?array $config = null): array {
 
     // Calculate day_balance using worked_minutes_for_display (which excludes coffee excess and lunch)
     $day_balance = ($worked_minutes_for_display === null) ? null : ($worked_minutes_for_display - $expected_minutes);
+    
+    // Calculate balance_empresa using the same worked_minutes_for_display but with empresa expected hours
+    $balance_empresa = ($worked_minutes_for_display === null) ? null : ($worked_minutes_for_display - $expected_empresa_minutes);
 
     // balances compared to configured minutes (positive means longer than configured)
     $coffee_balance = $coffee_taken ? ($coffee_duration - intval($config['coffee_minutes'])) : null;
@@ -165,6 +185,7 @@ function compute_day(array $entry, ?array $config = null): array {
         $worked_minutes = null;
         $worked_minutes_for_display = null;
         $day_balance = null;
+        $balance_empresa = null;
         $coffee_balance = null;
         $lunch_balance = null;
         $blankWeekendDisplay = true;
@@ -175,9 +196,11 @@ function compute_day(array $entry, ?array $config = null): array {
     return [
         'season' => $season,
         'expected_minutes' => $expected_minutes,
+        'expected_empresa_minutes' => $expected_empresa_minutes,
         'worked_minutes' => $worked_minutes,
         'worked_minutes_for_display' => $worked_minutes_for_display,
         'day_balance' => $day_balance,
+        'balance_empresa' => $balance_empresa,
         'coffee_taken' => $coffee_taken,
         'coffee_duration' => $coffee_duration,
         'coffee_balance' => $coffee_balance,
@@ -186,6 +209,7 @@ function compute_day(array $entry, ?array $config = null): array {
         'lunch_balance' => $lunch_balance,
         'worked_hours_formatted' => $blankWeekendDisplay ? '' : minutes_to_hours_formatted($worked_minutes),
         'day_balance_formatted' => $blankWeekendDisplay ? '' : minutes_to_hours_formatted($day_balance),
+        'balance_empresa_formatted' => $blankWeekendDisplay ? '' : minutes_to_hours_formatted($balance_empresa),
         'coffee_balance_formatted' => minutes_to_hours_formatted($coffee_balance),
         'lunch_balance_formatted' => minutes_to_hours_formatted($lunch_balance),
     ];
