@@ -44,7 +44,7 @@ function generate_user_stats(PDO $pdo, int $year): array {
       $entry = $entries[$dateStr] ?? ['date' => $dateStr];
       $calc = compute_day($entry, $config);
       $worked_display = $calc['worked_minutes_for_display'] ?? null;
-      $expected = intval($calc['expected_minutes'] ?? 0);
+      $expected = intval($calc['expected_empresa_minutes'] ?? 0);
       if ($expected > 0) {
         $totalExpected += $expected;
       }

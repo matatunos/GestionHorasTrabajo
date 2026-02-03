@@ -117,6 +117,16 @@ if ($year < $currentYear) {
   $endTs = $startTs - 86400;
 }
 $month_values = array_fill(1,12,0);
+
+// Initialize months array with proper structure
+for ($m = 1; $m <= 12; $m++) {
+  if ($year === $currentYear && $m > $currentMonth) break;
+  if (!isset($months[$m])) {
+    $months[$m] = ['worked' => 0, 'expected' => 0, 'days_counted' => 0, 'ytd_worked' => 0, 'ytd_expected' => 0];
+  }
+}
+
+// First pass: calculate YTD (up to today) - stored separately
 for ($ts = $startTs; $ts <= $endTs; $ts += 86400) {
   $d = date('Y-m-d', $ts);
   $m = intval(date('n', $ts));
@@ -126,19 +136,51 @@ for ($ts = $startTs; $ts <= $endTs; $ts += 86400) {
     $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
   }
   $calc = compute_day($e, $config);
-  // compute_day returns worked_minutes and expected_minutes
+  // compute_day returns worked_minutes and expected_empresa_minutes
   $worked = $calc['worked_minutes'] ?? 0;
-  $expected = $calc['expected_minutes'] ?? 0;
+  $expected = $calc['expected_empresa_minutes'] ?? 0;
   // Exclude weekends without any recorded times: when there is no entry and compute_day produced blank display
   $is_real_entry = isset($entries[$d]);
   $blankWeekend = ($calc['worked_hours_formatted'] === '' && $expected === 0 && !$is_real_entry);
   if ($blankWeekend) {
     continue; // skip counting this day
   }
-  $months[$m]['worked'] += $worked;
-  $months[$m]['expected'] += $expected;
-  $months[$m]['days_counted']++;
+  if (isset($months[$m])) {
+    $months[$m]['ytd_worked'] += $worked;
+    $months[$m]['ytd_expected'] += $expected;
+  }
   $month_values[$m] += $worked;
+}
+
+// Second pass: calculate full month data (all days in each month)
+$endMonthYear = ($year === $currentYear) ? $currentMonth : 12;
+for ($m = 1; $m <= $endMonthYear; $m++) {
+  $dtMonthStart = new DateTimeImmutable(sprintf('%04d-%02d-01', $year, $m));
+  $dtMonthEnd = $dtMonthStart->modify('last day of this month');
+  
+  if (!isset($months[$m])) {
+    $months[$m] = ['worked' => 0, 'expected' => 0, 'days_counted' => 0, 'ytd_worked' => 0, 'ytd_expected' => 0];
+  }
+  
+  for ($dtCur = $dtMonthStart; $dtCur <= $dtMonthEnd; $dtCur = $dtCur->modify('+1 day')) {
+    $d = $dtCur->format('Y-m-d');
+    $e = $entries[$d] ?? ['date' => $d];
+    if (isset($holidayMap[$d])) {
+      $e['is_holiday'] = true;
+      $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
+    }
+    $calc = compute_day($e, $config);
+    $worked = $calc['worked_minutes'] ?? 0;
+    $expected = $calc['expected_empresa_minutes'] ?? 0;
+    $is_real_entry = isset($entries[$d]);
+    $blankWeekend = ($calc['worked_hours_formatted'] === '' && $expected === 0 && !$is_real_entry);
+    if ($blankWeekend) {
+      continue;
+    }
+    $months[$m]['worked'] += $worked;
+    $months[$m]['expected'] += $expected;
+    $months[$m]['days_counted']++;
+  }
 }
 
 // Year aggregates up to today (or full year if past)
@@ -146,8 +188,8 @@ $ytd_worked = 0; $ytd_expected = 0;
 for ($m=1;$m<=12;$m++) {
   // if current year, only include months up to currentMonth
   if ($year === $currentYear && $m > $currentMonth) break;
-  $ytd_worked += $months[$m]['worked'];
-  $ytd_expected += $months[$m]['expected'];
+  $ytd_worked += $months[$m]['ytd_worked'];
+  $ytd_expected += $months[$m]['ytd_expected'];
 }
 
 // Extra dashboard KPIs (computed on the fly)
@@ -310,7 +352,7 @@ function fmt_week_range(DateTimeImmutable $start): string {
   return $start->format('d/m') . '–' . $end->format('d/m');
 }
 
-function svg_sparkline(array $values, $w=120, $h=28){
+function svg_sparkline(array $values, $w=120, $h=28, $color='currentColor'){
   $vals = array_values($values);
   if (empty($vals)) {
     $w = max(1, intval($w));
@@ -328,7 +370,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
   }
   $poly = implode(' ', $points);
   $svg = '<svg class="sparkline-svg" width="100%" height="100%" viewBox="0 0 ' . $w . ' ' . $h . '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">';
-  $svg .= '<polyline fill="none" stroke="currentColor" stroke-width="2" points="' . $poly . '" />';
+  $svg .= '<polyline fill="none" stroke="' . htmlspecialchars($color) . '" stroke-width="2" points="' . $poly . '" />';
   $svg .= '</svg>';
   return $svg;
 }
@@ -560,6 +602,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
         <?php for ($mm=1;$mm<=12;$mm++):
             if ($year == $currentYear && $mm > $currentMonth) break;
             $w = $months[$mm]['worked']; $eexp = $months[$mm]['expected']; $bal = $w - $eexp; $ex = $bal>0 ? $bal : 0;
+            $sparklineColor = $bal > 0 ? '#10b981' : ($bal < 0 ? '#ef4444' : '#6b7280');
         ?>
           <tr>
             <td><?php echo strftime('%B', mktime(0,0,0,$mm,1,$year)); ?></td>
@@ -567,7 +610,7 @@ function svg_sparkline(array $values, $w=120, $h=28){
             <td><?php echo fmt_clock($eexp); ?></td>
             <td><?php echo fmt_clock($bal); ?></td>
             <td><?php echo fmt_clock($ex); ?></td>
-            <td><div class="sparkline"><?php echo svg_sparkline(array_slice($month_values, max(1,$mm-5), min(6, $mm)),160,32); ?></div></td>
+            <td><div class="sparkline"><?php echo svg_sparkline(array_slice($month_values, max(1,$mm-5), min(6, $mm)),160,32, $sparklineColor); ?></div></td>
           </tr>
         <?php endfor; ?>
         </tbody>

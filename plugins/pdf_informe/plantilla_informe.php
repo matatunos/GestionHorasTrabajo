@@ -2,42 +2,41 @@
 // Función para renderizar el informe PDF con la estructura del ejemplo
 function renderizarInformePDF($pdf, $datos, $info = []) {
     // Cabecera con logo y datos
-    if (file_exists(__DIR__ . '/logo.png')) {
-        $pdf->Image(__DIR__ . '/logo.png', 15, 10, 30, 0, '', '', '', false, 300);
-        $pdf->SetXY(50, 10);
-    } else {
-        $pdf->SetXY(15, 10);
-    }
-    $pdf->SetFont('helvetica', 'B', 16);
-    $pdf->Cell(0, 10, 'INFORME MENSUAL DE REGISTRO HORARIO', 0, 1, 'C');
-    $pdf->SetFont('helvetica', '', 10);
-    $pdf->Cell(0, 6, 'Nombre: ' . ($info['usuario'] ?? '________________________'), 0, 1, 'L');
-    $pdf->Cell(0, 6, 'Periodo: ' . ($info['periodo'] ?? '__________'), 0, 1, 'L');
-    $pdf->Ln(2);
-
-    // Tabla de fichajes detallada
-    $pdf->SetFont('helvetica', 'B', 9);
-    $pdf->SetFillColor(220, 220, 220);
-    $pdf->Cell(18, 8, 'Fecha', 1, 0, 'C', 1);
-    $pdf->Cell(16, 8, 'Entrada', 1, 0, 'C', 1);
-    $pdf->Cell(16, 8, 'Salida', 1, 0, 'C', 1);
-    $pdf->Cell(16, 8, 'Entrada', 1, 0, 'C', 1);
-    $pdf->Cell(16, 8, 'Salida', 1, 0, 'C', 1);
-    $pdf->Cell(16, 8, 'Entrada', 1, 0, 'C', 1);
-    $pdf->Cell(16, 8, 'Salida', 1, 0, 'C', 1);
-    $pdf->Cell(18, 8, 'Efectivas', 1, 0, 'C', 1);
-    $pdf->Cell(18, 8, 'Balance', 1, 0, 'C', 1);
-    $pdf->Cell(18, 8, 'Acum.', 1, 1, 'C', 1);
+    $pdf->SetFont('helvetica', 'B', 14);
+    $pdf->SetTextColor(40, 40, 40);
+    $pdf->Cell(0, 8, 'INFORME MENSUAL DE REGISTRO HORARIO', 0, 1, 'C');
+    
     $pdf->SetFont('helvetica', '', 9);
+    $pdf->SetTextColor(80, 80, 80);
+    $pdf->Cell(50, 5, 'Empleado: ' . ($info['usuario'] ?? '________________________'), 0, 0, 'L');
+    $pdf->Cell(0, 5, 'Período: ' . ($info['periodo'] ?? '__________'), 0, 1, 'L');
+    $pdf->Ln(3);
 
+    // Tabla de fichajes
+    $pdf->SetFont('helvetica', 'B', 7);
+    $pdf->SetFillColor(66, 133, 244);
+    $pdf->SetTextColor(255, 255, 255);
+    
+    $pdf->Cell(13, 5, 'Día', 1, 0, 'C', true);
+    $pdf->Cell(12, 5, 'D.S', 1, 0, 'C', true);
+    $pdf->Cell(15, 5, 'Ent', 1, 0, 'C', true);
+    $pdf->Cell(14, 5, 'E.C', 1, 0, 'C', true);
+    $pdf->Cell(14, 5, 'V.C', 1, 0, 'C', true);
+    $pdf->Cell(14, 5, 'E.L', 1, 0, 'C', true);
+    $pdf->Cell(14, 5, 'V.L', 1, 0, 'C', true);
+    $pdf->Cell(15, 5, 'Sal', 1, 0, 'C', true);
+    $pdf->Cell(15, 5, 'Efect', 1, 0, 'C', true);
+    $pdf->Cell(15, 5, 'Teó', 1, 0, 'C', true);
+    $pdf->Cell(14, 5, 'Bal', 1, 0, 'C', true);
+    $pdf->Cell(15, 5, 'Acum', 1, 1, 'C', true);
+    
+    $pdf->SetFont('helvetica', '', 7);
+    $pdf->SetTextColor(0, 0, 0);
 
     $balance_acumulado = 0;
     $semana_actual = null;
-    $totales_semana = [
-        'efectivas' => 0,
-        'balance' => 0,
-        'esperadas' => 0
-    ];
+    $totales_semana = ['efectivas' => 0, 'balance' => 0, 'esperadas' => 0];
+    
     // Para resumen mensual
     $monthStats = [
         'expected_minutes' => 0,
@@ -49,58 +48,86 @@ function renderizarInformePDF($pdf, $datos, $info = []) {
         'coffee_excess_total' => 0,
         'coffee_excess_days' => 0,
     ];
+    
     foreach ($datos as $fila) {
         $fecha = $fila['date'];
         $dow = date('N', strtotime($fecha)); // 1=lunes ... 7=domingo
         $semana = date('W', strtotime($fecha));
-
+        $diaNum = date('d', strtotime($fecha));
+        
         // Si cambia la semana y no es la primera fila, mostrar totales de la semana anterior
         if ($semana_actual !== null && $semana !== $semana_actual) {
-            // Fila separadora de totales semanales
-            $pdf->SetFont('helvetica', 'B', 9);
-            $pdf->SetFillColor(200, 255, 200);
-            $pdf->Cell(98, 7, 'Total semana '.$semana_actual, 1, 0, 'R', 1);
-            $pdf->Cell(18, 7, minutes_to_hours_formatted($totales_semana['efectivas']), 1, 0, 'C', 1);
-            $pdf->Cell(18, 7, minutes_to_hours_formatted($totales_semana['balance']), 1, 0, 'C', 1);
-            $pdf->Cell(18, 7, '', 1, 1, 'C', 1);
-            $pdf->SetFont('helvetica', '', 9);
-            // Reset totales
-            $totales_semana = [ 'efectivas' => 0, 'balance' => 0, 'esperadas' => 0 ];
+            $pdf->SetFont('helvetica', 'B', 7);
+            $pdf->SetFillColor(240, 240, 240);
+            $pdf->Cell(13, 5, '', 1, 0, 'C', true);
+            $pdf->Cell(12, 5, '', 1, 0, 'C', true);
+            $pdf->Cell(15, 5, 'S'.$semana_actual, 1, 0, 'C', true);
+            $pdf->Cell(14, 5, '', 1, 0, 'C', true);
+            $pdf->Cell(14, 5, '', 1, 0, 'C', true);
+            $pdf->Cell(14, 5, '', 1, 0, 'C', true);
+            $pdf->Cell(14, 5, '', 1, 0, 'C', true);
+            $pdf->Cell(15, 5, '', 1, 0, 'C', true);
+            $pdf->Cell(15, 5, minutes_to_hours_formatted($totales_semana['efectivas']), 1, 0, 'C', true);
+            $pdf->Cell(15, 5, minutes_to_hours_formatted($totales_semana['esperadas']), 1, 0, 'C', true);
+            $pdf->Cell(14, 5, minutes_to_hours_formatted($totales_semana['balance']), 1, 0, 'C', true);
+            $pdf->Cell(15, 5, '', 1, 1, 'C', true);
+            $pdf->SetFont('helvetica', '', 7);
+            $totales_semana = ['efectivas' => 0, 'balance' => 0, 'esperadas' => 0];
         }
         $semana_actual = $semana;
 
+        // Determinar día de semana abreviado
+        $diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+        $dayStr = $diasSemana[$dow - 1];
+        
+        // Color de fondo según tipo de día
+        $isHoliday = isset($fila['is_holiday']) && $fila['is_holiday'];
+        $isWeekend = $dow >= 6;
+        if ($isHoliday || $isWeekend) {
+            $pdf->SetFillColor(230, 230, 230);
+        } else {
+            $pdf->SetFillColor(255, 255, 255);
+        }
+        
         // Fila normal de día
-        $pdf->Cell(18, 7, $fecha, 1);
-        $pdf->Cell(16, 7, $fila['start'] ?? '', 1);
-        $pdf->Cell(16, 7, $fila['coffee_out'] ?? '', 1);
-        $pdf->Cell(16, 7, $fila['coffee_in'] ?? '', 1);
-        $pdf->Cell(16, 7, $fila['lunch_out'] ?? '', 1);
-        $pdf->Cell(16, 7, $fila['lunch_in'] ?? '', 1);
-        $pdf->Cell(16, 7, $fila['end'] ?? '', 1);
+        $pdf->Cell(13, 5, $diaNum, 1, 0, 'C', $isHoliday || $isWeekend);
+        $pdf->Cell(12, 5, $dayStr, 1, 0, 'C', $isHoliday || $isWeekend);
+        $pdf->Cell(15, 5, $fila['start'] ?? '', 1, 0, 'C', $isHoliday || $isWeekend);
+        $pdf->Cell(14, 5, $fila['coffee_out'] ?? '', 1, 0, 'C', $isHoliday || $isWeekend);
+        $pdf->Cell(14, 5, $fila['coffee_in'] ?? '', 1, 0, 'C', $isHoliday || $isWeekend);
+        $pdf->Cell(14, 5, $fila['lunch_out'] ?? '', 1, 0, 'C', $isHoliday || $isWeekend);
+        $pdf->Cell(14, 5, $fila['lunch_in'] ?? '', 1, 0, 'C', $isHoliday || $isWeekend);
+        $pdf->Cell(15, 5, $fila['end'] ?? '', 1, 0, 'C', $isHoliday || $isWeekend);
+        
         // Horas efectivas
         $efectivas = $fila['worked_minutes_for_display'] ?? null;
         $efectivas_fmt = $efectivas !== null ? minutes_to_hours_formatted($efectivas) : '';
-        $pdf->Cell(18, 7, $efectivas_fmt, 1);
+        $pdf->Cell(15, 5, $efectivas_fmt, 1, 0, 'C', $isHoliday || $isWeekend);
+        
+        // Esperadas
+        $exp = $fila['expected_empresa_minutes'] ?? 0;
+        $exp_fmt = $exp > 0 ? minutes_to_hours_formatted($exp) : '';
+        $pdf->Cell(15, 5, $exp_fmt, 1, 0, 'C', $isHoliday || $isWeekend);
+        
         // Balance diario
-        $bal = $fila['day_balance'] ?? null;
+        $bal = ($efectivas !== null && $exp > 0) ? ($efectivas - $exp) : null;
         $bal_fmt = $bal !== null ? minutes_to_hours_formatted($bal) : '';
-        $pdf->Cell(18, 7, $bal_fmt, 1);
+        $pdf->Cell(14, 5, $bal_fmt, 1, 0, 'C', $isHoliday || $isWeekend);
+        
         // Balance acumulado
         if ($bal !== null) $balance_acumulado += $bal;
-        $pdf->Cell(18, 7, minutes_to_hours_formatted($balance_acumulado), 1, 1);
+        $pdf->Cell(15, 5, minutes_to_hours_formatted($balance_acumulado), 1, 1, 'C', $isHoliday || $isWeekend);
 
         // Acumular totales semanales
         if ($efectivas !== null) $totales_semana['efectivas'] += $efectivas;
         if ($bal !== null) $totales_semana['balance'] += $bal;
-        // Calcular esperadas por día (asumimos 8h/día laborable, puedes ajustar)
-        $exp = $fila['expected_minutes'] ?? 0;
         if ($exp > 0) $totales_semana['esperadas'] += $exp;
 
-        // Resumen mensual (igual que index.php)
+        // Resumen mensual
         if ($exp > 0) {
             $monthStats['expected_minutes'] += $exp;
             $monthStats['workdays'] += 1;
-            if (($fila['worked_minutes_for_display'] ?? null) === null) {
+            if ($efectivas === null) {
                 $monthStats['missing_workdays'] += 1;
             }
         }
@@ -116,55 +143,72 @@ function renderizarInformePDF($pdf, $datos, $info = []) {
             $monthStats['coffee_excess_days'] += 1;
         }
 
-        // Si es domingo, mostrar totales de la semana
+        // Si es domingo, mostrar línea separadora
         if ($dow == 7) {
-            $pdf->SetFont('helvetica', 'B', 9);
-            $pdf->SetFillColor(200, 255, 200);
-            $pdf->Cell(98, 7, 'Total semana '.$semana, 1, 0, 'R', 1);
-            $pdf->Cell(18, 7, minutes_to_hours_formatted($totales_semana['efectivas']), 1, 0, 'C', 1);
-            $pdf->Cell(18, 7, minutes_to_hours_formatted($totales_semana['balance']), 1, 0, 'C', 1);
-            $pdf->Cell(18, 7, minutes_to_hours_formatted($totales_semana['esperadas']), 1, 1, 'C', 1);
-            // Resumen semanal
-            $pdf->SetFont('helvetica', 'I', 8);
-            $pdf->Cell(0, 6, 'Resumen semanal: Efectivas '.minutes_to_hours_formatted($totales_semana['efectivas']).' / Esperadas '.minutes_to_hours_formatted($totales_semana['esperadas']).' / Balance '.minutes_to_hours_formatted($totales_semana['balance']), 0, 1, 'R');
-            $pdf->SetFont('helvetica', '', 9);
-            $pdf->Ln(3);
-            $totales_semana = [ 'efectivas' => 0, 'balance' => 0, 'esperadas' => 0 ];
+            $pdf->SetLineWidth(0.1);
+            $pdf->Line(15, $pdf->GetY(), 195, $pdf->GetY());
         }
     }
+    
+    // Última semana si queda abierta
+    if ($semana_actual !== null) {
+        $pdf->SetFont('helvetica', 'B', 7);
+        $pdf->SetFillColor(240, 240, 240);
+        $pdf->Cell(13, 5, '', 1, 0, 'C', true);
+        $pdf->Cell(12, 5, '', 1, 0, 'C', true);
+        $pdf->Cell(15, 5, 'S'.$semana_actual, 1, 0, 'C', true);
+        $pdf->Cell(14, 5, '', 1, 0, 'C', true);
+        $pdf->Cell(14, 5, '', 1, 0, 'C', true);
+        $pdf->Cell(14, 5, '', 1, 0, 'C', true);
+        $pdf->Cell(14, 5, '', 1, 0, 'C', true);
+        $pdf->Cell(15, 5, '', 1, 0, 'C', true);
+        $pdf->Cell(15, 5, minutes_to_hours_formatted($totales_semana['efectivas']), 1, 0, 'C', true);
+        $pdf->Cell(15, 5, minutes_to_hours_formatted($totales_semana['esperadas']), 1, 0, 'C', true);
+        $pdf->Cell(14, 5, minutes_to_hours_formatted($totales_semana['balance']), 1, 0, 'C', true);
+        $pdf->Cell(15, 5, '', 1, 1, 'C', true);
+    }
 
-    // Resumen mensual
-    $pdf->Ln(6);
-    $pdf->SetFont('helvetica', 'B', 10);
-    $pdf->Cell(0, 8, '📅 Resumen mensual', 0, 1, 'L');
+    // Resumen mensual compacto
+    $pdf->Ln(4);
+    $pdf->SetFont('helvetica', 'B', 9);
+    $pdf->SetTextColor(40, 40, 40);
+    $pdf->Cell(0, 7, 'RESUMEN MENSUAL', 0, 1, 'L');
+    
     $mExp = intval($monthStats['expected_minutes']);
     $mWork = intval($monthStats['worked_minutes']);
     $mBal = $mWork - $mExp;
     $dietas = intval($monthStats['dietas']);
-    $coffeeExCount = intval($monthStats['coffee_excess_days']);
-    $coffeeExAvg = ($coffeeExCount > 0) ? intdiv(intval($monthStats['coffee_excess_total']), $coffeeExCount) : 0;
     $missing = intval($monthStats['missing_workdays']);
     $workdays = intval($monthStats['workdays']);
-    $pdf->SetFont('helvetica', '', 10);
-    $pdf->Cell(60, 7, 'Balance', 1, 0, 'L');
-    $pdf->Cell(30, 7, minutes_to_hours_formatted($mBal), 1, 1, 'C');
-    $pdf->Cell(60, 7, 'Esperadas', 1, 0, 'L');
-    $pdf->Cell(30, 7, minutes_to_hours_formatted($mExp), 1, 1, 'C');
-    $pdf->Cell(60, 7, 'Hechas', 1, 0, 'L');
-    $pdf->Cell(30, 7, minutes_to_hours_formatted($mWork), 1, 1, 'C');
-    $pdf->Cell(60, 7, 'Dietas', 1, 0, 'L');
-    $pdf->Cell(30, 7, $dietas, 1, 1, 'C');
-    $pdf->Cell(60, 7, 'Café exceso medio', 1, 0, 'L');
-    $pdf->Cell(30, 7, $coffeeExCount > 0 ? minutes_to_hours_formatted($coffeeExAvg) : '—', 1, 1, 'C');
-    $pdf->Cell(60, 7, 'Días con datos', 1, 0, 'L');
-    $pdf->Cell(30, 7, $monthStats['days_with_worked'].'/'.$workdays.($missing>0 ? ' · Incompletos '.$missing : ''), 1, 1, 'C');
+    
+    $pdf->SetFont('helvetica', '', 8);
+    $pdf->SetFillColor(220, 240, 255);
+    $pdf->Cell(45, 6, 'Horas Teóricas:', 0, 0, 'L');
+    $pdf->Cell(30, 6, minutes_to_hours_formatted($mExp), 0, 1, 'C');
+    $pdf->Cell(45, 6, 'Horas Trabajadas:', 0, 0, 'L');
+    $pdf->Cell(30, 6, minutes_to_hours_formatted($mWork), 0, 1, 'C');
+    
+    $balanceColor = $mBal >= 0 ? [200, 255, 200] : [255, 200, 200];
+    $pdf->SetFillColor($balanceColor[0], $balanceColor[1], $balanceColor[2]);
+    $pdf->SetFont('helvetica', 'B', 8);
+    $pdf->Cell(45, 6, 'BALANCE MENSUAL:', 0, 0, 'L');
+    $pdf->Cell(30, 6, minutes_to_hours_formatted($mBal), 0, 1, 'C');
+    
+    $pdf->SetFont('helvetica', '', 8);
+    $pdf->SetFillColor(255, 255, 255);
+    $pdf->Cell(45, 5, 'Dietas (comida ≥ ' . intval(60) . 'min):', 0, 0, 'L');
+    $pdf->Cell(30, 5, $dietas, 0, 1, 'C');
+    $pdf->Cell(45, 5, 'Días con registro / Incompletos:', 0, 0, 'L');
+    $pdf->Cell(30, 5, $monthStats['days_with_worked'].'/'.$workdays.($missing>0 ? ' / '.$missing : ''), 0, 1, 'C');
 
-    // Pie de página con espacio para firma
-    $pdf->Ln(10);
-    $pdf->SetFont('helvetica', '', 10);
-    $pdf->Cell(0, 8, 'Firma trabajador: ___________________________', 0, 1, 'L');
-    $pdf->Cell(0, 8, 'Firma empresa:   ___________________________', 0, 1, 'L');
-    $pdf->Ln(4);
-    $pdf->SetFont('helvetica', 'I', 8);
-    $pdf->Cell(0, 6, 'Generado automáticamente por GestionHorasTrabajo', 0, 1, 'C');
+    // Pie de página
+    $pdf->Ln(8);
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->Cell(50, 6, 'Firma del empleado: ___________', 0, 0, 'L');
+    $pdf->Cell(0, 6, 'Firma de la empresa: ___________', 0, 1, 'L');
+    
+    $pdf->Ln(3);
+    $pdf->SetFont('helvetica', 'I', 7);
+    $pdf->SetTextColor(150, 150, 150);
+    $pdf->Cell(0, 5, 'Generado automáticamente por GestionHorasTrabajo', 0, 1, 'C');
 }

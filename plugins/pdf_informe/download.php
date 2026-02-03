@@ -1,13 +1,15 @@
 <?php
-require_once __DIR__ . '/plantilla_informe.php';
-// download.php: Genera y descarga el PDF directamente, evitando problemas de headers
+require_once __DIR__ . '/../../auth.php';
 require_once __DIR__ . '/../../lib.php';
 require_once __DIR__ . '/../../db.php';
 require_once __DIR__ . '/plantilla_informe.php';
 
+require_login();
+$user = current_user();
+
 $anio = isset($_GET['anio']) ? intval($_GET['anio']) : date('Y');
 $mes = isset($_GET['mes']) ? intval($_GET['mes']) : date('n');
-$usuarioId = 1; // Puedes hacerlo dinámico
+$usuarioId = $user['id']; // Usar el usuario actual
 
 // Obtener datos
 $pdo = get_pdo();
@@ -60,7 +62,7 @@ $pdf->SetTitle('Informe de Fichajes');
 $pdf->SetMargins(15, 20, 15);
 $pdf->AddPage();
 renderizarInformePDF($pdf, $datos, [
-    'usuario' => 'Nombre Apellido',
+    'usuario' => $user['username'] ?? 'Empleado',
     'periodo' => "$fechaInicio a $fechaFin"
 ]);
 

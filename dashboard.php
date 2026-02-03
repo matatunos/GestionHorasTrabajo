@@ -103,7 +103,7 @@ $todayInYear = ($year === $currentYear);
 $months = [];
 for ($mm=1;$mm<=12;$mm++) {
   if ($year == $currentYear && $mm > $currentMonth) break;
-  $months[$mm] = ['worked' => 0, 'expected' => 0];
+  $months[$mm] = ['worked' => 0, 'expected' => 0, 'ytd_worked' => 0, 'ytd_expected' => 0];
 }
 
 // YTD calculation
@@ -115,6 +115,7 @@ $dtStart = new DateTimeImmutable(sprintf('%04d-01-01', $year));
 $limitEnd = ($year === $currentYear) ? $today : sprintf('%04d-12-31', $year);
 $dtEnd = new DateTimeImmutable($limitEnd);
 
+// First pass: calculate YTD and partial month data (up to today)
 for ($cur = $dtStart; $cur <= $dtEnd; $cur = $cur->modify('+1 day')) {
   $d = $cur->format('Y-m-d');
   $mm = intval($cur->format('n'));
@@ -127,11 +128,11 @@ for ($cur = $dtStart; $cur <= $dtEnd; $cur = $cur->modify('+1 day')) {
   
   $calc = compute_day($e, $config);
   $w = intval($calc['worked_minutes'] ?? 0);
-  $exp = intval($calc['expected_minutes'] ?? 0);
+  $exp = intval($calc['expected_empresa_minutes'] ?? 0);
   
   if (isset($months[$mm])) {
-    $months[$mm]['worked'] += $w;
-    $months[$mm]['expected'] += $exp;
+    $months[$mm]['ytd_worked'] += $w;
+    $months[$mm]['ytd_expected'] += $exp;
   }
   
   $ytd_worked += $w;
@@ -142,6 +143,31 @@ for ($cur = $dtStart; $cur <= $dtEnd; $cur = $cur->modify('+1 day')) {
       $month_values[] = 0;
     }
     $month_values[$mm] += $w - $exp;
+  }
+}
+
+// Second pass: calculate full month data (all days in each month)
+for ($mm = 1; $mm <= 12; $mm++) {
+  if ($year == $currentYear && $mm > $currentMonth) break;
+  
+  $dtMonthStart = new DateTimeImmutable(sprintf('%04d-%02d-01', $year, $mm));
+  $dtMonthEnd = $dtMonthStart->modify('last day of this month');
+  
+  for ($cur = $dtMonthStart; $cur <= $dtMonthEnd; $cur = $cur->modify('+1 day')) {
+    $d = $cur->format('Y-m-d');
+    
+    $e = $entries[$d] ?? ['date' => $d];
+    if (isset($holidayMap[$d])) {
+      $e['is_holiday'] = true;
+      $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
+    }
+    
+    $calc = compute_day($e, $config);
+    $w = intval($calc['worked_minutes'] ?? 0);
+    $exp = intval($calc['expected_empresa_minutes'] ?? 0);
+    
+    $months[$mm]['worked'] += $w;
+    $months[$mm]['expected'] += $exp;
   }
 }
 
@@ -836,6 +862,7 @@ $recentActivity = LogAnalytics::getRecentActivity(5);
           <th>Saldo</th>
           <th>Exceso</th>
           <th>Defecto</th>
+          <th>Tendencia</th>
         </tr>
       </thead>
       <tbody>
@@ -846,6 +873,7 @@ $recentActivity = LogAnalytics::getRecentActivity(5);
             $bal = $w - $eexp;
             $ex = $bal>0 ? $bal : 0;
             $def = $bal<0 ? -$bal : 0;
+            $barColor = $bal > 0 ? '#10b981' : ($bal < 0 ? '#ef4444' : '#6b7280');
         ?>
           <tr>
             <td style="font-weight: 600;">
@@ -860,6 +888,7 @@ $recentActivity = LogAnalytics::getRecentActivity(5);
             <td><strong style="color: <?php echo $bal >= 0 ? 'var(--success-color)' : 'var(--danger-color)'; ?>"><?php echo fmt($bal); ?></strong></td>
             <td><span class="badge badge-positive"><?php echo fmt($ex); ?></span></td>
             <td><span class="badge badge-negative"><?php echo fmt($def); ?></span></td>
+            <td><div style="width:100%;height:24px;background:<?php echo $barColor; ?>;opacity:0.6;border-radius:4px;"></div></td>
           </tr>
         <?php endfor; ?>
       </tbody>
