@@ -44,6 +44,8 @@ function is_summer_date(string $date, array $config): bool {
 
 function time_to_minutes(?string $time): ?int {
     if (!$time) return null;
+    // Permitir tanto ":" como "." como separador de horas
+    $time = str_replace('.', ':', $time);
     $parts = explode(':', $time);
     if (count($parts) < 2) return null;
     return intval($parts[0]) * 60 + intval($parts[1]);

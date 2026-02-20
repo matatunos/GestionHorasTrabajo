@@ -819,9 +819,10 @@ svg polyline { stroke: var(--brand-primary) !important; }
 .sheet.compact th:nth-child(11), .sheet.compact td:nth-child(11),
 .sheet.compact th:nth-child(12), .sheet.compact td:nth-child(12) { width: 85px; }
 .sheet.compact th:nth-child(13), .sheet.compact td:nth-child(13) { width: 140px; }
+.sheet.compact th:nth-child(14), .sheet.compact td:nth-child(14) { width: 80px; }
 
 /* Table container: keep full height; only use horizontal scroll when needed */
-.table-responsive { overflow: visible; max-width: 100%; }
+.table-responsive { overflow: visible; max-width: 100%; width: 100%; display: block; max-height: calc(100vh - 300px); overflow-y: auto; }
 
 @media (max-width: 900px) {
     .sheet.compact th, .sheet.compact td { padding: 5px 6px; font-size: 12px; }
@@ -908,16 +909,25 @@ svg polyline { stroke: var(--brand-primary) !important; }
 .sheet tr.editing td {
     background-color: rgba(96,165,250,0.06); /* soft blue tint */
     transition: background-color 0.15s ease-in-out;
+    overflow: hidden;
+    white-space: nowrap;
 }
 .sheet tr.editing td:first-child {
     border-left: 4px solid var(--brand-accent);
 }
 .sheet tr.editing input.form-control {
+    display: block;
     border-color: rgba(37,99,235,0.55) !important;
     box-shadow: 0 4px 10px rgba(37,99,235,0.06) !important;
     background: #fff !important;
     padding: 4px 6px !important;
     height: 30px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 .sheet tr.editing .btn.save-entry { background: var(--brand-primary) !important; color: #fff !important; }
 .sheet tr.editing .btn.cancel-entry { background: transparent !important; border-color: var(--border-color) !important; color: var(--text-primary) !important; }
@@ -1299,10 +1309,9 @@ body { display: flex; flex-direction: column; }
 .sheet.compact thead th, .sheet.compact tbody td { padding: 0.5rem 0.75rem; font-size: 13px; }
 
 /* Floating month column headers: fixed position when scrolling over table */
-.page-index .table-responsive { position: relative; }
-.sheet tr.month-columns { opacity: 1; transition: opacity 0.1s; }
+.page-index .table-responsive { position: static; }
+.sheet tr.month-columns { opacity: 1; transition: opacity 0.1s; position: sticky; top: 0; z-index: 99; background: var(--bg-secondary); box-shadow: 0 2px 8px rgba(0,0,0,0.1); will-change: transform; }
 .sheet tr.month-columns th { background: var(--bg-color); padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; color: var(--text-muted); border-bottom: 2px solid var(--border-color); }
-.sheet tr.month-columns { position: sticky; top: 60px; z-index: 99; background: var(--bg-secondary); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 .sheet td.month-header { position: relative; z-index: 30; background: var(--bg-secondary); box-shadow: 0 1px 0 var(--border-color); }
 
 /* Schedule balance cells (coffee/lunch): color by sign vs configured minutes */
@@ -2167,7 +2176,7 @@ tbody.month-group.collapsed tr.weekend td:not(.month) { opacity: 0.95; }
 
 /* If the table layout is fixed globally, allow the first column to behave like auto for visibility */
 .sheet.compact, .sheet {
-    table-layout: auto !important;
+    table-layout: fixed !important;
 }
 
 /* Date cell styling: center weekend labels and keep nowrap */

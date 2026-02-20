@@ -97,13 +97,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['date'])) {
   function nullIfEmpty($v) {
     return (isset($v) && trim($v) !== '') ? $v : null;
   }
+  function normalizeTime($t) {
+    $t = nullIfEmpty($t);
+    if ($t) {
+      // Convertir "." a ":" para que acepte ambos separadores
+      $t = str_replace('.', ':', $t);
+    }
+    return $t;
+  }
   $data = [
-    'start' => nullIfEmpty($_POST['start'] ?? null),
-    'coffee_out' => nullIfEmpty($_POST['coffee_out'] ?? null),
-    'coffee_in' => nullIfEmpty($_POST['coffee_in'] ?? null),
-    'lunch_out' => nullIfEmpty($_POST['lunch_out'] ?? null),
-    'lunch_in' => nullIfEmpty($_POST['lunch_in'] ?? null),
-    'end' => nullIfEmpty($_POST['end'] ?? null),
+    'start' => normalizeTime($_POST['start'] ?? null),
+    'coffee_out' => normalizeTime($_POST['coffee_out'] ?? null),
+    'coffee_in' => normalizeTime($_POST['coffee_in'] ?? null),
+    'lunch_out' => normalizeTime($_POST['lunch_out'] ?? null),
+    'lunch_in' => normalizeTime($_POST['lunch_in'] ?? null),
+    'end' => normalizeTime($_POST['end'] ?? null),
     'note' => $_POST['note'] ?? '',
     'absence_type' => $_POST['absence_type'] ?? null,
   ];
@@ -276,7 +284,7 @@ $holidayMap = [];
   <div class="card">
 
     <!-- Barra de filtros y botón añadir registro alineados en una sola línea -->
-    <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;justify-content:space-between;">
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;justify-content:space-between;width:100%;">
       <form id="filters-form" method="get" style="display:flex;align-items:center;gap:12px;flex:1;">
         <label class="form-label">Año
           <select id="entry-year" class="form-control auto-filter-trigger" name="year" style="width:100px;">
@@ -1009,6 +1017,31 @@ window.updateFloatingArrows = updateFloatingArrows;
     entryModalOverlay.style.display = 'none';
     entryModalOverlay.setAttribute('aria-hidden', 'true');
   }
+  
+  // Setup time input handlers to accept both ":" and "." as separators
+  function setupTimeInputHandlers() {
+    const timeInputs = document.querySelectorAll('input.time-input');
+    timeInputs.forEach(input => {
+      input.addEventListener('change', function() {
+        if (this.value && this.value.includes('.')) {
+          this.value = this.value.replace(/\./g, ':');
+        }
+      });
+      input.addEventListener('blur', function() {
+        if (this.value && this.value.includes('.')) {
+          this.value = this.value.replace(/\./g, ':');
+        }
+      });
+    });
+  }
+  setupTimeInputHandlers();
+  
+  // Also setup handlers when the modal opens (for dynamic inputs)
+  if (entryModalOverlay) {
+    const observer = new MutationObserver(setupTimeInputHandlers);
+    observer.observe(entryModalOverlay, { childList: true, subtree: true });
+  }
+  
   // Botón 'Añadir registro' (nuevo principal)
   const addEntryBtn = document.getElementById('add-entry-btn');
   if (addEntryBtn) addEntryBtn.addEventListener('click', openEntryModal);
@@ -1491,10 +1524,10 @@ window.updateFloatingArrows = updateFloatingArrows;
       tds[5].innerHTML = mkInput('time', editBtn.getAttribute('data-lunch_out') || '', 'lunch_out');
       tds[6].innerHTML = mkInput('time', editBtn.getAttribute('data-lunch_in') || '', 'lunch_in');
       tds[8].innerHTML = mkInput('time', editBtn.getAttribute('data-end') || '', 'end');
-      tds[11].innerHTML = mkInput('text', editBtn.getAttribute('data-note') || '', 'note');
+      tds[12].innerHTML = mkInput('text', editBtn.getAttribute('data-note') || '', 'note');
       // Add absence_type to form data
       tr.dataset._absence_type = editBtn.getAttribute('data-absence_type') || '';
-      tds[12].innerHTML = '<button class="btn btn-primary save-entry" type="button">Guardar</button> <button class="btn btn-secondary cancel-entry" type="button">Cancelar</button>';
+      tds[13].innerHTML = '<button class="btn btn-primary save-entry icon-btn" type="button" title="Guardar (Enter)">✓</button><button class="btn btn-secondary cancel-entry icon-btn" type="button" title="Cancelar (Esc)">✕</button>';
       tr.dataset._date = date;
       return;
     }
@@ -1514,7 +1547,7 @@ window.updateFloatingArrows = updateFloatingArrows;
       fd.append('lunch_out', getVal(5,'lunch_out'));
       fd.append('lunch_in', getVal(6,'lunch_in'));
       fd.append('end', getVal(8,'end'));
-      fd.append('note', getVal(11,'note'));
+      fd.append('note', getVal(12,'note'));
       if (tr.dataset._absence_type) fd.append('absence_type', tr.dataset._absence_type);
       fetch(location.pathname + location.search, { method: 'POST', body: fd, headers: {'X-Requested-With':'XMLHttpRequest'} })
         .then(r => r.json()).then(j => { if (j && j.ok){ tr.classList.remove('editing'); fetchTable(); } else { alert('Error guardando'); } })
@@ -1564,6 +1597,70 @@ window.updateFloatingArrows = updateFloatingArrows;
       return;
     }
   });
+
+  // Sticky headers implementation
+  function setupStickyHeaders() {
+    const tableContainer = document.getElementById('registro-table-container');
+    if (!tableContainer) return;
+    
+    const sheet = tableContainer.querySelector('.sheet');
+    const monthColumnRows = Array.from(tableContainer.querySelectorAll('.sheet tr.month-columns'));
+    
+    if (monthColumnRows.length === 0) return;
+    
+    let lastStuckRow = null;
+    
+    function updateStickyPosition() {
+      const scrollTop = tableContainer.scrollTop;
+      
+      monthColumnRows.forEach((row, index) => {
+        const rowTop = row.offsetTop;
+        const rowHeight = row.offsetHeight;
+        
+        // Check if this row should stick
+        const nextRow = monthColumnRows[index + 1];
+        const nextRowTop = nextRow ? nextRow.offsetTop : sheet.offsetHeight;
+        
+        if (scrollTop >= rowTop && scrollTop < nextRowTop - rowHeight) {
+          // This row should be sticky
+          if (lastStuckRow !== row) {
+            // Remove sticky style from previous row
+            monthColumnRows.forEach(r => {
+              r.style.position = '';
+              r.style.top = '';
+              r.style.left = '';
+              r.style.right = '';
+              r.style.backgroundColor = '';
+              r.style.zIndex = '';
+              r.style.boxShadow = '';
+            });
+            
+            // Apply sticky style to current row
+            row.style.position = 'fixed';
+            row.style.top = '60px';
+            row.style.left = tableContainer.getBoundingClientRect().left + 'px';
+            row.style.right = 'auto';
+            row.style.width = tableContainer.offsetWidth + 'px';
+            row.style.zIndex = '99';
+            row.style.backgroundColor = 'var(--bg-secondary)';
+            row.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            
+            lastStuckRow = row;
+          }
+        }
+      });
+    }
+    
+    tableContainer.addEventListener('scroll', updateStickyPosition);
+    updateStickyPosition(); // Call once on init
+  }
+  
+  // Wait for DOM to be ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupStickyHeaders);
+  } else {
+    setupStickyHeaders();
+  }
 
 })();
 </script>
