@@ -712,9 +712,6 @@ $holidayMap = [];
           elseif ($dow === 7) $dateLabel = 'Domingo';
         ?>
         <td class="date-cell<?php echo $isWeekend ? ' center' : ''; ?><?php if ($isToday) echo ' today-cell'; ?>">
-          <?php if ($isToday): ?>
-            <span class="today-arrow" style="font-size:1.7em;color:#ffb300;vertical-align:middle;filter:drop-shadow(0 0 6px #fffbe6);">&#9728;&#65039;</span>
-          <?php endif; ?>
           <?php echo $dateLabel; ?>
           <?php if ($isToday): ?>
             <span class="visually-hidden">(hoy)</span>
@@ -981,6 +978,28 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(updateFloatingArrows, 300);
   setTimeout(updateFloatingArrows, 1000);
   updateFloatingArrows();
+
+  // Scroll interno de la tabla: ir a la fila de hoy al cargar
+  (function() {
+    var container = document.getElementById('registro-table-container');
+    if (!container) return;
+
+    function scrollToToday() {
+      var todayRow = container.querySelector('tr.today-row, tr.highlight-today');
+      if (!todayRow) return;
+      var containerRect = container.getBoundingClientRect();
+      var rowRect = todayRow.getBoundingClientRect();
+      container.scrollTop = Math.max(0, container.scrollTop + (rowRect.top - containerRect.top) - 40);
+    }
+
+    window.scrollTableToToday = scrollToToday;
+    setTimeout(scrollToToday, 150);
+
+    // Actualizar flechas también cuando scrollea el contenedor
+    container.addEventListener('scroll', function() {
+      if (window.updateFloatingArrows) window.updateFloatingArrows();
+    }, {passive: true});
+  })();
 });
 // Re-ejecutar tras AJAX o recarga parcial
 window.updateFloatingArrows = updateFloatingArrows;
@@ -1245,6 +1264,7 @@ window.updateFloatingArrows = updateFloatingArrows;
         if (newTable && cur) {
           cur.innerHTML = newTable.innerHTML;
           if (window.updateFloatingArrows) setTimeout(window.updateFloatingArrows, 100);
+          if (window.scrollTableToToday) setTimeout(window.scrollTableToToday, 100);
         }
       }).catch(err=>{ console.error('fetchTable error', err); });
   }
@@ -1597,70 +1617,6 @@ window.updateFloatingArrows = updateFloatingArrows;
       return;
     }
   });
-
-  // Sticky headers implementation
-  function setupStickyHeaders() {
-    const tableContainer = document.getElementById('registro-table-container');
-    if (!tableContainer) return;
-    
-    const sheet = tableContainer.querySelector('.sheet');
-    const monthColumnRows = Array.from(tableContainer.querySelectorAll('.sheet tr.month-columns'));
-    
-    if (monthColumnRows.length === 0) return;
-    
-    let lastStuckRow = null;
-    
-    function updateStickyPosition() {
-      const scrollTop = tableContainer.scrollTop;
-      
-      monthColumnRows.forEach((row, index) => {
-        const rowTop = row.offsetTop;
-        const rowHeight = row.offsetHeight;
-        
-        // Check if this row should stick
-        const nextRow = monthColumnRows[index + 1];
-        const nextRowTop = nextRow ? nextRow.offsetTop : sheet.offsetHeight;
-        
-        if (scrollTop >= rowTop && scrollTop < nextRowTop - rowHeight) {
-          // This row should be sticky
-          if (lastStuckRow !== row) {
-            // Remove sticky style from previous row
-            monthColumnRows.forEach(r => {
-              r.style.position = '';
-              r.style.top = '';
-              r.style.left = '';
-              r.style.right = '';
-              r.style.backgroundColor = '';
-              r.style.zIndex = '';
-              r.style.boxShadow = '';
-            });
-            
-            // Apply sticky style to current row
-            row.style.position = 'fixed';
-            row.style.top = '60px';
-            row.style.left = tableContainer.getBoundingClientRect().left + 'px';
-            row.style.right = 'auto';
-            row.style.width = tableContainer.offsetWidth + 'px';
-            row.style.zIndex = '99';
-            row.style.backgroundColor = 'var(--bg-secondary)';
-            row.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-            
-            lastStuckRow = row;
-          }
-        }
-      });
-    }
-    
-    tableContainer.addEventListener('scroll', updateStickyPosition);
-    updateStickyPosition(); // Call once on init
-  }
-  
-  // Wait for DOM to be ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupStickyHeaders);
-  } else {
-    setupStickyHeaders();
-  }
 
 })();
 </script>

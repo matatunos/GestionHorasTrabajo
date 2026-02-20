@@ -126,15 +126,7 @@ $site_name = $site_cfg['site_name'] ?? 'GestionHoras';
 					if (e.key === 'Escape') userMenu.classList.remove('open');
 				});
 			}
-			// ... código JS para la cabecera ...
-			(function(){
-				try {
-					var hdr = document.querySelector('.header');
-					if (window.innerWidth < 900 && hdr) {
-						hdr.style.display = 'none';
-					}
-				} catch (e) { /* ignore */ }
-			})();
+			// header siempre visible (topbar horizontal)
 		});
 		</script>
 

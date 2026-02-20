@@ -76,11 +76,10 @@ body:not(.page-index) #floating-arrow-right {
     0% { box-shadow: 0 0 0 4px #43a047, 0 0 16px 4px #b2f5b2, 0 2px 24px 4px #43a04744; }
     100% { box-shadow: 0 0 0 8px #b2f5b2, 0 0 32px 8px #43a047, 0 2px 32px 8px #43a04788; }
 }
-}
 .sheet td.today-cell {
     color: #d97706 !important;
-    font-size: 1.13em;
-    font-weight: 900;
+    font-size: 1em;
+    font-weight: 700;
     letter-spacing: 0.5px;
     position: relative;
 }
@@ -149,23 +148,20 @@ body:not(.page-index) #floating-arrow-right {
 }
 
 html, body {
-    max-width: 100vw;
-    overflow-x: hidden !important;
+    width: 100%;
+    max-width: 100%;
+    /* overflow-x:hidden en html o body rompe position:fixed — no usarlo nunca aquí */
 }
 
 .container {
-    max-width: 100vw;
-    width: 100vw !important;
-    overflow-x: visible !important;
+    max-width: 100%;
+    width: 100%;
     position: relative;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
 }
 
 .dashboard-cards {
     width: 100%;
-    max-width: 100vw;
-    overflow-x: hidden;
+    max-width: 100%;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -176,8 +172,6 @@ body {
     line-height: 1.5;
     color: var(--text-color);
     background-color: var(--bg-color);
-    zoom: 0.8;
-    transform-origin: top left;
 }
 
 a { color: var(--primary-color); text-decoration: none; transition: color 0.2s; }
@@ -197,7 +191,7 @@ a:hover { color: var(--primary-dark); }
 /* Prevent scrollbars: allow wrapping and hide horizontal overflow on narrow viewports */
 .menu-section { display:flex; flex-wrap:wrap; gap:8px; max-width: calc(100% - 3rem); }
 .menu-item { white-space: nowrap; }
-.header { overflow-x: hidden; }
+.header { }
 .sidebar { overflow: visible; }
 .sidebar-menu { overflow: hidden; }
 .menu-user { display: inline-flex; align-items: center; gap: 0.5rem; position: relative; padding: 0.35rem 0.6rem; border-radius: 6px; }
@@ -258,8 +252,7 @@ body {
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 1rem;
         width: 100%;
-        max-width: 100vw;
-        overflow-x: hidden;
+        max-width: 100%;
 }
 
 @media (max-width: 600px) {
@@ -355,7 +348,6 @@ svg polyline { stroke: var(--brand-accent) !important; stroke-linecap: round; st
 /* Small responsive tweaks to keep airy spacing */
 @media (max-width:900px){
   .dashboard-cards { grid-template-columns: 1fr !important; }
-  .sidebar { display:none; }
 }
 
 /* subtle transitions */
@@ -390,9 +382,10 @@ body.mobile-menu-open .sidebar {
 /* (This matches the UI you had: more horizontal room than a left sidebar.) */
 .app-container { flex-direction: column; }
 .sidebar { width: 100%; min-width: 100%; height: var(--header-height); border-right: none; border-bottom: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; align-items: center; }
-/* Keep topbar visible without overlaying content (better sticky offsets for tables) */
-.sidebar { position: sticky; top: 0; z-index: 200; overflow: visible; }
-.main-content { margin-left: 0; margin-top: 0; }
+/* Topbar fijo al viewport, igual que el footer */
+.sidebar { position: fixed; top: 0; left: 0; right: 0; z-index: 200; overflow: visible; }
+/* Compensar la altura del topbar fijo para que el contenido no quede tapado */
+.main-content { margin-left: 0; margin-top: var(--header-height); }
 .menu-section { display: flex; gap: 8px; align-items: center; padding: 0 1rem; }
 .menu-item { display: inline-flex; padding: 0.5rem 0.75rem; border-radius: 6px; }
 .menu-item { display: flex; align-items: center; padding: 0.75rem 1.5rem; color: var(--text-color); transition: all 0.2s; cursor: pointer; }
@@ -829,8 +822,8 @@ svg polyline { stroke: var(--brand-primary) !important; }
 .sheet.compact th:nth-child(13), .sheet.compact td:nth-child(13) { width: 140px; }
 .sheet.compact th:nth-child(14), .sheet.compact td:nth-child(14) { width: 80px; }
 
-/* Table container: keep full height; only use horizontal scroll when needed */
-.table-responsive { overflow: visible; max-width: 100%; width: 100%; display: block; max-height: calc(100vh - 300px); overflow-y: auto; }
+/* Table container: natural page scroll so sticky headers use viewport correctly */
+.table-responsive { overflow: visible; max-width: 100%; width: 100%; display: block; }
 
 @media (max-width: 900px) {
     .sheet.compact th, .sheet.compact td { padding: 5px 6px; font-size: 12px; }
@@ -1289,15 +1282,48 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 
 /* App-specific overrides to integrate Mimir with existing `.sheet` styles */
 /* Keep this block at the end so it overrides upstream rules */
-.main-content .container { padding: 1.5rem; max-width: 1100px; margin: 1rem auto; padding-bottom: 1.5rem; /* Espacio para el footer fijo */ }
+/* overflow-x:hidden en .main-content corta el desbordamiento horizontal sin romper position:fixed */
+.main-content { overflow-x: hidden; }
+.main-content .container { padding: 1.5rem; max-width: none; width: 100%; margin: 0; padding-bottom: 1.5rem; box-sizing: border-box; }
 
 /* Hours register and dashboard need more horizontal room (wide tables) */
 .page-index .main-content .container,
-.page-dashboard .main-content .container { max-width: none !important; width: 75% !important; }
-.page-dashboard .container { max-width: none !important; width: 75% !important; }
-.page-index .table-responsive { overflow: visible; }
+.page-dashboard .main-content .container { max-width: none !important; width: 100% !important; margin: 0 !important; }
+.page-dashboard .container { max-width: none !important; width: 100% !important; margin: 0 !important; }
 .app-container { display: flex; }
-body { display: flex; flex-direction: column; }
+
+/* Cadena flex para page-index: el topbar ya es position:fixed (fuera del flujo),
+   así que .main-content puede tener height fijo y pasar el espacio sobrante a la tabla.
+   De este modo el cálculo es exacto sin hardcodear alturas de filtros ni paddings. */
+body.page-index .main-content {
+  height: calc(100vh - var(--header-height));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+body.page-index .main-content .container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0.5rem;
+}
+body.page-index .card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+.page-index .table-responsive {
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: none !important;
+}
 
 /* Align month summary with month toggle indent */
 .page-index .month-summary-row { padding-left: 42px; }
@@ -1305,21 +1331,30 @@ body { display: flex; flex-direction: column; }
 /* Keep month summary clearly separated from next month */
 .sheet tr.month-summary td { border-bottom: 2px solid var(--border-color); }
 
-/* Sticky month column headers: avoid clipped text on first paint */
+/* Sticky month column headers */
 .sheet tr.month-columns th { line-height: 1.2; vertical-align: middle; background: var(--bg-color); }
 
 /* Make .sheet look more like the theme's tables */
-/* NOTE: keep overflow visible + border-collapse separate so sticky headers work in Chrome */
 .sheet { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; overflow: visible; }
 .sheet thead th { background-color: var(--bg-color); padding: 0.85rem 1rem; text-align: left; font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; color: var(--text-muted); border-bottom: 2px solid var(--border-color); }
 .sheet tbody td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
 .sheet tbody tr:hover { background-color: var(--bg-secondary); }
 .sheet.compact thead th, .sheet.compact tbody td { padding: 0.5rem 0.75rem; font-size: 13px; }
 
-/* Floating month column headers: fixed position when scrolling over table */
-.page-index .table-responsive { position: static; }
-.sheet tr.month-columns { opacity: 1; transition: opacity 0.1s; position: sticky; top: 0; z-index: 99; background: var(--bg-secondary); box-shadow: 0 2px 8px rgba(0,0,0,0.1); will-change: transform; }
-.sheet tr.month-columns th { background: var(--bg-color); padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; font-size: 0.8125rem; text-transform: uppercase; color: var(--text-muted); border-bottom: 2px solid var(--border-color); }
+.sheet tr.month-columns th {
+    position: sticky;
+    top: 0;
+    z-index: 99;
+    background: var(--bg-color);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 2px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
 .sheet td.month-header { position: relative; z-index: 30; background: var(--bg-secondary); box-shadow: 0 1px 0 var(--border-color); }
 
 /* Schedule balance cells (coffee/lunch): color by sign vs configured minutes */
@@ -1795,11 +1830,11 @@ label.form-label { display: flex; flex-direction: column; gap: 6px; margin: 0; f
 }
 /* Centrar el contenedor principal del dashboard */
 .main-content .container, .page-dashboard .container {
-    max-width: 1300px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
     width: 100%;
-    padding-left: 24px;
-    padding-right: 24px;
+    padding-left: 16px;
+    padding-right: 16px;
 }
 @media (max-width: 900px) {
     .dashboard-cards {
@@ -2161,7 +2196,7 @@ tbody.month-group.collapsed tr.weekend td:not(.month) { opacity: 0.95; }
 
 /* Ensure date column shows fully: give first column more space and avoid truncation */
 .sheet th:first-child, .sheet td:first-child {
-    min-width: 130px !important;
+    min-width: 190px !important;
     white-space: nowrap !important;
 }
 
@@ -2174,12 +2209,12 @@ tbody.month-group.collapsed tr.weekend td:not(.month) { opacity: 0.95; }
 /* Strong overrides to counter earlier compact/fixed-table rules that shrink the first column */
 .sheet.compact th:nth-child(1), .sheet.compact td:nth-child(1),
 .sheet th:nth-child(1), .sheet td:nth-child(1) {
-    min-width: 130px !important;
+    min-width: 190px !important;
     max-width: none !important;
     width: auto !important;
     white-space: nowrap !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 
 /* If the table layout is fixed globally, allow the first column to behave like auto for visibility */
