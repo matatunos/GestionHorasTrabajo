@@ -287,7 +287,7 @@ function fmt_week_range(DateTimeImmutable $start): string {
 }
 
 // Weekly summary
-$refDate = isset($_GET['refdate']) ? $_GET['refdate'] : sprintf('%04d-01-15', $year);
+$refDate = isset($_GET['refdate']) ? $_GET['refdate'] : date('Y-m-d');
 $refEnd = new DateTimeImmutable($refDate);
 $curWeekStart = $refEnd->modify('Monday this week');
 $prevWeekStart = $curWeekStart->modify('-7 days');
