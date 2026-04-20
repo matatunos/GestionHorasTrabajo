@@ -24,30 +24,8 @@ $site_name = $site_cfg['site_name'] ?? 'GestionHoras';
 					<a class="menu-item" href="/dashboard.php">🏠 Dashboard</a>
 					<a class="menu-item" href="/index.php">🕒 Registro horario</a>
 					<a class="menu-item" href="/holidays.php">📅 Festivos y Ausencias</a>
-                                        <div class="menu-item menu-guardias-dropdown" tabindex="0" style="padding-left:0; position:relative; cursor:pointer;">
-                                                <span style="font-size:1.2em; margin-right:7px;">🛡️</span>
-                                                <span>Guardias ▼</span>
-                                                <ul class="guardias-dropdown-list" style="display:none; position:absolute; left:0; top:100%; background:#1a2639; border:1px solid #2a3f5f; border-radius:8px; min-width:220px; z-index:1000; list-style:none; padding:8px 0; margin:0; box-shadow:0 4px 16px rgba(0,0,0,0.18);">
-                                                        <li style="margin:0; padding:0;"><a href="/guardias-nomina.php" style="display:block; color:#eaf1fb; text-decoration:none; font-weight:500; padding:10px 18px; border-radius:4px; transition:background 0.15s;" onmouseover="this.style.background='#22304a'" onmouseout="this.style.background='none'">🛡️ Guardias vs. Nómina</a></li>
-                                                        <li style="margin:0; padding:0;"><a href="/guardias-compensacion.php" style="display:block; color:#eaf1fb; text-decoration:none; font-weight:500; padding:10px 18px; border-radius:4px; transition:background 0.15s;" onmouseover="this.style.background='#22304a'" onmouseout="this.style.background='none'">⚖️ Compensación Guardias</a></li>
-                                                        <li style="margin:0; padding:0;"><a href="/vacaciones.php" style="display:block; color:#eaf1fb; text-decoration:none; font-weight:500; padding:10px 18px; border-radius:4px; transition:background 0.15s;" onmouseover="this.style.background='#22304a'" onmouseout="this.style.background='none'">🏖️ Vacaciones</a></li>
-                                                </ul>
-                                        </div>
-                                        <script>
-                                        document.addEventListener('DOMContentLoaded', function() {
-                                          var guardiasMenu = document.querySelector('.menu-guardias-dropdown');
-                                          var guardiasDropdown = guardiasMenu && guardiasMenu.querySelector('.guardias-dropdown-list');
-                                          if (guardiasMenu && guardiasDropdown) {
-                                                guardiasMenu.addEventListener('click', function(e) {
-                                                  e.stopPropagation();
-                                                  guardiasDropdown.style.display = guardiasDropdown.style.display === 'block' ? 'none' : 'block';
-                                                });
-                                                document.addEventListener('click', function() {
-                                                  guardiasDropdown.style.display = 'none';
-                                                });
-                                          }
-                                        });
-                                        </script>
+                                        <a class="menu-item" href="/vacaciones.php">🏖️ Vacaciones</a>
+                                        <a class="menu-item" href="/guardias-nomina.php">🛡️ Guardias vs. Nómina</a>
 					<?php
 					require_once __DIR__ . '/plugins/plugin_loader.php';
 					$plugins = get_plugins_list(__DIR__ . '/plugins');
