@@ -439,8 +439,10 @@ $holidayMap = [];
             $wWork = intval($weekStats['worked_minutes'] ?? 0);
             $wBal = $wWork - $wExp;
             $wBalEmpresa = $wWork - $wExpEmpresa;
+            $wDayBalSum = intval($weekStats['day_balance_sum'] ?? 0);
             $wBalClass = ($wBal > 0) ? 'balance--good' : (($wBal < 0) ? 'balance--bad' : 'balance--ok');
             $wBalEmpresaClass = ($wBalEmpresa > 0) ? 'balance--good' : (($wBalEmpresa < 0) ? 'balance--bad' : 'balance--ok');
+            $wDayBalSumClass = ($wDayBalSum > 0) ? 'balance--good' : (($wDayBalSum < 0) ? 'balance--bad' : 'balance--ok');
             
             $weekEndDate = $cur->modify('-1 day');
             $weekDisplay = $weekStart->format('d/m') . ' - ' . $weekEndDate->format('d/m');
@@ -452,7 +454,7 @@ $holidayMap = [];
             echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExpEmpresa)).'</span></span>';
             echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Efectivas '.htmlspecialchars(minutes_to_hours_formatted($wWork)).'</span></span>';
             echo '<span class="pill '.$wBalEmpresaClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBalEmpresa>0)?'↑':(($wBalEmpresa<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($wBalEmpresa)).'</span></span>';
-            echo '<span class="pill '.$wBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBal>0)?'↑':(($wBal<0)?'↓':'•')).'</span><span class="pill-value">Exceso sem. '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span></span>';
+            echo '<span class="pill '.$wDayBalSumClass.'"><span class="pill-icon" aria-hidden="true">'.(($wDayBalSum>0)?'↑':(($wDayBalSum<0)?'↓':'•')).'</span><span class="pill-value">Exceso sem. '.htmlspecialchars(minutes_to_hours_formatted($wDayBalSum)).'</span></span>';
             echo '<span class="pill balance--info"><span class="pill-icon" aria-hidden="true">📊</span><span class="pill-value">Anual acum. '.htmlspecialchars(minutes_to_hours_formatted($yearBalance)).'</span></span>';
             echo '</div>';
             echo '</td>';
@@ -469,6 +471,7 @@ $holidayMap = [];
             'expected_minutes' => 0,
             'expected_empresa_minutes' => 0,
             'worked_minutes' => 0,
+            'day_balance_sum' => 0,  // suma de Balance Día solo de días con entrada real
           ];
         }
         
@@ -481,8 +484,10 @@ $holidayMap = [];
               $wWork = intval($weekStats['worked_minutes'] ?? 0);
               $wBal = $wWork - $wExp;
               $wBalEmpresa = $wWork - $wExpEmpresa;
+              $wDayBalSum = intval($weekStats['day_balance_sum'] ?? 0);
               $wBalClass = ($wBal > 0) ? 'balance--good' : (($wBal < 0) ? 'balance--bad' : 'balance--ok');
               $wBalEmpresaClass = ($wBalEmpresa > 0) ? 'balance--good' : (($wBalEmpresa < 0) ? 'balance--bad' : 'balance--ok');
+              $wDayBalSumClass = ($wDayBalSum > 0) ? 'balance--good' : (($wDayBalSum < 0) ? 'balance--bad' : 'balance--ok');
               
               $weekEndDate = $cur->modify('-1 day');
               $weekDisplay = $weekStart->format('d/m') . ' - ' . $weekEndDate->format('d/m');
@@ -494,7 +499,7 @@ $holidayMap = [];
               echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExpEmpresa)).'</span></span>';
               echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Efectivas '.htmlspecialchars(minutes_to_hours_formatted($wWork)).'</span></span>';
               echo '<span class="pill '.$wBalEmpresaClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBalEmpresa>0)?'↑':(($wBalEmpresa<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($wBalEmpresa)).'</span></span>';
-              echo '<span class="pill '.$wBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBal>0)?'↑':(($wBal<0)?'↓':'•')).'</span><span class="pill-value">Exceso sem. '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span></span>';
+              echo '<span class="pill '.$wDayBalSumClass.'"><span class="pill-icon" aria-hidden="true">'.(($wDayBalSum>0)?'↑':(($wDayBalSum<0)?'↓':'•')).'</span><span class="pill-value">Exceso sem. '.htmlspecialchars(minutes_to_hours_formatted($wDayBalSum)).'</span></span>';
               echo '<span class="pill balance--info"><span class="pill-icon" aria-hidden="true">📊</span><span class="pill-value">Anual acum. '.htmlspecialchars(minutes_to_hours_formatted($yearBalance)).'</span></span>';
               echo '</div>';
               echo '</td>';
@@ -680,6 +685,9 @@ $holidayMap = [];
                 if ($calc['worked_minutes_for_display'] !== null) {
                   $weekStats['worked_minutes'] += intval($calc['worked_minutes_for_display']);
                 }
+                if ($calc['day_balance'] !== null) {
+                  $weekStats['day_balance_sum'] += intval($calc['day_balance']);
+                }
               }
               
               // Accumulate annual balance (daily balance = worked - expected)
@@ -852,7 +860,9 @@ $holidayMap = [];
           $wExp = intval($weekStats['expected_minutes'] ?? 0);
           $wWork = intval($weekStats['worked_minutes'] ?? 0);
           $wBal = $wWork - $wExp;
+          $wDayBalSum = intval($weekStats['day_balance_sum'] ?? 0);
           $wBalClass = ($wBal > 0) ? 'balance--good' : (($wBal < 0) ? 'balance--bad' : 'balance--ok');
+          $wDayBalSumClass = ($wDayBalSum > 0) ? 'balance--good' : (($wDayBalSum < 0) ? 'balance--bad' : 'balance--ok');
           
           $weekEndDate = $end;
           $weekDisplay = $weekStart->format('d/m') . ' - ' . $weekEndDate->format('d/m');
@@ -864,9 +874,10 @@ $holidayMap = [];
           echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExp)).'</span></span>';
           echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Efectivas '.htmlspecialchars(minutes_to_hours_formatted($wWork)).'</span></span>';
             $wBalColor = ($wBal > 0) ? 'var(--success-color)' : (($wBal < 0) ? 'var(--danger-color)' : 'var(--text-secondary)');
-            echo '<span class="pill '.$wBalClass.'" style="color:'.$wBalColor.';border-color:'.$wBalColor.';">'
-              .'<span class="pill-icon" aria-hidden="true" style="color:'.$wBalColor.';">'.(($wBal>0)?'↑':(($wBal<0)?'↓':'•')).'</span>'
-              .'<span class="pill-value" style="color:'.$wBalColor.';">Exceso sem. '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span>'
+            $wDayBalSumColor = ($wDayBalSum > 0) ? 'var(--success-color)' : (($wDayBalSum < 0) ? 'var(--danger-color)' : 'var(--text-secondary)');
+            echo '<span class="pill '.$wDayBalSumClass.'" style="color:'.$wDayBalSumColor.';border-color:'.$wDayBalSumColor.';">'
+              .'<span class="pill-icon" aria-hidden="true" style="color:'.$wDayBalSumColor.';">'.(($wDayBalSum>0)?'↑':(($wDayBalSum<0)?'↓':'•')).'</span>'
+              .'<span class="pill-value" style="color:'.$wDayBalSumColor.';">Exceso sem. '.htmlspecialchars(minutes_to_hours_formatted($wDayBalSum)).'</span>'
               .'</span>';
           echo '<span class="pill balance--info"><span class="pill-icon" aria-hidden="true">📊</span><span class="pill-value">Anual acum. '.htmlspecialchars(minutes_to_hours_formatted($yearBalance)).'</span></span>';
           echo '</div>';
