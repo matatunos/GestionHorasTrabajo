@@ -864,10 +864,13 @@ $holidayMap = [];
         // Show the last week summary BEFORE final month summary
         if (is_array($weekStats) && $weekStart !== null) {
           $wExp = intval($weekStats['expected_minutes'] ?? 0);
+          $wExpEmpresa = intval($weekStats['expected_empresa_minutes'] ?? 0);
           $wWork = intval($weekStats['worked_minutes'] ?? 0);
           $wBal = $wWork - $wExp;
+          $wBalEmpresa = $wWork - $wExpEmpresa;
           $wDayBalSum = intval($weekStats['day_balance_sum'] ?? 0);
           $wBalClass = ($wBal > 0) ? 'balance--good' : (($wBal < 0) ? 'balance--bad' : 'balance--ok');
+          $wBalEmpresaClass = ($wBalEmpresa > 0) ? 'balance--good' : (($wBalEmpresa < 0) ? 'balance--bad' : 'balance--ok');
           $wDayBalSumClass = ($wDayBalSum > 0) ? 'balance--good' : (($wDayBalSum < 0) ? 'balance--bad' : 'balance--ok');
           
           $weekEndDate = $end;
@@ -877,9 +880,9 @@ $holidayMap = [];
           echo '<td colspan="14">';
           echo '<div class="week-summary-row">';
           echo '<span class="week-summary-title">Semana ' . htmlspecialchars($weekDisplay) . '</span>';
-          echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExp)).'</span></span>';
+          echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExpEmpresa)).'</span></span>';
           echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Efectivas '.htmlspecialchars(minutes_to_hours_formatted($wWork)).'</span></span>';
-            $wBalColor = ($wBal > 0) ? 'var(--success-color)' : (($wBal < 0) ? 'var(--danger-color)' : 'var(--text-secondary)');
+          echo '<span class="pill '.$wBalEmpresaClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBalEmpresa>0)?'↑':(($wBalEmpresa<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($wBalEmpresa)).'</span></span>';
             $wDayBalSumColor = ($wDayBalSum > 0) ? 'var(--success-color)' : (($wDayBalSum < 0) ? 'var(--danger-color)' : 'var(--text-secondary)');
             echo '<span class="pill '.$wDayBalSumClass.'" style="color:'.$wDayBalSumColor.';border-color:'.$wDayBalSumColor.';">'
               .'<span class="pill-icon" aria-hidden="true" style="color:'.$wDayBalSumColor.';">'.(($wDayBalSum>0)?'↑':(($wDayBalSum<0)?'↓':'•')).'</span>'

@@ -22,10 +22,13 @@ function generate_user_stats(PDO $pdo, int $year): array {
     $config = get_year_config($year, $userId);
 
     // Obtener festivos para el año (incluye anuales)
+    // Cargar festivos del usuario (sistema: user_id IS NULL, y propios: user_id = $userId)
+    // Excluir guardias: son días laborables con horas esperadas normales
     $holidays = [];
-    $hstmt = $pdo->prepare('SELECT date, annual FROM holidays WHERE (YEAR(date)=? OR annual=1)');
-    $hstmt->execute([$year]);
+    $hstmt = $pdo->prepare('SELECT date, annual, type FROM holidays WHERE (YEAR(date)=? OR annual=1) AND (user_id IS NULL OR user_id=?)');
+    $hstmt->execute([$year, $userId]);
     foreach ($hstmt->fetchAll() as $h) {
+      if (($h['type'] ?? 'holiday') === 'guardia') continue; // guardia = día laborable normal
       $hd = $h['date'];
       if (!empty($h['annual'])) {
         $hd = sprintf('%04d-%s', $year, substr($h['date'],5));
@@ -40,7 +43,7 @@ function generate_user_stats(PDO $pdo, int $year): array {
       $dateStr = $d->format('Y-m-d');
       $dow = intval($d->format('N')); // 6=sábado, 7=domingo
       if ($dow >= 6) continue; // Excluir fines de semana
-      if (isset($holidays[$dateStr])) continue; // Excluir festivos
+      if (isset($holidays[$dateStr])) continue; // Excluir festivos/vacaciones
       $entry = $entries[$dateStr] ?? ['date' => $dateStr];
       $calc = compute_day($entry, $config);
       $worked_display = $calc['worked_minutes_for_display'] ?? null;
