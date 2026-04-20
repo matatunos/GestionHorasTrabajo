@@ -78,8 +78,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
         exit;
       }
       
-      $stmt = $pdo->prepare('UPDATE holidays SET label = ?, type = ?, annual = ? WHERE user_id = ? AND date = ?');
-      $stmt->execute([$label, $type, $annual, $user['id'], $date]);
+      // Si el festivo es del sistema (user_id IS NULL), actualizar con IS NULL; si es propio, filtrar por user_id
+      $check = $pdo->prepare('SELECT user_id FROM holidays WHERE date = ? AND (user_id IS NULL OR user_id = ?) LIMIT 1');
+      $check->execute([$date, $user['id']]);
+      $existing = $check->fetch(PDO::FETCH_ASSOC);
+      if ($existing && $existing['user_id'] === null) {
+        // Festivo de sistema: solo admin puede editarlo
+        $stmt = $pdo->prepare('UPDATE holidays SET label = ?, type = ?, annual = ? WHERE user_id IS NULL AND date = ?');
+        $stmt->execute([$label, $type, $annual, $date]);
+      } else {
+        $stmt = $pdo->prepare('UPDATE holidays SET label = ?, type = ?, annual = ? WHERE user_id = ? AND date = ?');
+        $stmt->execute([$label, $type, $annual, $user['id'], $date]);
+      }
       
       echo json_encode(['success' => true, 'message' => 'Festivo actualizado']);
       exit;
@@ -100,9 +110,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
         exit;
       }
       
-      $stmt = $pdo->prepare('DELETE FROM holidays WHERE user_id = ? AND date = ?');
-      $stmt->execute([$user['id'], $date]);
-      
+      // Festivo sistema (user_id IS NULL) o festivo propio
+      $chk = $pdo->prepare('SELECT user_id FROM holidays WHERE date = ? AND (user_id IS NULL OR user_id = ?) LIMIT 1');
+      $chk->execute([$date, $user['id']]);
+      $ex = $chk->fetch(PDO::FETCH_ASSOC);
+      if ($ex && $ex['user_id'] === null) {
+        $stmt = $pdo->prepare('DELETE FROM holidays WHERE user_id IS NULL AND date = ?');
+        $stmt->execute([$date]);
+      } else {
+        $stmt = $pdo->prepare('DELETE FROM holidays WHERE user_id = ? AND date = ?');
+        $stmt->execute([$user['id'], $date]);
+      }
+
       echo json_encode(['success' => true, 'message' => 'Festivo eliminado']);
       exit;
     } catch (Exception $e) {
@@ -482,7 +501,7 @@ $pageStyles = '
         <h2 id="modalTitle">Agregar Ausencia</h2>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <form id="holidayForm" onsubmit="saveHoliday(event)">
+      <form id="holidayForm">
         <div class="form-group">
           <label>Selecciona fecha(s):</label>
           <div style="margin-top:0.5rem; color:#555; font-size:0.95rem;">Usa el calendario para seleccionar uno o varios días. Navega mes/año desde el calendario.</div>
