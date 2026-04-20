@@ -121,7 +121,7 @@ for ($cur = $dtStart; $cur <= $dtEnd; $cur = $cur->modify('+1 day')) {
   $mm = intval($cur->format('n'));
   
   $e = $entries[$d] ?? ['date' => $d];
-  if (isset($holidayMap[$d])) {
+  if (isset($holidayMap[$d]) && ($holidayMap[$d]['type'] ?? 'holiday') !== 'guardia') {
     $e['is_holiday'] = true;
     $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
   }
@@ -157,7 +157,7 @@ for ($mm = 1; $mm <= 12; $mm++) {
     $d = $cur->format('Y-m-d');
     
     $e = $entries[$d] ?? ['date' => $d];
-    if (isset($holidayMap[$d])) {
+    if (isset($holidayMap[$d]) && ($holidayMap[$d]['type'] ?? 'holiday') !== 'guardia') {
       $e['is_holiday'] = true;
       $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
     }
@@ -190,7 +190,7 @@ function fmt_clock(?int $minutesOfDay): string {
 $todayCalc = null;
 if ($todayInYear) {
   $eToday = $entries[$today] ?? ['date' => $today];
-  if (isset($holidayMap[$today])) {
+  if (isset($holidayMap[$today]) && ($holidayMap[$today]['type'] ?? 'holiday') !== 'guardia') {
     $eToday['is_holiday'] = true;
     $eToday['special_type'] = $holidayMap[$today]['type'] ?? 'holiday';
   }
@@ -205,7 +205,7 @@ $incompleteStreak = 0;
 for ($cur = $dtStart; $cur <= $dtEnd; $cur = $cur->modify('+1 day')) {
   $d = $cur->format('Y-m-d');
   $e = $entries[$d] ?? ['date' => $d];
-  if (isset($holidayMap[$d])) {
+  if (isset($holidayMap[$d]) && ($holidayMap[$d]['type'] ?? 'holiday') !== 'guardia') {
     $e['is_holiday'] = true;
     $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
   }
@@ -226,7 +226,7 @@ for ($cur = $dtStart; $cur <= $dtEnd; $cur = $cur->modify('+1 day')) {
 for ($cur = $dtEnd; $cur >= $dtStart; $cur = $cur->modify('-1 day')) {
   $d = $cur->format('Y-m-d');
   $e = $entries[$d] ?? ['date' => $d];
-  if (isset($holidayMap[$d])) {
+  if (isset($holidayMap[$d]) && ($holidayMap[$d]['type'] ?? 'holiday') !== 'guardia') {
     $e['is_holiday'] = true;
     $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
   }
@@ -252,7 +252,7 @@ $distCount = 0;
 for ($cur = $dtStart; $cur <= $dtEnd; $cur = $cur->modify('+1 day')) {
   $d = $cur->format('Y-m-d');
   $e = $entries[$d] ?? ['date' => $d];
-  if (isset($holidayMap[$d])) {
+  if (isset($holidayMap[$d]) && ($holidayMap[$d]['type'] ?? 'holiday') !== 'guardia') {
     $e['is_holiday'] = true;
     $e['special_type'] = $holidayMap[$d]['type'] ?? 'holiday';
   }
@@ -715,7 +715,7 @@ $recentActivity = LogAnalytics::getRecentActivity(5);
     
     if ($todayInYear && empty($entries[$today])) {
       $eToday = $entries[$today] ?? ['date' => $today];
-      if (isset($holidayMap[$today])) {
+      if (isset($holidayMap[$today]) && ($holidayMap[$today]['type'] ?? 'holiday') !== 'guardia') {
         $eToday['is_holiday'] = true;
       }
       $dayOfWeek = date('N', strtotime($today));
