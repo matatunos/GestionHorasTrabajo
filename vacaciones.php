@@ -4,7 +4,7 @@
  *
  * Vista anual de calendario para marcar y gestionar días de vacaciones.
  * Los días se guardan en la tabla holidays con type='vacation' y user_id del usuario.
- * Días disponibles por convenio Tragsatec: 22 laborables/año.
+ * Días disponibles por convenio Tragsatec: 23 laborables/año + 3 días de Libre Disposición.
  */
 
 require_once __DIR__ . '/auth.php';
@@ -40,6 +40,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SERVER['HTTP_X_REQUESTED_W
         $del = $pdo->prepare("DELETE FROM holidays WHERE user_id=? AND date=? AND type='vacation'");
         $del->execute([$user['id'], $date]);
         echo json_encode(['ok' => true, 'action' => 'removed']);
+    } elseif ($action === 'add_ld') {
+        $chk = $pdo->prepare("SELECT id FROM holidays WHERE user_id=? AND date=? AND type='LibreDisposicion'");
+        $chk->execute([$user['id'], $date]);
+        if (!$chk->fetch()) {
+            $ins = $pdo->prepare("INSERT INTO holidays (user_id, date, label, type, annual) VALUES (?,?,'Libre Disposición','LibreDisposicion',0)");
+            $ins->execute([$user['id'], $date]);
+        }
+        echo json_encode(['ok' => true, 'action' => 'added_ld']);
+    } elseif ($action === 'remove_ld') {
+        $del = $pdo->prepare("DELETE FROM holidays WHERE user_id=? AND date=? AND type='LibreDisposicion'");
+        $del->execute([$user['id'], $date]);
+        echo json_encode(['ok' => true, 'action' => 'removed_ld']);
     } else {
         http_response_code(400);
         echo json_encode(['ok' => false, 'error' => 'Acción inválida']);
@@ -50,8 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SERVER['HTTP_X_REQUESTED_W
 // --- Lógica principal ---
 $year = isset($_GET['year']) && ctype_digit($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
 
-// Días de vacaciones disponibles — Convenio Tragsatec: 22 días laborables
-$DIAS_DISPONIBLES = 22;
+// Días de vacaciones disponibles — Convenio Tragsatec: 23 días laborables
+$DIAS_DISPONIBLES = 23;
+// Días de Libre Disposición disponibles
+$LD_DISPONIBLES = 3;
 
 // Vacaciones del usuario para el año
 $stmt = $pdo->prepare("
@@ -62,6 +76,16 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$user['id'], $year]);
 $vacaciones = array_flip($stmt->fetchAll(PDO::FETCH_COLUMN));
+
+// Días de Libre Disposición del usuario para el año
+$lstmt = $pdo->prepare("
+    SELECT DATE_FORMAT(date, '%Y-%m-%d') AS d
+    FROM holidays
+    WHERE user_id = ? AND type = 'LibreDisposicion' AND YEAR(date) = ?
+    ORDER BY date
+");
+$lstmt->execute([$user['id'], $year]);
+$libre_disp = array_flip($lstmt->fetchAll(PDO::FETCH_COLUMN));
 
 // Festivos del sistema para el año
 $fstmt = $pdo->prepare("
@@ -89,6 +113,16 @@ foreach ($vacaciones as $d => $_) {
     }
 }
 $dias_restantes = $DIAS_DISPONIBLES - $dias_usados;
+
+// Contar días de Libre Disposición usados
+$ld_usados = 0;
+foreach ($libre_disp as $d => $_) {
+    $dow = (int)date('N', strtotime($d));
+    if ($dow < 6 && !isset($festivos[$d])) {
+        $ld_usados++;
+    }
+}
+$ld_restantes = $LD_DISPONIBLES - $ld_usados;
 
 // Años para el selector
 $ayrs = $pdo->prepare("SELECT DISTINCT YEAR(date) y FROM entries WHERE user_id=? ORDER BY y DESC");
