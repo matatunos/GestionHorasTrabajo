@@ -41,7 +41,13 @@ DB_USER="${DB_USER:-app_user}"
 # Credenciales SMTP de homelab-notify (mismo servidor DonDominio)
 SMTP_URL="smtps://smtp.dondominio.com:465"
 SMTP_USER="${SMTP_USER:-homelab@favala.es}"
-SMTP_PASS="${SMTP_PASS:-Satriani@69.}"
+
+# --- Validar credenciales obligatorias ---
+if [[ -z "$SMTP_PASS" ]]; then
+    echo "ERROR: SMTP_PASS no está definido en ${ENV_FILE}" >&2
+    exit 1
+fi
+SMTP_PASS="${SMTP_PASS:-}"
 EMAIL_FROM="${SMTP_USER}"
 EMAIL_TO="${GUARDIA_REPORT_EMAIL:-nacho@favala.es}"
 

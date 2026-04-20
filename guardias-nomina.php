@@ -180,9 +180,10 @@ sort($meses_mostrar);
     .gn-c-danger  { color: #fc8181; }
     .gn-muted     { color: var(--text-muted); }
     /* Tabla */
-    .gn-table-wrap { overflow: hidden; }
+    .gn-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .gn-table {
       width: 100%;
+      min-width: 640px;
       border-collapse: collapse;
       font-size: 14px;
     }
@@ -255,7 +256,7 @@ sort($meses_mostrar);
 <body>
 <?php include __DIR__ . '/header.php'; ?>
 <div class="main-content">
-  <div class="container" style="max-width: 1000px; padding: 2rem 1.5rem;">
+  <div class="container" style="padding: 2rem 1.5rem;">
 
     <!-- Cabecera de página -->
     <div class="gn-page-header">
