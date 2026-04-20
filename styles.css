@@ -414,7 +414,7 @@ body.mobile-menu-open .sidebar {
 .app-container > .sidebar .sidebar-menu { display: flex; align-items: center; width: 100%; overflow: visible; }
 .app-container > .sidebar .menu-section { margin-left: 0; display: flex; gap: 2px; align-items: center; justify-content: flex-start; flex-wrap: nowrap; }
 .app-container > .sidebar .menu-section .menu-item { padding: 0.4rem 0.6rem; font-size: 0.88rem; white-space: nowrap; }
-.app-container > .sidebar .menu-section .menu-user { padding: 0.2rem 0.4rem; }
+.app-container > .sidebar .menu-section .menu-user { padding: 0.2rem 0.4rem; margin-left: auto; }
 
 /* ===== Cards ===== */
 .card { background-color: #1a2639; border-radius: var(--radius-md); box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 1px solid #2a3f5f; margin-bottom: 1.5rem; }
