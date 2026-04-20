@@ -29,6 +29,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SERVER['HTTP_X_REQUESTED_W
     }
 
     if ($action === 'add') {
+        // --- Validaciones de convenio (solo si es día laborable no festivo) ---
+        $cfg           = get_config();
+        $max_periodos  = 6;
+        $max_verano    = 13;
+        $max_invierno  = 10;
+
+        // Cargar festivos del año
+        $yr    = substr($date, 0, 4);
+        $uid   = $user['id'];
+        $fq    = $pdo->prepare("SELECT date, annual FROM holidays
+            WHERE type IN ('holiday','FiestasLocales','FiestasConvenio','TurnoNavidad','FiestasAcordadas','FiestaAcordada')
+              AND (YEAR(date)=? OR annual=1) AND (user_id IS NULL OR user_id=?)");
+        $fq->execute([$yr, $uid]);
+        $fests = [];
+        foreach ($fq->fetchAll(PDO::FETCH_ASSOC) as $f) {
+            if ($f['annual']) $fests[$yr . substr($f['date'], 4)] = true;
+            $fests[$f['date']] = true;
+        }
+
+        $dow_new = (int)date('N', strtotime($date));
+        $es_lab  = ($dow_new < 6 && !isset($fests[$date]));
+
+        if ($es_lab) {
+            // Vacaciones actuales del usuario en ese año
+            $vq = $pdo->prepare("SELECT DATE_FORMAT(date,'%Y-%m-%d') d FROM holidays
+                WHERE user_id=? AND type='vacation' AND YEAR(date)=? ORDER BY date");
+            $vq->execute([$uid, $yr]);
+            $vac_dates = $vq->fetchAll(PDO::FETCH_COLUMN);
+
+            // ── Límite verano / invierno ──
+            if (is_summer_date($date, $cfg)) {
+                $cnt = array_sum(array_map(fn($d) => (is_summer_date($d, $cfg) && (int)date('N', strtotime($d)) < 6 && !isset($fests[$d])) ? 1 : 0, $vac_dates));
+                if ($cnt >= $max_verano) {
+                    echo json_encode(['ok' => false, 'error' => "Límite de {$max_verano} días en horario de verano alcanzado"]);
+                    exit;
+                }
+            } else {
+                $cnt = array_sum(array_map(fn($d) => (!is_summer_date($d, $cfg) && (int)date('N', strtotime($d)) < 6 && !isset($fests[$d])) ? 1 : 0, $vac_dates));
+                if ($cnt >= $max_invierno) {
+                    echo json_encode(['ok' => false, 'error' => "Límite de {$max_invierno} días en horario de invierno alcanzado"]);
+                    exit;
+                }
+            }
+
+            // ── Límite de periodos ──
+            if (!in_array($date, $vac_dates)) {
+                $sim = $vac_dates;
+                $sim[] = $date;
+                sort($sim);
+                // función inline de conteo de periodos
+                $per = 1;
+                for ($i = 1; $i < count($sim); $i++) {
+                    $prev = strtotime($sim[$i-1]);
+                    $curr = strtotime($sim[$i]);
+                    $gap_ok = true;
+                    for ($t = $prev + 86400; $t < $curr; $t += 86400) {
+                        $dd = date('Y-m-d', $t);
+                        if ((int)date('N', $t) < 6 && !isset($fests[$dd])) { $gap_ok = false; break; }
+                    }
+                    if (!$gap_ok) $per++;
+                }
+                if ($per > $max_periodos) {
+                    echo json_encode(['ok' => false, 'error' => "Máximo {$max_periodos} periodos de vacaciones alcanzado"]);
+                    exit;
+                }
+            }
+        }
+
         $chk = $pdo->prepare("SELECT id FROM holidays WHERE user_id=? AND date=? AND type='vacation'");
         $chk->execute([$user['id'], $date]);
         if (!$chk->fetch()) {
@@ -104,15 +172,61 @@ foreach ($festivos_raw as $f) {
     $festivos[$f['date']] = true;
 }
 
+// --- Configuración y límites del convenio ---
+$config         = get_config();
+$MAX_PERIODOS   = 6;   // Máximo número de periodos de vacaciones
+$MAX_VERANO     = 13;  // Máximo días de vacaciones en horario de verano
+$MAX_INVIERNO   = 10;  // Máximo días de vacaciones en horario de invierno
+
+/**
+ * Cuenta los periodos de vacaciones en un array de fechas ordenadas.
+ * Un periodo es un bloque de días donde cualquier hueco está compuesto
+ * exclusivamente de fines de semana o festivos (no interrumpen el periodo).
+ */
+function contar_periodos(array $fechas_ordenadas, array $festivos): int {
+    if (empty($fechas_ordenadas)) return 0;
+    $periodos = 1;
+    for ($i = 1, $n = count($fechas_ordenadas); $i < $n; $i++) {
+        $prev = strtotime($fechas_ordenadas[$i - 1]);
+        $curr = strtotime($fechas_ordenadas[$i]);
+        // Recorrer cada día entre las dos fechas (sin incluirlas)
+        $solo_no_laborables = true;
+        for ($t = $prev + 86400; $t < $curr; $t += 86400) {
+            $d   = date('Y-m-d', $t);
+            $dow = (int)date('N', $t);
+            if ($dow < 6 && !isset($festivos[$d])) {
+                $solo_no_laborables = false;
+                break;
+            }
+        }
+        if (!$solo_no_laborables) {
+            $periodos++;
+        }
+    }
+    return $periodos;
+}
+
 // Contar días laborables de vacaciones (excluye fines de semana y festivos)
-$dias_usados = 0;
+$dias_usados   = 0;
+$dias_verano   = 0;
+$dias_invierno = 0;
 foreach ($vacaciones as $d => $_) {
     $dow = (int)date('N', strtotime($d));
     if ($dow < 6 && !isset($festivos[$d])) {
         $dias_usados++;
+        if (is_summer_date($d, $config)) {
+            $dias_verano++;
+        } else {
+            $dias_invierno++;
+        }
     }
 }
 $dias_restantes = $DIAS_DISPONIBLES - $dias_usados;
+
+// Contar periodos actuales
+$fechas_vac_ord = array_keys($vacaciones);
+sort($fechas_vac_ord);
+$periodos_usados = contar_periodos($fechas_vac_ord, $festivos);
 
 // Contar días de Libre Disposición usados
 $ld_usados = 0;
@@ -184,6 +298,7 @@ $today = date('Y-m-d');
     .vac-festivo { background:#c0392b1a;color:#fc8181;cursor:default; }
     .vac-off     { background:var(--bg-card, #2d3748);color:var(--text-secondary, #cbd5e0); }
     .vac-on      { background:#1e4d3a;color:#9ae6b4;font-weight:700; }
+    .vac-ld      { background:#312e81;color:#c4b5fd;font-weight:700; }
     .vac-today   { border-color:var(--accent, #4a9eff) !important; }
     /* Leyenda */
     .vac-legend  { display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--text-muted,#94a3b8);margin-bottom:12px; }
@@ -204,7 +319,19 @@ $today = date('Y-m-d');
 
     <!-- Cabecera -->
     <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-      <h2 style="margin:0;">🏖️ Planificador de Vacaciones</h2>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <h2 style="margin:0;">🏖️ Planificador de Vacaciones</h2>
+        <div style="display:flex;gap:0;border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
+          <button id="btn-mode-vac" onclick="setMode('vacation')" type="button"
+            style="padding:5px 14px;font-size:.82rem;font-weight:600;border:none;cursor:pointer;background:#1e4d3a;color:#9ae6b4;">
+            🏖️ Vacaciones
+          </button>
+          <button id="btn-mode-ld" onclick="setMode('ld')" type="button"
+            style="padding:5px 14px;font-size:.82rem;font-weight:600;border:none;cursor:pointer;background:var(--bg-secondary,#1e293b);color:var(--text-muted,#94a3b8);">
+            📋 Libre Disposición
+          </button>
+        </div>
+      </div>
       <form method="get" style="display:flex;align-items:center;gap:8px;">
         <label class="form-label" style="margin:0;">Año
           <select name="year" class="form-control" style="width:90px;" onchange="this.form.submit()">
@@ -219,28 +346,87 @@ $today = date('Y-m-d');
     <div class="card-body">
 
       <!-- Contadores -->
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
-        <?php
-        $stat_items = [
-          [$DIAS_DISPONIBLES, 'var(--accent,#4a9eff)', 'Días disponibles'],
-          [$dias_usados,       '#68d391',               'Días usados'],
-          [$dias_restantes,
-           $dias_restantes < 0 ? '#fc8181' : ($dias_restantes <= 5 ? '#f6ad55' : '#e2e8f0'),
-           'Días restantes'],
-        ];
-        foreach ($stat_items as [$val, $col, $lbl]): ?>
-        <div class="card" style="flex:1;min-width:120px;text-align:center;background:var(--bg-secondary,#1e293b);">
-          <div class="card-body" style="padding:12px;">
-            <div style="font-size:1.7rem;font-weight:700;color:<?= $col ?>;"><?= $val ?></div>
-            <div style="font-size:.78rem;color:var(--text-muted,#94a3b8);"><?= $lbl ?></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;margin-bottom:16px;">
+
+        <!-- Vacaciones: Disponibles / Usados / Restantes -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;flex:3;min-width:260px;">
+          <div style="font-size:.7rem;color:var(--text-muted,#94a3b8);width:100%;margin-bottom:-4px;
+                      font-weight:600;text-transform:uppercase;letter-spacing:.5px;">🏖️ Vacaciones</div>
+          <?php
+          $stat_vac = [
+            [$DIAS_DISPONIBLES, 'var(--accent,#4a9eff)', 'Disponibles'],
+            [$dias_usados,       '#68d391',               'Usados'],
+            [$dias_restantes,
+             $dias_restantes < 0 ? '#fc8181' : ($dias_restantes <= 5 ? '#f6ad55' : '#e2e8f0'),
+             'Restantes'],
+          ];
+          foreach ($stat_vac as [$val, $col, $lbl]): ?>
+          <div class="card" style="flex:1;min-width:80px;text-align:center;
+                                   background:var(--bg-secondary,#1e293b);border:1px solid #1e4d3a;">
+            <div class="card-body" style="padding:10px;">
+              <div style="font-size:1.5rem;font-weight:700;color:<?= $col ?>;"><?= $val ?></div>
+              <div style="font-size:.75rem;color:var(--text-muted,#94a3b8);"><?= $lbl ?></div>
+            </div>
           </div>
+          <?php endforeach; ?>
         </div>
-        <?php endforeach; ?>
+
+        <!-- Distribución: Periodos / Días verano / Días invierno -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;flex:3;min-width:260px;">
+          <div style="font-size:.7rem;color:var(--text-muted,#94a3b8);width:100%;margin-bottom:-4px;
+                      font-weight:600;text-transform:uppercase;letter-spacing:.5px;">📆 Distribución</div>
+          <?php
+          $stat_dist = [
+            [$periodos_usados . '/' . $MAX_PERIODOS,
+             $periodos_usados >= $MAX_PERIODOS ? '#fc8181' : ($periodos_usados >= $MAX_PERIODOS - 1 ? '#f6ad55' : '#e2e8f0'),
+             'Periodos'],
+            [$dias_verano . '/' . $MAX_VERANO,
+             $dias_verano >= $MAX_VERANO ? '#fc8181' : ($dias_verano >= $MAX_VERANO - 2 ? '#f6ad55' : '#68d391'),
+             'Días verano'],
+            [$dias_invierno . '/' . $MAX_INVIERNO,
+             $dias_invierno >= $MAX_INVIERNO ? '#fc8181' : ($dias_invierno >= $MAX_INVIERNO - 2 ? '#f6ad55' : '#68d391'),
+             'Días invierno'],
+          ];
+          foreach ($stat_dist as [$val, $col, $lbl]): ?>
+          <div class="card" style="flex:1;min-width:80px;text-align:center;
+                                   background:var(--bg-secondary,#1e293b);border:1px solid rgba(255,255,255,0.07);">
+            <div class="card-body" style="padding:10px;">
+              <div style="font-size:1.2rem;font-weight:700;color:<?= $col ?>;"><?= $val ?></div>
+              <div style="font-size:.75rem;color:var(--text-muted,#94a3b8);"><?= $lbl ?></div>
+            </div>
+          </div>
+          <?php endforeach; ?>
+        </div>
+
+        <!-- Libre Disposición: Disponibles / Usados / Restantes -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;flex:2;min-width:200px;">
+          <div style="font-size:.7rem;color:var(--text-muted,#94a3b8);width:100%;margin-bottom:-4px;
+                      font-weight:600;text-transform:uppercase;letter-spacing:.5px;">📋 Libre Disposición</div>
+          <?php
+          $stat_ld = [
+            [$LD_DISPONIBLES, '#a78bfa', 'Disponibles'],
+            [$ld_usados,      '#c4b5fd', 'Usados'],
+            [$ld_restantes,
+             $ld_restantes < 0 ? '#fc8181' : ($ld_restantes <= 1 ? '#f6ad55' : '#e2e8f0'),
+             'Restantes'],
+          ];
+          foreach ($stat_ld as [$val, $col, $lbl]): ?>
+          <div class="card" style="flex:1;min-width:60px;text-align:center;
+                                   background:var(--bg-secondary,#1e293b);border:1px solid #312e81;">
+            <div class="card-body" style="padding:10px;">
+              <div style="font-size:1.5rem;font-weight:700;color:<?= $col ?>;"><?= $val ?></div>
+              <div style="font-size:.75rem;color:var(--text-muted,#94a3b8);"><?= $lbl ?></div>
+            </div>
+          </div>
+          <?php endforeach; ?>
+        </div>
+
       </div>
 
       <!-- Leyenda -->
       <div class="vac-legend">
         <span><span class="vac-dot" style="background:#1e4d3a;border:1px solid #68d391;"></span>Vacaciones</span>
+        <span><span class="vac-dot" style="background:#312e81;border:1px solid #a78bfa;"></span>Libre disposición</span>
         <span><span class="vac-dot" style="background:#c0392b1a;border:1px solid #fc8181;"></span>Festivo</span>
         <span><span class="vac-dot" style="background:var(--bg-card,#2d3748);"></span>Laborable</span>
         <span><span class="vac-dot" style="background:transparent;border:1px solid var(--accent,#4a9eff);"></span>Hoy</span>
@@ -270,16 +456,20 @@ $today = date('Y-m-d');
               $is_festivo = !$is_finde && isset($festivos[$ds]);
               $is_vac     = isset($vacaciones[$ds]);
               $is_today   = ($ds === $today);
+              $is_ld      = isset($libre_disp[$ds]);
               $clickable  = !$is_finde && !$is_festivo;
               $cls = 'vac-day';
               if ($is_finde)        $cls .= ' vac-finde';
               elseif ($is_festivo)  $cls .= ' vac-festivo';
               elseif ($is_vac)      $cls .= ' vac-on';
+              elseif ($is_ld)       $cls .= ' vac-ld';
               else                  $cls .= ' vac-off';
               if ($is_today) $cls .= ' vac-today';
+              // data-dtype: estado actual del día para el JS de modo
+              $dtype = $is_vac ? 'vacation' : ($is_ld ? 'ld' : 'free');
             ?>
               <div class="<?= $cls ?>"
-                <?= $clickable ? 'data-date="'.$ds.'"' : '' ?>
+                <?= $clickable ? 'data-date="'.$ds.'" data-dtype="'.$dtype.'"' : '' ?>
                 title="<?= $ds ?>">
                 <?= $d ?>
               </div>
@@ -306,6 +496,22 @@ $today = date('Y-m-d');
 "></div>
 
 <script>
+// --- Variables del convenio (generadas por PHP) ---
+var VAC_SUMMER_START  = '<?= $config['summer_start'] ?>';   // MM-DD
+var VAC_SUMMER_END    = '<?= $config['summer_end'] ?>';     // MM-DD
+var VAC_MAX_PERIODOS  = <?= $MAX_PERIODOS ?>;
+var VAC_MAX_VERANO    = <?= $MAX_VERANO ?>;
+var VAC_MAX_INVIERNO  = <?= $MAX_INVIERNO ?>;
+var VAC_DIAS_VERANO   = <?= $dias_verano ?>;
+var VAC_DIAS_INVIERNO = <?= $dias_invierno ?>;
+var VAC_PERIODOS      = <?= $periodos_usados ?>;
+// Festivos como objeto {fecha:true} para no romper periodos
+var VAC_FESTIVOS      = <?= json_encode(array_map(fn($_) => true, $festivos)) ?>;
+// Fechas de vacaciones actuales (array ordenado) para calcular periodos
+var VAC_FECHAS        = <?= json_encode(array_values(array_keys($vacaciones))) ?>;
+</script>
+
+<script>
 (function () {
   'use strict';
 
@@ -320,13 +526,123 @@ $today = date('Y-m-d');
     t._timer = setTimeout(function () { t.style.opacity = '0'; }, 2500);
   }
 
+  // --- Helpers de validación client-side ---
+
+  // Comprueba si una fecha YYYY-MM-DD cae en horario de verano
+  function isSummerDate(dateStr) {
+    var parts  = dateStr.split('-');
+    var year   = parts[0];
+    var mmdd   = parts[1] + '-' + parts[2]; // MM-DD del día a comprobar
+    return mmdd >= VAC_SUMMER_START && mmdd <= VAC_SUMMER_END;
+  }
+
+  // Cuenta los periodos de vacaciones dado un array de fechas YYYY-MM-DD ordenado
+  function countPeriods(sortedDates) {
+    if (!sortedDates.length) return 0;
+    var periods = 1;
+    for (var i = 1; i < sortedDates.length; i++) {
+      var prev = new Date(sortedDates[i-1] + 'T00:00:00');
+      var curr = new Date(sortedDates[i]   + 'T00:00:00');
+      var gapOk = true;
+      // Recorrer cada día entre prev y curr (sin incluirlos)
+      for (var t = new Date(prev.getTime() + 86400000); t < curr; t = new Date(t.getTime() + 86400000)) {
+        var d   = t.toISOString().slice(0, 10);
+        var dow = t.getDay(); // 0=Dom, 6=Sáb
+        if (dow !== 0 && dow !== 6 && !VAC_FESTIVOS[d]) {
+          gapOk = false;
+          break;
+        }
+      }
+      if (!gapOk) periods++;
+    }
+    return periods;
+  }
+
+  // Valida si se puede añadir una fecha de vacaciones; devuelve string de error o null
+  function validarAnadirVacacion(date) {
+    var dow = new Date(date + 'T00:00:00').getDay();
+    // Si es festivo o fin de semana no hay límite que comprobar (no computa)
+    if (dow === 0 || dow === 6 || VAC_FESTIVOS[date]) return null;
+
+    // ── Límite verano / invierno ──
+    if (isSummerDate(date)) {
+      if (VAC_DIAS_VERANO >= VAC_MAX_VERANO) {
+        return 'Límite de ' + VAC_MAX_VERANO + ' días en horario de verano alcanzado';
+      }
+    } else {
+      if (VAC_DIAS_INVIERNO >= VAC_MAX_INVIERNO) {
+        return 'Límite de ' + VAC_MAX_INVIERNO + ' días en horario de invierno alcanzado';
+      }
+    }
+
+    // ── Límite de periodos ──
+    if (VAC_FECHAS.indexOf(date) === -1) {
+      var sim = VAC_FECHAS.slice();
+      sim.push(date);
+      sim.sort();
+      if (countPeriods(sim) > VAC_MAX_PERIODOS) {
+        return 'Máximo ' + VAC_MAX_PERIODOS + ' periodos de vacaciones alcanzado';
+      }
+    }
+
+    return null; // sin error → se puede añadir
+  }
+
+  // --- Modo: vacaciones o libre disposición ---
+  var currentMode = 'vacation';
+
+  window.setMode = function (mode) {
+    currentMode = mode;
+    var btnVac = document.getElementById('btn-mode-vac');
+    var btnLd  = document.getElementById('btn-mode-ld');
+    if (mode === 'vacation') {
+      btnVac.style.background = '#1e4d3a'; btnVac.style.color = '#9ae6b4';
+      btnLd.style.background  = 'var(--bg-secondary,#1e293b)'; btnLd.style.color = 'var(--text-muted,#94a3b8)';
+    } else {
+      btnLd.style.background  = '#312e81'; btnLd.style.color = '#c4b5fd';
+      btnVac.style.background = 'var(--bg-secondary,#1e293b)'; btnVac.style.color = 'var(--text-muted,#94a3b8)';
+    }
+  };
+
   document.getElementById('vac-grid').addEventListener('click', function (e) {
     var el = e.target.closest('[data-date]');
     if (!el || pendingRequest) return;
 
-    var date   = el.dataset.date;
-    var adding = el.classList.contains('vac-on') ? false : true;
-    var action = adding ? 'add' : 'remove';
+    var date  = el.dataset.date;
+    var dtype = el.dataset.dtype || 'free'; // 'vacation' | 'ld' | 'free'
+    var action, addCls, rmCls, toastOk, toastRm, toastColor;
+
+    if (currentMode === 'vacation') {
+      // En modo vacaciones: no tocar días LD ya marcados
+      if (dtype === 'ld') {
+        showToast('⚠️ Día de Libre Disposición — cambia al modo 📋', '#4a5568');
+        return;
+      }
+      var adding = dtype !== 'vacation';
+      action     = adding ? 'add' : 'remove';
+      addCls     = 'vac-on'; rmCls = 'vac-off';
+      toastOk    = '✅ ' + date + ' → vacación';
+      toastRm    = '🗑️ ' + date + ' → desmarcado';
+      toastColor = '#1e4d3a';
+
+      // Pre-validación client-side (solo al añadir)
+      if (adding) {
+        var err = validarAnadirVacacion(date);
+        if (err) { showToast('⛔ ' + err, '#7f1d1d'); return; }
+      }
+    } else {
+      // En modo LD: no tocar días de vacaciones ya marcados
+      if (dtype === 'vacation') {
+        showToast('⚠️ Día de vacación — cambia al modo 🏖️', '#4a5568');
+        return;
+      }
+      var adding = dtype !== 'ld';
+      action     = adding ? 'add_ld' : 'remove_ld';
+      addCls     = 'vac-ld'; rmCls = 'vac-off';
+      toastOk    = '📋 ' + date + ' → libre disposición';
+      toastRm    = '🗑️ ' + date + ' → desmarcado';
+      toastColor = '#312e81';
+    }
 
     pendingRequest = true;
     el.style.opacity = '.4';
@@ -346,17 +662,18 @@ $today = date('Y-m-d');
       pendingRequest = false;
 
       if (data.ok) {
-        if (action === 'add') {
-          el.classList.replace('vac-off', 'vac-on');
-          showToast('✅ ' + date + ' → vacación', '#1e4d3a');
+        if (adding) {
+          el.classList.replace('vac-off', addCls);
+          el.dataset.dtype = currentMode === 'vacation' ? 'vacation' : 'ld';
+          showToast(toastOk, toastColor);
         } else {
-          el.classList.replace('vac-on', 'vac-off');
-          showToast('🗑️ ' + date + ' → desmarcado', '#4a5568');
+          el.classList.replace(addCls, rmCls);
+          el.dataset.dtype = 'free';
+          showToast(toastRm, '#4a5568');
         }
-        // Recargar contador tras 700ms
         setTimeout(function () { window.location.reload(); }, 700);
       } else {
-        showToast('⚠️ ' + (data.error || 'Error desconocido'), '#c0392b');
+        showToast('⛔ ' + (data.error || 'Error desconocido'), '#7f1d1d');
       }
     })
     .catch(function () {
