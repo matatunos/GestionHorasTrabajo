@@ -355,7 +355,7 @@ $recentActivity = LogAnalytics::getRecentActivity(5);
       padding: 0;
     }
   </style>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=<?php echo filemtime(__DIR__.'/styles.css'); ?>">
   <style>
     :root {
       --card-shadow: 0 1px 3px rgba(0,0,0,0.08);

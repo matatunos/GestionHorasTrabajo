@@ -276,7 +276,7 @@ $holidayMap = [];
   <title>Registro Horas</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
   <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=<?php echo filemtime(__DIR__.'/styles.css'); ?>">
   <link rel="stylesheet" href="css/dashboard-theme.css">
 </head>
 <body class="page-index">

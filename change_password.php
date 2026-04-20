@@ -53,7 +53,7 @@ $forceChange = needs_password_change();
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Cambiar Contraseña</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=<?php echo filemtime(__DIR__.'/styles.css'); ?>">
   <style>
     .change-password-container {
       display: flex;

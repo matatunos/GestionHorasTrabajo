@@ -117,7 +117,7 @@ $stats = generate_user_stats($pdo, $year);
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Reportes</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=<?php echo filemtime(__DIR__.'/styles.css'); ?>">
 </head>
 <body>
 <?php include __DIR__ . '/header.php'; ?>

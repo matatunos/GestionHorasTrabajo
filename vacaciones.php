@@ -108,7 +108,7 @@ $today = date('Y-m-d');
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Vacaciones <?= $year ?> — Gestión de Horas</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=<?php echo filemtime(__DIR__.'/styles.css'); ?>">
   <style>
     /* --- Grid de meses --- */
     .vac-grid {

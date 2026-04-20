@@ -137,7 +137,7 @@ if (empty($anios)) $anios = [(int)date('Y')];
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Compensación de Guardias — Gestión de Horas</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=<?php echo filemtime(__DIR__.'/styles.css'); ?>">
   <style>
     .gc-badge {
       display:inline-block;padding:2px 9px;border-radius:12px;

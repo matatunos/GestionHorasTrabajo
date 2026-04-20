@@ -259,7 +259,7 @@ if ($pdo) {
   <meta http-equiv="Expires" content="0">
   <title>Configuración — GestionHoras</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=<?php echo filemtime(__DIR__.'/styles.css'); ?>">
   <link rel="stylesheet" href="css/settings.css">
   <link rel="stylesheet" href="assets/fontawesome/css/all.min.css">
 </head>

@@ -112,7 +112,7 @@ sort($meses_mostrar);
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>🛡️ Guardias vs. Nómina</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=<?php echo filemtime(__DIR__.'/styles.css'); ?>">
   <style>
     /* --- Estilos específicos de guardias-nomina.php --- */
 
