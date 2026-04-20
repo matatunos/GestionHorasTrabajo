@@ -562,10 +562,16 @@ $holidayMap = [];
             'guardias' => 0,
           ];
           
-          // Reset week stats when month changes to avoid carrying over incomplete weeks
-          $weekStats = null;
-          $currentWeek = null;
-          $weekStart = null;
+          // Al cambiar de mes en mitad de semana, reiniciar el seguimiento desde el día actual
+          // (no resetear a null: el día actual quedaría sin acumular y la semana mostraría ceros)
+          $currentWeek = $week;
+          $weekStart = $cur;
+          $weekStats = [
+            'expected_minutes' => 0,
+            'expected_empresa_minutes' => 0,
+            'worked_minutes' => 0,
+            'day_balance_sum' => 0,
+          ];
           
           echo "<tbody class=\"month-group\" data-month=\"".$monthKey."\">";
           echo "<tr class=\"month\"><td class=\"month-header\" data-month=\"".$monthKey."\" colspan=14><button class=\"month-toggle\" data-month=\"".$monthKey."\">−</button> ".htmlspecialchars($month)."</td></tr>";
