@@ -127,7 +127,7 @@ for ($cur = $dtStart; $cur <= $dtEnd; $cur = $cur->modify('+1 day')) {
   }
   
   $calc = compute_day($e, $config);
-  $w = intval($calc['worked_minutes'] ?? 0);
+  $w = intval($calc['worked_minutes_for_display'] ?? 0);
   $exp = intval($calc['expected_empresa_minutes'] ?? 0);
   
   if (isset($months[$mm])) {
@@ -163,7 +163,7 @@ for ($mm = 1; $mm <= 12; $mm++) {
     }
     
     $calc = compute_day($e, $config);
-    $w = intval($calc['worked_minutes'] ?? 0);
+    $w = intval($calc['worked_minutes_for_display'] ?? 0);
     $exp = intval($calc['expected_empresa_minutes'] ?? 0);
     
     $months[$mm]['worked'] += $w;
