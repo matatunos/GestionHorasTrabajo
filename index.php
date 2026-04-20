@@ -452,6 +452,7 @@ $holidayMap = [];
             echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExpEmpresa)).'</span></span>';
             echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Efectivas '.htmlspecialchars(minutes_to_hours_formatted($wWork)).'</span></span>';
             echo '<span class="pill '.$wBalEmpresaClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBalEmpresa>0)?'↑':(($wBalEmpresa<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($wBalEmpresa)).'</span></span>';
+            echo '<span class="pill '.$wBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBal>0)?'↑':(($wBal<0)?'↓':'•')).'</span><span class="pill-value">Exceso sem. '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span></span>';
             echo '<span class="pill balance--info"><span class="pill-icon" aria-hidden="true">📊</span><span class="pill-value">Anual acum. '.htmlspecialchars(minutes_to_hours_formatted($yearBalance)).'</span></span>';
             echo '</div>';
             echo '</td>';
@@ -493,6 +494,7 @@ $holidayMap = [];
               echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">⏱</span><span class="pill-value">Teóricas '.htmlspecialchars(minutes_to_hours_formatted($wExpEmpresa)).'</span></span>';
               echo '<span class="pill balance--ok"><span class="pill-icon" aria-hidden="true">✓</span><span class="pill-value">Efectivas '.htmlspecialchars(minutes_to_hours_formatted($wWork)).'</span></span>';
               echo '<span class="pill '.$wBalEmpresaClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBalEmpresa>0)?'↑':(($wBalEmpresa<0)?'↓':'•')).'</span><span class="pill-value">Balance '.htmlspecialchars(minutes_to_hours_formatted($wBalEmpresa)).'</span></span>';
+              echo '<span class="pill '.$wBalClass.'"><span class="pill-icon" aria-hidden="true">'.(($wBal>0)?'↑':(($wBal<0)?'↓':'•')).'</span><span class="pill-value">Exceso sem. '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span></span>';
               echo '<span class="pill balance--info"><span class="pill-icon" aria-hidden="true">📊</span><span class="pill-value">Anual acum. '.htmlspecialchars(minutes_to_hours_formatted($yearBalance)).'</span></span>';
               echo '</div>';
               echo '</td>';
@@ -864,7 +866,7 @@ $holidayMap = [];
             $wBalColor = ($wBal > 0) ? 'var(--success-color)' : (($wBal < 0) ? 'var(--danger-color)' : 'var(--text-secondary)');
             echo '<span class="pill '.$wBalClass.'" style="color:'.$wBalColor.';border-color:'.$wBalColor.';">'
               .'<span class="pill-icon" aria-hidden="true" style="color:'.$wBalColor.';">'.(($wBal>0)?'↑':(($wBal<0)?'↓':'•')).'</span>'
-              .'<span class="pill-value" style="color:'.$wBalColor.';">Balance semanal '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span>'
+              .'<span class="pill-value" style="color:'.$wBalColor.';">Exceso sem. '.htmlspecialchars(minutes_to_hours_formatted($wBal)).'</span>'
               .'</span>';
           echo '<span class="pill balance--info"><span class="pill-icon" aria-hidden="true">📊</span><span class="pill-value">Anual acum. '.htmlspecialchars(minutes_to_hours_formatted($yearBalance)).'</span></span>';
           echo '</div>';
@@ -1264,7 +1266,12 @@ window.updateFloatingArrows = updateFloatingArrows;
         if (newTable && cur) {
           cur.innerHTML = newTable.innerHTML;
           if (window.updateFloatingArrows) setTimeout(window.updateFloatingArrows, 100);
-          if (window.scrollTableToToday) setTimeout(window.scrollTableToToday, 100);
+          // Scroll a hoy: usar scrollIntoView directamente sobre tr.today-row
+          // (scrollTableToToday falla porque captura el container antiguo via closure)
+          setTimeout(function() {
+            const todayRow = document.querySelector('tr.today-row, tr.highlight-today');
+            if (todayRow) todayRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 150);
         }
       }).catch(err=>{ console.error('fetchTable error', err); });
   }
