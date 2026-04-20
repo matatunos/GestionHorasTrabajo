@@ -92,8 +92,17 @@ $nominas_disponibles = !empty($nomina_por_mes) || $resp !== false;
 $meses_es = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
              'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-// --- Meses a mostrar: unión de meses con guardias y con cobro en nómina ---
-$meses_mostrar = array_unique(array_merge(array_keys($por_mes), array_keys($nomina_por_mes)));
+// --- Meses a mostrar: guardias se pagan a mes vencido (mes M → cobro en nómina M+1) ---
+// Vista por mes de guardia. También incluimos meses sin guardia si hay cobro
+// en el mes siguiente sin guardias registradas el mes anterior (= "sin registro").
+$meses_mostrar = array_keys($por_mes);
+foreach (array_keys($nomina_por_mes) as $mes_cobro) {
+    $mes_guardia = $mes_cobro - 1;
+    if ($mes_guardia >= 1 && !isset($por_mes[$mes_guardia])) {
+        $meses_mostrar[] = $mes_guardia; // cobro en nómina sin guardias el mes anterior
+    }
+}
+$meses_mostrar = array_unique($meses_mostrar);
 sort($meses_mostrar);
 ?>
 <!DOCTYPE html>
@@ -278,10 +287,21 @@ sort($meses_mostrar);
         $total_festivos = array_sum(array_column($por_mes, 'festivos'));
         $total_finde    = array_sum(array_column($por_mes, 'finde'));
         $total_lab      = array_sum(array_column($por_mes, 'laborables'));
-        $total_cobrado  = array_sum(array_column($nomina_por_mes, 'total_guardia'));
+        // Total cobrado y meses sin pago con offset +1 (pago mes vencido)
+        $total_cobrado  = 0;
         $meses_sin_pago = 0;
+        $mes_actual     = (int)date('n');
         foreach ($por_mes as $m => $gd) {
-            if ($gd['total'] > 0 && empty($nomina_por_mes[$m])) $meses_sin_pago++;
+            $mes_pago_sum = ($m < 12) ? $m + 1 : null; // diciembre → enero año siguiente
+            $cobro_sum = ($mes_pago_sum && isset($nomina_por_mes[$mes_pago_sum]))
+                         ? (float)$nomina_por_mes[$mes_pago_sum]['total_guardia'] : null;
+            $total_cobrado += $cobro_sum ?? 0;
+            // "Sin pago" solo si el mes de cobro ya debería haber pasado
+            $pago_deberia_haber_llegado = $mes_pago_sum !== null
+                && ($year < (int)date('Y') || $mes_pago_sum <= $mes_actual);
+            if ($gd['total'] > 0 && $pago_deberia_haber_llegado && ($cobro_sum === null || $cobro_sum == 0)) {
+                $meses_sin_pago++;
+            }
         }
       ?>
 
@@ -328,7 +348,7 @@ sort($meses_mostrar);
               <th class="tc" style="color: #f6ad55;">Finde</th>
               <th class="tc" style="color: #63b3ed;">Laborables</th>
               <?php if ($nominas_disponibles): ?>
-              <th class="tr" style="color: #68d391;">Cobrado</th>
+              <th class="tr" style="color: #68d391;">Cobrado<br><small style="font-weight:400;font-size:10px;opacity:.7;">nómina siguiente</small></th>
               <th class="tc" style="color: var(--text-muted);">€/día</th>
               <th class="tc" style="color: var(--text-muted);">Estado</th>
               <?php endif; ?>
@@ -337,19 +357,33 @@ sort($meses_mostrar);
           <tbody>
             <?php foreach ($meses_mostrar as $m):
               $gd = $por_mes[$m] ?? ['total' => 0, 'festivos' => 0, 'finde' => 0, 'laborables' => 0, 'dias' => []];
-              $nm = $nomina_por_mes[$m] ?? null;
+              // Offset +1: guardias de mes M → cobro en nómina de mes M+1
+              $mes_pago = $m + 1;
+              if ($mes_pago <= 12) {
+                  $nm = $nomina_por_mes[$mes_pago] ?? null;
+                  $mes_pago_label = $meses_es[$mes_pago];
+              } else {
+                  $nm = null; // diciembre: cobro en enero del año siguiente, no disponible
+                  $mes_pago_label = 'Ene ' . ($year + 1);
+              }
               $cobrado = $nm ? (float)$nm['total_guardia'] : null;
               $por_dia = ($gd['total'] > 0 && $cobrado !== null && $cobrado > 0)
                          ? $cobrado / $gd['total'] : null;
 
+              // "Sin pago" solo si el mes de cobro ya debería haber llegado
+              $pago_deberia_haber_llegado = ($mes_pago <= 12)
+                  && ($year < (int)date('Y') || $mes_pago <= (int)date('n'));
+
               if (!$nominas_disponibles) {
                   $estado_html = '';
-              } elseif ($gd['total'] > 0 && ($cobrado === null || $cobrado == 0)) {
+              } elseif ($gd['total'] > 0 && $pago_deberia_haber_llegado && ($cobrado === null || $cobrado == 0)) {
                   $estado_html = '<span class="gn-badge gn-badge-nopago">⚠ Sin pago</span>';
               } elseif ($gd['total'] == 0 && $cobrado !== null && $cobrado > 0) {
                   $estado_html = '<span class="gn-badge gn-badge-noreg">⚠ Sin registro</span>';
               } elseif ($gd['total'] > 0 && $cobrado !== null && $cobrado > 0) {
                   $estado_html = '<span class="gn-badge gn-badge-ok">✓ OK</span>';
+              } elseif ($gd['total'] > 0 && !$pago_deberia_haber_llegado) {
+                  $estado_html = '<span class="gn-badge" style="background:#1a2847;color:var(--text-muted);">⏳ Pendiente</span>';
               } else {
                   $estado_html = '<span class="gn-muted">—</span>';
               }
@@ -381,7 +415,14 @@ sort($meses_mostrar);
               </td>
               <?php if ($nominas_disponibles): ?>
               <td class="tr gn-c-cobrado" style="font-weight: 600;">
-                <?= $cobrado !== null ? number_format($cobrado, 2) . ' €' : '<span class="gn-muted">—</span>' ?>
+                <?php if ($cobrado !== null): ?>
+                  <?= number_format($cobrado, 2) ?> €
+                  <div style="font-size: 11px; color: var(--text-muted); font-weight: 400;"><?= $mes_pago_label ?></div>
+                <?php elseif (!$pago_deberia_haber_llegado): ?>
+                  <span class="gn-muted" style="font-size: 12px;"><?= $mes_pago_label ?></span>
+                <?php else: ?>
+                  <span class="gn-muted">—</span>
+                <?php endif; ?>
               </td>
               <td class="tc gn-muted" style="font-size: 13px;">
                 <?= $por_dia !== null ? number_format($por_dia, 2) . ' €' : '<span class="gn-muted">—</span>' ?>
