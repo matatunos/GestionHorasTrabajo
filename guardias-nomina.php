@@ -266,10 +266,9 @@ sort($meses_mostrar);
     }
   </style>
 </head>
-<body>
+<body class="page-guardias-nomina">
 <?php include __DIR__ . '/header.php'; ?>
-<div class="main-content">
-  <div class="container" style="padding: 2rem 1.5rem;">
+<div class="container" style="padding: 2rem 1.5rem;">
 
     <!-- Cabecera de página -->
     <div class="gn-page-header">
@@ -486,7 +485,6 @@ sort($meses_mostrar);
 
     <?php endif; ?>
   </div>
-</div>
 
 <script>
 function toggleDetalle(id) {

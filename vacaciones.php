@@ -165,7 +165,7 @@ $today = date('Y-m-d');
 <body class="page-vacaciones">
 <?php include __DIR__ . '/header.php'; ?>
 
-<div class="container" style="max-width:1200px;">
+<div class="container">
   <div class="card">
 
     <!-- Cabecera -->
