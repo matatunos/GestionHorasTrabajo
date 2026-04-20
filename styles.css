@@ -409,11 +409,12 @@ body.mobile-menu-open .sidebar {
 .user-dropdown.show { display: block; }
 
 /* Sidebar vertical styling */
-.app-container > .sidebar { display: flex; align-items: center; padding: 0 1rem; box-shadow: none; }
+.app-container > .sidebar { display: flex; align-items: center; padding: 0 0.5rem; box-shadow: none; }
+.app-container > .sidebar .sidebar-header { display: none; } /* ocultar brand en topbar desktop */
 .app-container > .sidebar .sidebar-menu { display: flex; align-items: center; width: 100%; overflow: visible; }
-.app-container > .sidebar .menu-section { margin-left: auto; display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
-.app-container > .sidebar .menu-section .menu-item { padding: 0.45rem 0.85rem; }
-.app-container > .sidebar .menu-section .menu-user { padding: 0.2rem 0.5rem; }
+.app-container > .sidebar .menu-section { margin-left: 0; display: flex; gap: 2px; align-items: center; justify-content: flex-start; flex-wrap: nowrap; }
+.app-container > .sidebar .menu-section .menu-item { padding: 0.4rem 0.6rem; font-size: 0.88rem; white-space: nowrap; }
+.app-container > .sidebar .menu-section .menu-user { padding: 0.2rem 0.4rem; }
 
 /* ===== Cards ===== */
 .card { background-color: #1a2639; border-radius: var(--radius-md); box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 1px solid #2a3f5f; margin-bottom: 1.5rem; }
