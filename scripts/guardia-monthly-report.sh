@@ -139,43 +139,6 @@ NUM_FESTIVOS=$(echo "$GUARDIAS_TSV" | awk -F'\t' '$3=="festivo"' | wc -l)
 NUM_FINDE=$(echo "$GUARDIAS_TSV"    | awk -F'\t' '$3=="finde"'   | wc -l)
 NUM_LABORABLES=$(echo "$GUARDIAS_TSV" | awk -F'\t' '$3=="laborable"' | wc -l)
 
-# --- Construir filas HTML de la tabla detallada ---
-TABLE_ROWS=""
-while IFS=$'\t' read -r fecha dia_sem tipo label_fes; do
-    # Número de día del mes
-    dia_num=$(date -d "$fecha" +%-d 2>/dev/null || echo "${fecha##*-}")
-
-    case "$tipo" in
-        festivo)
-            badge='<span style="background:#e53e3e;color:#fff;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600">Festivo</span>'
-            nota="${label_fes}"
-            ;;
-        finde)
-            badge='<span style="background:#d69e2e;color:#fff;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600">Fin de semana</span>'
-            nota=""
-            ;;
-        laborable)
-            badge='<span style="background:#2b6cb0;color:#fff;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600">Laborable</span>'
-            nota=""
-            ;;
-        *)
-            badge="<span>${tipo}</span>"
-            nota=""
-            ;;
-    esac
-
-    # Capitalizar nombre del día
-    dia_sem_cap="$(tr '[:lower:]' '[:upper:]' <<< "${dia_sem:0:1}")${dia_sem:1}"
-
-    TABLE_ROWS+="
-        <tr>
-          <td style='padding:9px 14px;border-bottom:1px solid #edf2f7'>${dia_sem_cap} ${dia_num}</td>
-          <td style='padding:9px 14px;border-bottom:1px solid #edf2f7;color:#718096;font-size:13px'>${fecha}</td>
-          <td style='padding:9px 14px;border-bottom:1px solid #edf2f7'>${badge}</td>
-          <td style='padding:9px 14px;border-bottom:1px solid #edf2f7;color:#a0aec0;font-size:13px'>${nota}</td>
-        </tr>"
-done <<< "$GUARDIAS_TSV"
-
 # --- HTML del email ---
 cat > /tmp/guardia-report-$$.html << HTMLEOF
 <!DOCTYPE html>
@@ -208,32 +171,6 @@ cat > /tmp/guardia-report-$$.html << HTMLEOF
       <div style="font-size:32px;font-weight:700;color:#2b6cb0">${NUM_LABORABLES}</div>
       <div style="font-size:12px;color:#718096;margin-top:4px;text-transform:uppercase;letter-spacing:.5px">Laborables</div>
     </div>
-  </div>
-
-  <!-- Tabla detallada -->
-  <div style="padding:24px 32px">
-    <h2 style="font-size:14px;font-weight:600;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;margin:0 0 16px">Detalle por día</h2>
-    <table style="width:100%;border-collapse:collapse;font-size:14px">
-      <thead>
-        <tr style="background:#f7fafc">
-          <th style="padding:8px 14px;text-align:left;font-size:11px;color:#a0aec0;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e2e8f0;font-weight:600">Día</th>
-          <th style="padding:8px 14px;text-align:left;font-size:11px;color:#a0aec0;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e2e8f0;font-weight:600">Fecha</th>
-          <th style="padding:8px 14px;text-align:left;font-size:11px;color:#a0aec0;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e2e8f0;font-weight:600">Tipo</th>
-          <th style="padding:8px 14px;text-align:left;font-size:11px;color:#a0aec0;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e2e8f0;font-weight:600">Nota</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${TABLE_ROWS}
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Pie -->
-  <div style="background:#f7fafc;padding:16px 32px;border-top:1px solid #e2e8f0">
-    <p style="margin:0;font-size:12px;color:#a0aec0">
-      Generado automáticamente por GestionHorasTrabajo &middot; $(date '+%d/%m/%Y %H:%M') &middot;
-      <a href="http://192.168.1.17" style="color:#4a90d9;text-decoration:none">Ver app</a>
-    </p>
   </div>
 
 </div>
