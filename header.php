@@ -24,6 +24,7 @@ $site_name = $site_cfg['site_name'] ?? 'GestionHoras';
 					<a class="menu-item" href="/dashboard.php">🏠 Dashboard</a>
 					<a class="menu-item" href="/index.php">🕒 Registro horario</a>
 					<a class="menu-item" href="/holidays.php">📅 Festivos y Ausencias</a>
+					<a class="menu-item" href="/guardias-nomina.php">🛡️ Guardias vs. Nómina</a>
 					<?php
 					require_once __DIR__ . '/plugins/plugin_loader.php';
 					$plugins = get_plugins_list(__DIR__ . '/plugins');
