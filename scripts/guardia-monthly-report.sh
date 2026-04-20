@@ -151,6 +151,7 @@ cat > /tmp/guardia-report-$$.html << HTMLEOF
   <div style="background:linear-gradient(135deg,#2d3748,#1a202c);padding:28px 32px">
     <div style="font-size:12px;color:#a0aec0;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Informe de guardias</div>
     <h1 style="color:#fff;margin:0;font-size:24px;font-weight:700">${MONTH_NAME}</h1>
+    <div style="font-size:13px;color:#cbd5e0;margin-top:8px">${DATE_START} &mdash; ${DATE_END}</div>
   </div>
 
   <!-- Tarjetas resumen -->
