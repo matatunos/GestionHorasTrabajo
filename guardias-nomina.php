@@ -251,6 +251,19 @@ sort($meses_mostrar);
       font-size: 13px;
       color: var(--text-muted);
     }
+  
+    /* --- Impresión / PDF --- */
+    @media print {
+      .app-container .sidebar,
+      header.header,
+      .mobile-menu-toggle,
+      .gn-year-form,
+      .gn-noprint { display:none !important; }
+      .main-content { margin-left:0 !important; }
+      .gn-table { font-size:.8rem; }
+      body { background:#fff !important; color:#000 !important; }
+      .gn-stat-card { border:1px solid #ccc !important; }
+    }
   </style>
 </head>
 <body>
@@ -272,7 +285,7 @@ sort($meses_mostrar);
             <option value="<?= $y ?>" <?= $y === $year ? 'selected' : '' ?>><?= $y ?></option>
           <?php endforeach; ?>
         </select>
-      </form>
+      </form> <button class="btn btn-primary gn-noprint" onclick="window.print()" style="white-space:nowrap;">🖨️&nbsp;PDF</button>
     </div>
 
     <?php if (empty($meses_mostrar)): ?>

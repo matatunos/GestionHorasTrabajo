@@ -1,0 +1,19 @@
+{
+  "name": "Gestión de Horas",
+  "short_name": "GHoras",
+  "description": "Control de fichajes, guardias y vacaciones",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1a202c",
+  "theme_color": "#4a9eff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "images/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

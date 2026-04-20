@@ -275,6 +275,7 @@ $holidayMap = [];
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Registro Horas</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+  <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="css/dashboard-theme.css">
 </head>
@@ -1646,6 +1647,121 @@ window.updateFloatingArrows = updateFloatingArrows;
   });
 
 })();
+</script>
+
+
+<!-- =======================================================
+     TAP-TO-FICHAR — Botón flotante PWA
+     Llama a /api.php/entries/checkin o /checkout según estado
+     ======================================================= -->
+<div id="fab-container" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:none;">
+  <div id="fab-toast" style="
+    position:absolute;bottom:72px;right:0;
+    background:#2d3748;color:#fff;border-radius:8px;
+    padding:8px 14px;font-size:.85rem;white-space:nowrap;
+    opacity:0;transition:opacity .3s;pointer-events:none;min-width:180px;text-align:center;
+  "></div>
+  <button id="fab-btn" class="btn" style="
+    width:60px;height:60px;border-radius:50%;font-size:1.5rem;
+    box-shadow:0 4px 18px rgba(0,0,0,.5);display:flex;
+    align-items:center;justify-content:center;padding:0;
+    background:var(--accent,#4a9eff);border-color:var(--accent,#4a9eff);
+    transition:background .2s,border-color .2s;
+  " title="Fichar entrada">
+    <span id="fab-icon">&#9654;</span>
+  </button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var container = document.getElementById('fab-container');
+  var btn       = document.getElementById('fab-btn');
+  var icon      = document.getElementById('fab-icon');
+  var toast     = document.getElementById('fab-toast');
+  var active    = false;
+
+  function showToast(msg, bg) {
+    toast.textContent = msg;
+    toast.style.background = bg || '#2d3748';
+    toast.style.opacity = '1';
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { toast.style.opacity = '0'; }, 3000);
+  }
+
+  function setActive(isActive) {
+    active = isActive;
+    if (isActive) {
+      btn.style.background    = '#e53e3e';
+      btn.style.borderColor   = '#e53e3e';
+      icon.innerHTML          = '&#9646;&#9646;';
+      btn.title               = 'Fichar salida';
+    } else {
+      btn.style.background    = 'var(--accent,#4a9eff)';
+      btn.style.borderColor   = 'var(--accent,#4a9eff)';
+      icon.innerHTML          = '&#9654;';
+      btn.title               = 'Fichar entrada';
+    }
+  }
+
+  function fetchStatus() {
+    fetch('/api.php/entries/today', {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin'
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var todayStr = new Date().toISOString().slice(0, 10);
+      var entries  = (data.data || []).filter(function (e) { return e.date === todayStr; });
+      var hasOpen  = entries.some(function (e) { return e.start && !e.end; });
+      setActive(hasOpen);
+      container.style.display = 'block';
+    })
+    .catch(function () {
+      setActive(false);
+      container.style.display = 'block';
+    });
+  }
+
+  btn.addEventListener('click', function () {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    var endpoint = active ? '/api.php/entries/checkout' : '/api.php/entries/checkin';
+
+    fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json'
+      },
+      credentials: 'same-origin',
+      body: '{}'
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.ok) {
+        setActive(!active);
+        showToast(data.message || (active ? 'Salida registrada' : 'Entrada registrada'),
+                  active ? '#e53e3e33' : '#27674933');
+        setTimeout(function () { window.location.reload(); }, 1800);
+      } else {
+        showToast(data.message || 'Error al fichar', '#c0392b');
+        btn.disabled = false;
+      }
+    })
+    .catch(function () {
+      showToast('Error de red', '#c0392b');
+      btn.disabled = false;
+    });
+  });
+
+  // Registrar service worker para PWA offline
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(function () {});
+  }
+
+  fetchStatus();
+}());
 </script>
 
 <?php include __DIR__ . '/footer.php'; ?>
