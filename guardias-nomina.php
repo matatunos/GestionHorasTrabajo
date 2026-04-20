@@ -152,9 +152,6 @@ sort($meses_mostrar);
       margin-bottom: 1.5rem;
     }
     .gn-stat-card {
-      background: rgba(21, 30, 46, 0.9);
-      border: 1px solid #2a3f5f;
-      border-radius: var(--radius-md, 8px);
       padding: 1rem 1.25rem;
       text-align: center;
     }
@@ -226,7 +223,7 @@ sort($meses_mostrar);
       font-size: 13px;
       font-weight: 500;
     }
-    .gn-chip-festivo { background: #742a2a; color: #fc8181; }
+    .gn-chip-festivo { background: rgba(116, 42, 42, 0.45); color: #fc8181; }
     .gn-chip-finde   { background: #744210; color: #f6ad55; }
     .gn-chip-labor   { background: #1c3a5f; color: #63b3ed; }
     /* Badges de estado */
@@ -238,7 +235,7 @@ sort($meses_mostrar);
       font-weight: 600;
       white-space: nowrap;
     }
-    .gn-badge-ok     { background: #1c4532; color: #68d391; }
+    .gn-badge-ok     { background: #1e4d3a; color: #9ae6b4; }
     .gn-badge-nopago { background: #742a2a; color: #fc8181; }
     .gn-badge-noreg  { background: #744210; color: #f6ad55; }
     /* Aviso CT172 no disponible */
@@ -320,29 +317,29 @@ sort($meses_mostrar);
 
       <!-- Resumen anual -->
       <div class="gn-stat-grid">
-        <div class="gn-stat-card">
+        <div class="gn-stat-card card">
           <div class="gn-stat-value"><?= $total_anual ?></div>
           <div class="gn-stat-label">Total guardias</div>
         </div>
-        <div class="gn-stat-card">
+        <div class="gn-stat-card card">
           <div class="gn-stat-value gn-c-festivo"><?= $total_festivos ?></div>
           <div class="gn-stat-label">Festivos</div>
         </div>
-        <div class="gn-stat-card">
+        <div class="gn-stat-card card">
           <div class="gn-stat-value gn-c-finde"><?= $total_finde ?></div>
           <div class="gn-stat-label">Fin de semana</div>
         </div>
-        <div class="gn-stat-card">
+        <div class="gn-stat-card card">
           <div class="gn-stat-value gn-c-labor"><?= $total_lab ?></div>
           <div class="gn-stat-label">Laborables</div>
         </div>
         <?php if ($nominas_disponibles): ?>
-        <div class="gn-stat-card">
+        <div class="gn-stat-card card">
           <div class="gn-stat-value sm gn-c-cobrado"><?= number_format($total_cobrado, 2) ?> €</div>
           <div class="gn-stat-label">Cobrado año</div>
         </div>
         <?php if ($meses_sin_pago > 0): ?>
-        <div class="gn-stat-card gn-card-danger">
+        <div class="gn-stat-card gn-card-danger card">
           <div class="gn-stat-value gn-c-danger"><?= $meses_sin_pago ?></div>
           <div class="gn-stat-label" style="color: #fc8181;">⚠ Meses sin pago</div>
         </div>
@@ -396,7 +393,7 @@ sort($meses_mostrar);
               } elseif ($gd['total'] > 0 && $cobrado !== null && $cobrado > 0) {
                   $estado_html = '<span class="gn-badge gn-badge-ok">✓ OK</span>';
               } elseif ($gd['total'] > 0 && !$pago_deberia_haber_llegado) {
-                  $estado_html = '<span class="gn-badge" style="background:#1a2847;color:var(--text-muted);">⏳ Pendiente</span>';
+                  $estado_html = '<span class="gn-badge" style="background:rgba(21,30,46,0.6);color:var(--text-muted);border:1px solid #2a3f5f;">⏳ Pendiente</span>';
               } else {
                   $estado_html = '<span class="gn-muted">—</span>';
               }
