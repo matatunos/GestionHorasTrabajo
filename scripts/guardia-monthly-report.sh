@@ -139,6 +139,39 @@ NUM_FESTIVOS=$(echo "$GUARDIAS_TSV" | awk -F'\t' '$3=="festivo"' | wc -l)
 NUM_FINDE=$(echo "$GUARDIAS_TSV"    | awk -F'\t' '$3=="finde"'   | wc -l)
 NUM_LABORABLES=$(echo "$GUARDIAS_TSV" | awk -F'\t' '$3=="laborable"' | wc -l)
 
+# --- Calcular periodos de guardia (días consecutivos agrupados) ---
+PERIODOS=""
+prev_date=""
+period_start=""
+period_end=""
+while IFS=$'\t' read -r fecha rest; do
+    if [[ -z "$period_start" ]]; then
+        period_start="$fecha"
+        period_end="$fecha"
+    else
+        expected=$(date -d "$prev_date +1 day" +%Y-%m-%d 2>/dev/null)
+        if [[ "$fecha" == "$expected" ]]; then
+            period_end="$fecha"
+        else
+            # cerrar periodo anterior
+            s=$(date -d "$period_start" +%d/%m/%Y)
+            e=$(date -d "$period_end" +%d/%m/%Y)
+            [[ "$period_start" == "$period_end" ]] && seg="$s" || seg="$s — $e"
+            PERIODOS="${PERIODOS:+${PERIODOS} · }${seg}"
+            period_start="$fecha"
+            period_end="$fecha"
+        fi
+    fi
+    prev_date="$fecha"
+done <<< "$GUARDIAS_TSV"
+# cerrar último periodo
+if [[ -n "$period_start" ]]; then
+    s=$(date -d "$period_start" +%d/%m/%Y)
+    e=$(date -d "$period_end" +%d/%m/%Y)
+    [[ "$period_start" == "$period_end" ]] && seg="$s" || seg="$s — $e"
+    PERIODOS="${PERIODOS:+${PERIODOS} · }${seg}"
+fi
+
 # --- HTML del email ---
 cat > /tmp/guardia-report-$$.html << HTMLEOF
 <!DOCTYPE html>
@@ -151,7 +184,7 @@ cat > /tmp/guardia-report-$$.html << HTMLEOF
   <div style="background:linear-gradient(135deg,#2d3748,#1a202c);padding:28px 32px">
     <div style="font-size:12px;color:#a0aec0;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Informe de guardias</div>
     <h1 style="color:#fff;margin:0;font-size:24px;font-weight:700">${MONTH_NAME}</h1>
-    <div style="font-size:13px;color:#cbd5e0;margin-top:8px">${DATE_START} &mdash; ${DATE_END}</div>
+    <div style="font-size:13px;color:#cbd5e0;margin-top:8px">${PERIODOS}</div>
   </div>
 
   <!-- Tarjetas resumen -->
