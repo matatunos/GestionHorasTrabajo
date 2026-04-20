@@ -241,7 +241,8 @@ sort($meses_mostrar);
     }
     .gn-badge-ok     { background: #1e4d3a; color: #9ae6b4; }
     .gn-badge-nopago { background: #742a2a; color: #fc8181; }
-    .gn-badge-noreg  { background: #744210; color: #f6ad55; }
+    .gn-badge-noreg    { background: #744210; color: #f6ad55; }
+    .gn-badge-pending  { background: #1a3050; color: #90cdf4; }
     /* Aviso CT172 no disponible */
     .gn-notice {
       margin-top: 1rem;
@@ -397,7 +398,7 @@ sort($meses_mostrar);
               } elseif ($gd['total'] > 0 && $cobrado !== null && $cobrado > 0) {
                   $estado_html = '<span class="gn-badge gn-badge-ok">✓ OK</span>';
               } elseif ($gd['total'] > 0 && !$pago_deberia_haber_llegado) {
-                  $estado_html = '<span class="gn-badge" style="background:rgba(255,255,255,0.07);color:#b8d3ff;border:1px solid #2a3f5f;">⏳ Pendiente</span>';
+                  $estado_html = '<span class="gn-badge gn-badge-pending">⏳ Pendiente</span>';
               } else {
                   $estado_html = '<span class="gn-muted">—</span>';
               }
