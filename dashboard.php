@@ -307,7 +307,7 @@ $sum_week_balance = function(DateTimeImmutable $start) use ($getMapsForDate){
     $d = $start->modify("+$i days")->format('Y-m-d');
     [$entriesY, $holidayMapY, $cfgY] = $getMapsForDate($d);
     $e = $entriesY[$d] ?? ['date' => $d];
-    if (isset($holidayMapY[$d])) { $e['is_holiday'] = true; $e['special_type'] = $holidayMapY[$d]['type'] ?? 'holiday'; }
+    if (isset($holidayMapY[$d]) && ($holidayMapY[$d]['type'] ?? 'holiday') !== 'guardia') { $e['is_holiday'] = true; $e['special_type'] = $holidayMapY[$d]['type'] ?? 'holiday'; }
     $calc = compute_day($e, $cfgY);
     $sum += intval($calc['day_balance'] ?? 0);
   }
@@ -322,7 +322,7 @@ $sum_week_expected = function(DateTimeImmutable $start) use ($getMapsForDate){
     $e = $entriesY[$d] ?? ['date' => $d];
     $weekday = date('N', strtotime($d));
     if ($weekday > 5) continue;
-    if (isset($holidayMapY[$d])) { $e['is_holiday'] = true; $e['special_type'] = $holidayMapY[$d]['type'] ?? 'holiday'; }
+    if (isset($holidayMapY[$d]) && ($holidayMapY[$d]['type'] ?? 'holiday') !== 'guardia') { $e['is_holiday'] = true; $e['special_type'] = $holidayMapY[$d]['type'] ?? 'holiday'; }
     $calc = compute_day($e, $cfgY);
     $sum += intval($calc['expected_minutes'] ?? 0);
   }
