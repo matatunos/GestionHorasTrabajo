@@ -1,0 +1,26 @@
+# ===== Procesado PHP =====
+AddType application/x-httpd-php .php
+<FilesMatch "\.php$">
+    SetHandler application/x-httpd-php
+</FilesMatch>
+<IfModule mod_php.c>
+    php_flag engine on
+    php_flag short_open_tags On
+</IfModule>
+
+# ===== Seguridad: no listar directorios =====
+Options -Indexes +FollowSymLinks
+
+# ===== Seguridad: bloquear ficheros sensibles =====
+# Dotfiles (.env, .git, .htaccess, .gitignore, ...)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+# Backups, volcados, scripts, docs, logs y datos
+<FilesMatch "\.(bak|sql|sh|md|log|ini|lock|dist|example|twig|tpl|yml|yaml)$">
+    Require all denied
+</FilesMatch>
+# Patrones de backup con sufijo (api.php.bak-old, dashboard.php.bak-XXXX, ...)
+<FilesMatch "\.(bak|old)[^/]*$">
+    Require all denied
+</FilesMatch>
